@@ -16,21 +16,69 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
   });
   const [error, setError] = useState<string | null>(null);
 
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [isInputValid, setIsInputValid] = useState<boolean>(false);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFingerprintHash(e.target.value);
+    const value = e.target.value;
+    setFingerprintHash(value);
+    
+    // Only show validation after user has typed something meaningful
+    if (value.length > 3) {
+      const validation = validateFingerprint(value);
+      setIsInputValid(validation.isValid);
+      setValidationMessage(validation.isValid ? null : (validation.errorMessage || 'Invalid format'));
+    } else {
+      setValidationMessage(null);
+      setIsInputValid(false);
+    }
+  };
+
+  const validateFingerprint = (hash: string): { isValid: boolean; errorMessage: string } => {
+    if (!hash.trim()) {
+      return { isValid: false, errorMessage: 'Fingerprint hash is required' };
+    }
+    
+    // Check for common errors
+    if (hash.startsWith('Ox')) {
+      return { 
+        isValid: false, 
+        errorMessage: 'Invalid prefix "Ox". Fingerprint must start with "0x" (zero, not letter O)' 
+      };
+    }
+    
+    if (!hash.startsWith('0x')) {
+      return { 
+        isValid: false, 
+        errorMessage: 'Missing "0x" prefix. All fingerprint hashes must start with 0x' 
+      };
+    }
+    
+    if (hash.length !== 66) {
+      return { 
+        isValid: false, 
+        errorMessage: `Incorrect fingerprint length (${hash.length} characters). Must be exactly 66 characters (0x + 64 hex characters)` 
+      };
+    }
+    
+    // Full pattern validation
+    if (!isValidFingerprintFormat(hash)) {
+      return { 
+        isValid: false, 
+        errorMessage: 'Invalid fingerprint format. Must be 0x followed by 64 hex characters (0-9, a-f)' 
+      };
+    }
+    
+    return { isValid: true, errorMessage: '' };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!fingerprintHash.trim()) {
-      setError('Fingerprint hash is required');
-      return;
-    }
-    
-    // Validate fingerprint hash format
-    if (!isValidFingerprintFormat(fingerprintHash)) {
-      setError('Please enter a valid fingerprint hash (0x followed by 64 hex characters)');
+    // Validate fingerprint with detailed feedback
+    const validation = validateFingerprint(fingerprintHash);
+    if (!validation.isValid) {
+      setError(validation.errorMessage);
       return;
     }
     
@@ -65,10 +113,24 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
             value={fingerprintHash} 
             onChange={handleChange} 
             disabled={verifying}
+            className={fingerprintHash.length > 3 ? (isInputValid ? 'valid-input' : 'invalid-input') : ''}
+            placeholder="0x..."
           />
+          {validationMessage && (
+            <div className="validation-message">
+              <span className="validation-icon">⚠️</span>
+              {validationMessage}
+            </div>
+          )}
+          <div className="input-help">
+            Format: 0x followed by 64 hexadecimal characters (0-9, a-f)
+          </div>
         </div>
         
-        <button type="submit" disabled={verifying}>
+        <button 
+          type="submit" 
+          disabled={verifying || (fingerprintHash.length > 0 && !isInputValid)}
+        >
           {verifying ? 'Verifying...' : 'Verify Fingerprint'}
         </button>
       </form>

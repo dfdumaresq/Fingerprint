@@ -152,7 +152,8 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ blockchainService, on
               value={formData.fingerprintHash} 
               onChange={handleChange} 
               disabled={submitting}
-              className={generatedHash ? 'generated' : ''}
+              className={generatedHash ? 'generated valid-input' : isValidFingerprintFormat(formData.fingerprintHash) ? 'valid-input' : (formData.fingerprintHash.length > 0 ? 'invalid-input' : '')}
+              placeholder="0x..."
             />
             <button 
               type="button" 
@@ -162,6 +163,9 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ blockchainService, on
             >
               Generate
             </button>
+          </div>
+          <div className="input-help">
+            Format: 0x followed by 64 hexadecimal characters, or click "Generate" to create automatically
           </div>
         </div>
         

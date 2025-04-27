@@ -4,7 +4,7 @@ async function main() {
   const [deployer] = await ethers.getSigners();
 
   console.log("Deploying contracts with the account:", deployer.address);
-  console.log("Account balance:", (await deployer.getBalance()).toString());
+  console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
 
   // Deploy the AIFingerprint contract
   const AIFingerprint = await ethers.getContractFactory("AIFingerprint");

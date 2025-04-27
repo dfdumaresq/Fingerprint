@@ -14,6 +14,7 @@ This application allows users to:
 - React with TypeScript for the frontend
 - Ethers.js for blockchain integration
 - Solidity for smart contracts
+- Hardhat for contract deployment
 - Webpack for bundling
 
 ## Prerequisites
@@ -32,33 +33,42 @@ cd Fingerprint
 npm install
 ```
 
-## Smart Contract Deployment
-
-1. Install Hardhat (if not already installed):
-   ```bash
-   npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
-   ```
-
-2. Initialize Hardhat and deploy the contract:
-   ```bash
-   npx hardhat init
-   npx hardhat compile
-   npx hardhat deploy --network <your-network>
-   ```
-
-3. Update the contract address in `src/App.tsx` with your deployed contract address.
-
 ## Configuration
 
-Before running the application, update the following in `src/App.tsx`:
+1. Copy the example environment file and update it with your values:
+   ```bash
+   cp .env.example .env
+   ```
 
-```typescript
-const blockchainConfig: BlockchainConfig = {
-  networkUrl: 'https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY', // Replace with your provider URL
-  chainId: 11155111, // Use appropriate network ID
-  contractAddress: 'YOUR_DEPLOYED_CONTRACT_ADDRESS' // Replace with your contract address
-};
-```
+2. Edit the `.env` file with your:
+   - Ethereum wallet private key for deployment
+   - Alchemy API key for accessing the Ethereum network
+
+   ```
+   PRIVATE_KEY=your_wallet_private_key_here
+   SEPOLIA_URL=https://eth-sepolia.g.alchemy.com/v2/your-alchemy-api-key
+   ```
+
+3. After deploying the contract, update the `blockchainConfig` in `src/App.tsx` with your:
+   - Alchemy API URL
+   - Deployed contract address
+
+## Smart Contract Deployment
+
+1. Compile the contract:
+   ```bash
+   npm run compile
+   ```
+
+2. Deploy to Sepolia testnet:
+   ```bash
+   npm run deploy:sepolia
+   ```
+
+3. Deploy to a local Hardhat network (for development):
+   ```bash
+   npm run deploy:local
+   ```
 
 ## Running the Application
 

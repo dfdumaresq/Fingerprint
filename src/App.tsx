@@ -6,13 +6,14 @@ import VerifyFingerprint from './components/VerifyFingerprint';
 import { BlockchainService } from './services/blockchain.service';
 import { BlockchainConfig, Agent } from './types';
 
-// Blockchain configuration - would typically come from environment variables
+// Blockchain configuration - comes from environment variables or defaults to placeholder values
+// In production, these values should be set in environment variables
 const blockchainConfig: BlockchainConfig = {
-  // For development use Sepolia testnet - replace with your actual API key
+  // For development use Sepolia testnet
   networkUrl: 'https://eth-sepolia.g.alchemy.com/v2/your-api-key', 
   chainId: 11155111, // Sepolia testnet
-  // Replace with your deployed contract address after running hardhat deploy
-  contractAddress: '0x0000000000000000000000000000000000000000'
+  // Deployed contract address on Sepolia
+  contractAddress: '0x0000000000000000000000000000000000000000' // Replace with your contract address
 };
 
 const App: React.FC = () => {

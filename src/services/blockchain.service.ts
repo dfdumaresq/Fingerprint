@@ -7,9 +7,16 @@ const ABI = [
   "function verifyFingerprint(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt)"
 ];
 
+// Add Ethereum window type
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 export class BlockchainService {
-  private provider: ethers.JsonRpcProvider;
-  private contract: ethers.Contract;
+  private provider!: ethers.JsonRpcProvider;
+  private contract!: ethers.Contract;
   private isConnected: boolean = false;
 
   constructor(config: BlockchainConfig) {
@@ -43,9 +50,18 @@ export class BlockchainService {
   public async connectWallet(): Promise<string | null> {
     try {
       // This is a simplified example. In a real application, you would use Web3Modal or similar
+      if (!window.ethereum) {
+        throw new Error("No ethereum provider found. Please install MetaMask.");
+      }
+
+      // Request account access
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      this.contract = this.contract.connect(signer);
+      
+      // Create a new contract instance with the signer that can make write transactions
+      this.contract = new ethers.Contract(this.contract.target, ABI, signer);
       
       const address = await signer.getAddress();
       console.log('Connected wallet address:', address);
@@ -62,14 +78,30 @@ export class BlockchainService {
     }
 
     try {
-      const tx = await this.contract.registerFingerprint(
+      // Ensure we have a connected wallet
+      if (!window.ethereum) {
+        throw new Error("No ethereum provider found. Please install MetaMask.");
+      }
+
+      // Re-connect with the signer to ensure we can send transactions
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contractWithSigner = new ethers.Contract(this.contract.target, ABI, signer);
+      
+      // Use the contract with signer to make the transaction
+      const tx = await contractWithSigner.registerFingerprint(
         agent.id,
         agent.name,
         agent.provider,
         agent.version,
         agent.fingerprintHash
       );
-      await tx.wait();
+      console.log("Transaction sent:", tx.hash);
+      
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      console.log("Transaction confirmed in block:", receipt.blockNumber);
+      
       return true;
     } catch (error) {
       console.error('Failed to register fingerprint:', error);
@@ -83,8 +115,13 @@ export class BlockchainService {
     }
 
     try {
-      const [isVerified, id, name, provider, version, createdAt] = 
-        await this.contract.verifyFingerprint(fingerprintHash);
+      // For read operations, we can use our existing provider or create a new one
+      // We'll use the contract as is since it's already connected to the provider
+      const contract = this.contract;
+      
+      // Call the read-only function
+      const [isVerified, id, name, provider_name, version, createdAt] = 
+        await contract.verifyFingerprint(fingerprintHash);
 
       if (!isVerified) {
         return null;
@@ -93,7 +130,7 @@ export class BlockchainService {
       return {
         id,
         name,
-        provider,
+        provider: provider_name,
         version,
         fingerprintHash,
         createdAt: Number(createdAt)

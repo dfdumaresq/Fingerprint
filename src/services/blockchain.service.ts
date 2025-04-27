@@ -115,19 +115,29 @@ export class BlockchainService {
     }
 
     try {
+      console.log('Verifying fingerprint:', fingerprintHash);
+      console.log('Contract address:', this.contract.target);
+      // In ethers v6, the provider structure changed
+      console.log('Provider connected:', this.isConnected);
+      
       // For read operations, we can use our existing provider or create a new one
       // We'll use the contract as is since it's already connected to the provider
       const contract = this.contract;
       
       // Call the read-only function
-      const [isVerified, id, name, provider_name, version, createdAt] = 
-        await contract.verifyFingerprint(fingerprintHash);
-
+      console.log('Calling contract.verifyFingerprint...');
+      const result = await contract.verifyFingerprint(fingerprintHash);
+      console.log('Raw verification result:', result);
+      
+      const [isVerified, id, name, provider_name, version, createdAt] = result;
+      console.log('Parsed result - isVerified:', isVerified);
+      
       if (!isVerified) {
+        console.log('Fingerprint not verified - returning null');
         return null;
       }
 
-      return {
+      const agentData = {
         id,
         name,
         provider: provider_name,
@@ -135,6 +145,9 @@ export class BlockchainService {
         fingerprintHash,
         createdAt: Number(createdAt)
       };
+      
+      console.log('Verification successful, returning agent data:', agentData);
+      return agentData;
     } catch (error) {
       console.error('Failed to verify fingerprint:', error);
       return null;

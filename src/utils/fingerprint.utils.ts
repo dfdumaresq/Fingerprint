@@ -9,7 +9,20 @@
  */
 export const isValidFingerprintFormat = (hash: string): boolean => {
   // Basic validation for keccak256 hash format (0x followed by 64 hex characters)
-  return /^0x[0-9a-f]{64}$/i.test(hash);
+  const isValid = /^0x[0-9a-f]{64}$/i.test(hash);
+  console.log(`Validating fingerprint format: ${hash}, valid: ${isValid}`);
+  
+  // Log more details if invalid
+  if (!isValid) {
+    if (!hash.startsWith('0x')) {
+      console.log('Fingerprint missing 0x prefix');
+    }
+    if (hash.length !== 66) {
+      console.log(`Fingerprint incorrect length: ${hash.length}, expected: 66`);
+    }
+  }
+  
+  return isValid;
 };
 
 /**

@@ -89,11 +89,13 @@ The application will be available at http://localhost:3000.
    - Fill in the agent details (ID, name, provider, version)
    - Click "Generate" to create a unique fingerprint hash based on the agent details, or manually input a hash
    - Submit the form to register on the blockchain
+   - [View Registration Example](docs/Register%20Agent%20Fingerprint.pdf)
 
 3. **Verify an AI Agent Fingerprint**:
    - Enter a fingerprint hash
    - Click "Verify" to check if it exists on the blockchain
    - View the registration details if verified
+   - [View Verification Example](docs/Verify%20Agent%20Fingerprint.pdf)
 
 The fingerprint hash is generated using the keccak256 algorithm, combining the agent's ID, name, provider, version, and a timestamp to ensure uniqueness.
 

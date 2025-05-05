@@ -6,14 +6,13 @@ import VerifyFingerprint from './components/VerifyFingerprint';
 import { BlockchainService } from './services/blockchain.service';
 import { BlockchainConfig, Agent } from './types';
 
-// Blockchain configuration - comes from environment variables or defaults to placeholder values
-// In production, these values should be set in environment variables
+// Blockchain configuration - would typically come from environment variables
 const blockchainConfig: BlockchainConfig = {
   // For development use Sepolia testnet
-  networkUrl: 'https://eth-sepolia.g.alchemy.com/v2/your-api-key', 
+  networkUrl: 'https://eth-sepolia.g.alchemy.com/v2/HFnhVrrSQ3ZuUoP7csCxDfSIvJ2Cm9GE', 
   chainId: 11155111, // Sepolia testnet
   // Deployed contract address on Sepolia
-  contractAddress: '0x0000000000000000000000000000000000000000' // Replace with your contract address
+  contractAddress: '0x92eF65Ba802b38F3A87a3Ae292a4624FA3040930'
 };
 
 const App: React.FC = () => {
@@ -48,6 +47,14 @@ const App: React.FC = () => {
           <section className="connect-section">
             <h2>Connect Your Wallet</h2>
             <p>Connect your Ethereum wallet to register or verify AI agent fingerprints</p>
+            <div className="connection-instructions">
+              <p><strong>Requirements:</strong></p>
+              <ol>
+                <li>MetaMask wallet extension installed</li>
+                <li>Wallet connected to <strong>Sepolia testnet</strong> (Chain ID: 11155111)</li>
+              </ol>
+              <p><small>Need Sepolia ETH? Get it from <a href="https://sepoliafaucet.com/" target="_blank" rel="noopener noreferrer">Sepolia Faucet</a></small></p>
+            </div>
             <ConnectWallet 
               blockchainService={blockchainService} 
               onConnect={handleWalletConnect} 
@@ -112,6 +119,16 @@ const App: React.FC = () => {
 
       <footer>
         <p>&copy; 2025 AI Agent Fingerprinting System</p>
+        <div className="assistant-fingerprint">
+          <div className="fingerprint-icon">🧠</div>
+          <div className="fingerprint-info">
+            <p><small>This system was built with assistance from:</small></p>
+            <p><strong>ID:</strong> AI Agent Fingerprinting System Code Assistant</p>
+            <p><strong>AI:</strong> Claude (Anthropic)</p>
+            <p><strong>Version:</strong> Claude-3-7-Sonnet-20250219</p>
+            <p><strong>Fingerprint Hash:</strong> <span className="hash">0xbe7a118875bb8f33a2a58b78d74a1cfd6bb35ac3fe856c8b6c528daf4c1e888d</span></p>
+          </div>
+        </div>
       </footer>
     </div>
   );

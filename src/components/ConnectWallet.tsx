@@ -15,15 +15,28 @@ const ConnectWallet: React.FC<ConnectWalletProps> = ({ blockchainService, onConn
       setConnecting(true);
       setError(null);
       
+      // Check if MetaMask is installed
+      if (!window.ethereum) {
+        setError('MetaMask not detected. Please install MetaMask extension to connect your wallet.');
+        return;
+      }
+      
       const address = await blockchainService.connectWallet();
       
       if (address) {
         onConnect(address);
       } else {
-        setError('Failed to connect wallet');
+        // This error is shown when connectWallet returns null but doesn't throw an error
+        setError('Failed to connect wallet. Make sure you are using Sepolia testnet in MetaMask.');
       }
     } catch (err) {
-      setError('Error connecting wallet: ' + (err instanceof Error ? err.message : String(err)));
+      // Special handling for "Already processing" MetaMask error
+      if (err instanceof Error && err.message.includes('MetaMask connection already in progress')) {
+        setError('MetaMask connection already in progress. Please open MetaMask and approve the connection request.');
+      } else {
+        // If a specific error was thrown, display it
+        setError('Error connecting wallet: ' + (err instanceof Error ? err.message : String(err)));
+      }
     } finally {
       setConnecting(false);
     }

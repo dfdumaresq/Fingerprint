@@ -49,14 +49,80 @@ export class BlockchainService {
 
   public async connectWallet(): Promise<string | null> {
     try {
+      console.log('Connecting wallet...');
       // This is a simplified example. In a real application, you would use Web3Modal or similar
       if (!window.ethereum) {
+        console.error('No ethereum provider found. Please install MetaMask.');
         throw new Error("No ethereum provider found. Please install MetaMask.");
       }
 
-      // Request account access
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      console.log('Ethereum provider found, checking if already connected...');
       
+      // Try to get accounts without showing the MetaMask popup first
+      // If this succeeds, it means the user has already authorized the dApp
+      try {
+        const accounts = await window.ethereum.request({ 
+          method: 'eth_accounts' 
+        });
+        
+        if (accounts && accounts.length > 0) {
+          console.log('Already connected to account:', accounts[0]);
+          
+          // Check if we're on the right network
+          const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+          console.log('Current chain ID:', chainId);
+          
+          // Convert to decimal and check
+          if (parseInt(chainId, 16) !== 11155111) {
+            console.error('Please connect to Sepolia testnet (Chain ID: 11155111)');
+            throw new Error('Please connect to Sepolia testnet (Chain ID: 11155111)');
+          }
+          
+          console.log('Creating new provider and signer...');
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          
+          // Create a new contract instance with the signer that can make write transactions
+          this.contract = new ethers.Contract(this.contract.target, ABI, signer);
+          
+          const address = await signer.getAddress();
+          console.log('Connected wallet address:', address);
+          this.isConnected = true;
+          return address;
+        }
+      } catch (error) {
+        console.log('Error checking existing accounts:', error);
+        // Continue to request accounts
+      }
+      
+      console.log('Requesting account access...');
+      // Only request accounts if we don't already have access
+      try {
+        await window.ethereum.request({ 
+          method: 'eth_requestAccounts',
+          params: [] 
+        });
+        console.log('Account access granted');
+      } catch (err: any) {
+        // Handle the case where the user denies the request or it's already in progress
+        if (err && err.code === -32002) {
+          console.log('MetaMask is already processing a request. Please check the MetaMask extension and approve the connection.');
+          throw new Error('MetaMask connection already in progress. Please check the MetaMask extension.');
+        }
+        throw err;
+      }
+      
+      // Check if we're on the right network
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      console.log('Current chain ID:', chainId);
+      
+      // Convert to decimal and check
+      if (parseInt(chainId, 16) !== 11155111) {
+        console.error('Please connect to Sepolia testnet (Chain ID: 11155111)');
+        throw new Error('Please connect to Sepolia testnet (Chain ID: 11155111)');
+      }
+      
+      console.log('Creating new provider and signer...');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       
@@ -65,9 +131,11 @@ export class BlockchainService {
       
       const address = await signer.getAddress();
       console.log('Connected wallet address:', address);
+      this.isConnected = true;
       return address;
     } catch (error) {
       console.error('Failed to connect wallet:', error);
+      this.isConnected = false;
       return null;
     }
   }

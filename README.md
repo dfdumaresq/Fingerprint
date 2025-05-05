@@ -108,6 +108,33 @@ This application can be configured to work with:
 - Layer 2 solutions (Arbitrum, Optimism)
 - Other EVM-compatible chains
 
+## AI Assistance Attribution
+
+This project was built with assistance from Claude AI (Anthropic). The AI contribution has been fingerprinted and registered on the Sepolia testnet blockchain with the following details:
+
+- **ID**: AI Agent Fingerprinting System Code Assistant
+- **AI**: Claude (Anthropic)
+- **Version**: Claude-3-7-Sonnet-20250219
+- **Fingerprint Hash**: `0xbe7a118875bb8f33a2a58b78d74a1cfd6bb35ac3fe856c8b6c528daf4c1e888d`
+
+### Verifying the Fingerprint
+
+To verify this fingerprint:
+
+1. Ensure you have MetaMask connected to the Sepolia testnet
+2. Go to the "Verify Fingerprint" tab in the application
+3. Enter the hash: `0xbe7a118875bb8f33a2a58b78d74a1cfd6bb35ac3fe856c8b6c528daf4c1e888d`
+4. Click "Verify" to see the registration details
+
+Alternatively, you can verify using Etherscan:
+
+1. Visit the [Sepolia Etherscan](https://sepolia.etherscan.io/)
+2. Navigate to the contract address: `0x92eF65Ba802b38F3A87a3Ae292a4624FA3040930`
+3. Go to the "Read Contract" tab
+4. Call the `verifyFingerprint` function with the hash above
+
+This verification process ensures the authenticity of the AI assistance used in this project, regardless of any UI modifications in forks.
+
 ## License
 
 [MIT License](LICENSE)

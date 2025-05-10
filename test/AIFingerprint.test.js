@@ -97,4 +97,69 @@ describe("AIFingerprint", function () {
       expect(registeredBy).to.equal(await addr1.getAddress());
     });
   });
+
+  describe("Fingerprint Revocation", function () {
+    const revocationTestHash = "0x2222222222222222222222222222222222222222222222222222222222222222";
+
+    beforeEach(async function () {
+      // Register a fingerprint for revocation testing
+      await contract.registerFingerprint(
+        "revocation-test",
+        "Revocation Test Agent",
+        "Test Provider",
+        "1.0.0",
+        revocationTestHash
+      );
+    });
+
+    it("Should allow the owner to revoke a fingerprint", async function () {
+      // Revoke the fingerprint
+      await contract.revokeFingerprint(revocationTestHash);
+
+      // Check revocation status
+      const [revoked, revokedAt, revokedBy] = await contract.isRevoked(revocationTestHash);
+
+      expect(revoked).to.equal(true);
+      expect(revokedAt).to.be.gt(0); // Timestamp should be set
+      expect(revokedBy).to.equal(await owner.getAddress());
+    });
+
+    it("Should not allow non-owners to revoke a fingerprint", async function () {
+      // Try to revoke from a different address
+      await expect(
+        contract.connect(addr2).revokeFingerprint(revocationTestHash)
+      ).to.be.revertedWith("Only the original registrant can revoke the fingerprint");
+    });
+
+    it("Should not allow revoking a fingerprint that doesn't exist", async function () {
+      const nonExistentHash = "0x3333333333333333333333333333333333333333333333333333333333333333";
+
+      await expect(
+        contract.revokeFingerprint(nonExistentHash)
+      ).to.be.revertedWith("Fingerprint does not exist");
+    });
+
+    it("Should not allow revoking a fingerprint twice", async function () {
+      // Revoke once
+      await contract.revokeFingerprint(revocationTestHash);
+
+      // Try to revoke again
+      await expect(
+        contract.revokeFingerprint(revocationTestHash)
+      ).to.be.revertedWith("Fingerprint already revoked");
+    });
+
+    it("Should report the fingerprint as invalid after revocation", async function () {
+      // Verify fingerprint is valid before revocation
+      const [isVerifiedBefore] = await contract.verifyFingerprintExtended(revocationTestHash);
+      expect(isVerifiedBefore).to.equal(true);
+
+      // Revoke the fingerprint
+      await contract.revokeFingerprint(revocationTestHash);
+
+      // Verify fingerprint is invalid after revocation
+      const [isVerifiedAfter] = await contract.verifyFingerprintExtended(revocationTestHash);
+      expect(isVerifiedAfter).to.equal(false);
+    });
+  });
 });

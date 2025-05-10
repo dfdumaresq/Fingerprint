@@ -16,8 +16,18 @@ contract AIFingerprint {
         bool exists;
     }
 
+    // Additional struct for revocation information
+    struct RevocationData {
+        bool revoked;
+        uint256 revokedAt;
+        address revokedBy;
+    }
+
     // Mapping from fingerprint hash to agent data
     mapping(string => AgentData) private fingerprints;
+    
+    // Separate mapping for revocation information
+    mapping(string => RevocationData) private revocations;
     
     // Event emitted when a new fingerprint is registered
     event FingerprintRegistered(
@@ -28,6 +38,13 @@ contract AIFingerprint {
         string version,
         address registeredBy,
         uint256 createdAt
+    );
+
+    // Event emitted when a fingerprint is revoked
+    event FingerprintRevoked(
+        string fingerprintHash,
+        address revokedBy,
+        uint256 revokedAt
     );
 
     /**
@@ -119,5 +136,100 @@ contract AIFingerprint {
             return address(0);
         }
         return fingerprints[fingerprintHash].registeredBy;
+    }
+
+    /**
+     * @dev Revoke an existing fingerprint
+     * @param fingerprintHash The hash of the fingerprint to revoke
+     */
+    function revokeFingerprint(string calldata fingerprintHash) external {
+        // Ensure the fingerprint exists
+        require(fingerprints[fingerprintHash].exists, "Fingerprint does not exist");
+        
+        // Only the original registrant can revoke the fingerprint
+        require(
+            fingerprints[fingerprintHash].registeredBy == msg.sender,
+            "Only the original registrant can revoke the fingerprint"
+        );
+        
+        // Ensure the fingerprint is not already revoked
+        require(!revocations[fingerprintHash].revoked, "Fingerprint already revoked");
+        
+        // Store revocation data
+        revocations[fingerprintHash] = RevocationData({
+            revoked: true,
+            revokedAt: block.timestamp,
+            revokedBy: msg.sender
+        });
+        
+        // Emit the revocation event
+        emit FingerprintRevoked(
+            fingerprintHash,
+            msg.sender,
+            block.timestamp
+        );
+    }
+
+    /**
+     * @dev Check if a fingerprint is revoked
+     * @param fingerprintHash The fingerprint hash to check
+     * @return revoked Whether the fingerprint is revoked
+     * @return revokedAt The timestamp when the fingerprint was revoked (0 if not revoked)
+     * @return revokedBy The address that revoked the fingerprint (address(0) if not revoked)
+     */
+    function isRevoked(string calldata fingerprintHash)
+        external
+        view
+        returns (bool revoked, uint256 revokedAt, address revokedBy)
+    {
+        return (
+            revocations[fingerprintHash].revoked,
+            revocations[fingerprintHash].revokedAt,
+            revocations[fingerprintHash].revokedBy
+        );
+    }
+
+    /**
+     * @dev Verify an AI agent fingerprint with revocation status
+     * @param fingerprintHash The fingerprint hash to verify
+     * @return isVerified Whether the fingerprint is verified (exists and not revoked)
+     * @return id The agent's ID
+     * @return name The agent's name
+     * @return provider The agent's provider
+     * @return version The agent's version
+     * @return createdAt The timestamp when the fingerprint was registered
+     * @return revoked Whether the fingerprint has been revoked
+     * @return revokedAt The timestamp when the fingerprint was revoked (0 if not revoked)
+     */
+    function verifyFingerprintExtended(string calldata fingerprintHash) 
+        external 
+        view 
+        returns (
+            bool isVerified,
+            string memory id,
+            string memory name,
+            string memory provider,
+            string memory version,
+            uint256 createdAt,
+            bool revoked,
+            uint256 revokedAt
+        ) 
+    {
+        AgentData storage data = fingerprints[fingerprintHash];
+        RevocationData storage revData = revocations[fingerprintHash];
+        
+        // The fingerprint is verified if it exists and is not revoked
+        bool verified = data.exists && !revData.revoked;
+        
+        return (
+            verified,
+            data.id,
+            data.name,
+            data.provider,
+            data.version,
+            data.createdAt,
+            revData.revoked,
+            revData.revokedAt
+        );
     }
 }

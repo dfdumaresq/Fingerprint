@@ -188,6 +188,35 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
           <p><strong>Version:</strong> {result.agent.version}</p>
           <p><strong>Created At:</strong> {formatTimestamp(result.agent.createdAt)}</p>
 
+          {/* Show revocation status if available */}
+          {result.agent.revoked !== undefined ? (
+            <div className={result.agent.revoked ? "revocation-info revoked" : "revocation-info valid"}>
+              <h4>Revocation Status</h4>
+              <p>
+                <strong>Status:</strong> {result.agent.revoked ?
+                  <span className="invalid-signature">✗ Revoked</span> :
+                  <span className="valid-signature">✓ Valid</span>
+                }
+              </p>
+              {result.agent.revoked && result.agent.revokedAt && (
+                <p><strong>Revoked At:</strong> {formatTimestamp(result.agent.revokedAt)}</p>
+              )}
+              {result.agent.revoked && result.agent.revokedBy && (
+                <p><strong>Revoked By:</strong> {formatAddress(result.agent.revokedBy)}</p>
+              )}
+            </div>
+          ) : (
+            <div className="revocation-info not-supported">
+              <h4>Revocation Status</h4>
+              <p>
+                <strong>Status:</strong> <span className="info-text">Unknown</span>
+              </p>
+              <p className="info-text">
+                <small>Revocation checking is not supported on the current contract.</small>
+              </p>
+            </div>
+          )}
+
           {result.agent.signature && (
             <div className="signature-info">
               <h4>EIP-712 Signature Information</h4>

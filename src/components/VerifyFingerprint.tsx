@@ -10,6 +10,7 @@ interface VerifyFingerprintProps {
 const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService }) => {
   const [fingerprintHash, setFingerprintHash] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [verificationAttempted, setVerificationAttempted] = useState(false);
   const [result, setResult] = useState<{ verified: boolean; agent: Agent | null }>({
     verified: false,
     agent: null
@@ -22,7 +23,10 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFingerprintHash(value);
-    
+
+    // Reset verification attempted state when input changes
+    setVerificationAttempted(false);
+
     // Only show validation after user has typed something meaningful
     if (value.length > 3) {
       const validation = validateFingerprint(value);
@@ -74,25 +78,27 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate fingerprint with detailed feedback
     const validation = validateFingerprint(fingerprintHash);
     if (!validation.isValid) {
       setError(validation.errorMessage);
       return;
     }
-    
+
     setVerifying(true);
     setError(null);
     setResult({ verified: false, agent: null });
-    
+
     try {
       const agent = await blockchainService.verifyFingerprint(fingerprintHash);
-      
+
       setResult({
         verified: agent !== null,
         agent
       });
+      // Mark that verification has been attempted
+      setVerificationAttempted(true);
     } catch (err) {
       setError('Error verifying fingerprint: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
@@ -148,7 +154,7 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
         </div>
       )}
       
-      {!error && !result.agent && result.verified === false && verifying === false && fingerprintHash && (
+      {!error && !result.agent && result.verified === false && verifying === false && verificationAttempted && (
         <div className="result-card error">
           <h3>Verification Failed</h3>
           <p>The provided fingerprint was not found on the blockchain.</p>

@@ -115,7 +115,7 @@ This project was built with assistance from Claude AI (Anthropic). The AI contri
 - **ID**: AI Agent Fingerprinting System Code Assistant
 - **AI**: Claude (Anthropic)
 - **Version**: Claude-3-7-Sonnet-20250219
-- **Fingerprint Hash**: `0xbe7a118875bb8f33a2a58b78d74a1cfd6bb35ac3fe856c8b6c528daf4c1e888d`
+- **Fingerprint Hash**: `0x59bba0ed5a7d4a5ba2c3ecad48fa376f9383b834ad28b581a5ea97e11f3d1385`
 
 ### Verifying the Fingerprint
 
@@ -123,7 +123,7 @@ To verify this fingerprint:
 
 1. Ensure you have MetaMask connected to the Sepolia testnet
 2. Go to the "Verify Fingerprint" tab in the application
-3. Enter the hash: `0xbe7a118875bb8f33a2a58b78d74a1cfd6bb35ac3fe856c8b6c528daf4c1e888d`
+3. Enter the hash: `0x59bba0ed5a7d4a5ba2c3ecad48fa376f9383b834ad28b581a5ea97e11f3d1385`
 4. Click "Verify" to see the registration details
 
 Alternatively, you can verify using Etherscan:

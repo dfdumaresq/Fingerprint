@@ -126,7 +126,7 @@ const App: React.FC = () => {
             <p><strong>ID:</strong> AI Agent Fingerprinting System Code Assistant</p>
             <p><strong>AI:</strong> Claude (Anthropic)</p>
             <p><strong>Version:</strong> Claude-3-7-Sonnet-20250219</p>
-            <p><strong>Fingerprint Hash:</strong> <span className="hash">0xbe7a118875bb8f33a2a58b78d74a1cfd6bb35ac3fe856c8b6c528daf4c1e888d</span></p>
+            <p><strong>Fingerprint Hash:</strong> <span className="hash">0x59bba0ed5a7d4a5ba2c3ecad48fa376f9383b834ad28b581a5ea97e11f3d1385</span></p>
           </div>
         </div>
       </footer>

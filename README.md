@@ -14,7 +14,8 @@ This application allows users to:
 - React with TypeScript for the frontend
 - Ethers.js for blockchain integration
 - Solidity for smart contracts
-- Hardhat for contract deployment
+- OpenZeppelin contracts for security and access control
+- Hardhat for contract deployment and testing
 - Webpack for bundling
 
 ## Prerequisites
@@ -104,6 +105,12 @@ The application will be available at http://localhost:3000.
    - Only the original registrant (wallet address) can revoke their fingerprints
    - Once revoked, a fingerprint will be permanently marked as invalid
 
+5. **Administrative Functions** (Contract Owner Only):
+   - **Emergency Pause**: Pause all contract operations in case of security incidents
+   - **Admin Revocation**: Revoke any fingerprint regardless of original registrant
+   - **Ownership Transfer**: Transfer fingerprint ownership between addresses
+   - **Contract Management**: Transfer contract ownership to another address
+
 The fingerprint hash is generated using the keccak256 algorithm, combining the agent's ID, name, provider, version, and a timestamp to ensure uniqueness.
 
 ### EIP-712 Typed Data Signatures
@@ -115,15 +122,34 @@ This project also supports EIP-712 typed data signatures for enhanced security a
 - **Domain Separation**: Includes domain information to prevent cross-application signature reuse
 - **Optional Feature**: Can be enabled via a checkbox during agent registration
 
+### Security and Access Control
+
+The smart contract implements robust security mechanisms using OpenZeppelin libraries:
+
+- **Access Control**: Uses OpenZeppelin's Ownable pattern for secure, standardized role management
+- **Emergency Controls**: Implements Pausable mechanism to halt all contract operations in case of security incidents
+- **Administrative Functions**: Provides owner-only functions for contract management and issue resolution
+- **Standards Compliance**: Follows industry best practices for smart contract security
+
 ### Revocation System
 
 The fingerprinting system includes a revocation mechanism to invalidate fingerprints:
 
+- **Dual Revocation Paths**:
+  - **Self-Revocation**: Original registrants can revoke their own fingerprints
+  - **Administrative Revocation**: Contract owners can revoke any fingerprint to handle compromised accounts
 - **Permanence**: Once revoked, a fingerprint cannot be un-revoked
-- **Authority Control**: Only the original registrant can revoke their fingerprints
 - **Transparency**: Revocation information is stored on-chain with timestamp and revoker address
 - **Verification Integration**: All verification operations automatically check revocation status
 - **Backward Compatibility**: Works with both new and legacy contract deployments
+
+### Ownership Management
+
+The contract includes features for managing fingerprint ownership:
+
+- **Ownership Transfer**: Contract owner can transfer fingerprint ownership between addresses
+- **Dispute Resolution**: Provides mechanisms to resolve ownership disputes or recover from compromised accounts
+- **Audit Trail**: All ownership transfers are recorded on-chain with complete history
 
 ## Blockchain Networks
 

@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { BlockchainConfig, Agent, SignatureData } from '../types';
+import { BlockchainConfig, Agent, SignatureData, RevocationData } from '../types';
 import {
   createEIP712Domain,
   createAgentFingerprintMessage,
@@ -12,7 +12,10 @@ import {
 // Simple ABI for interacting with a smart contract that stores fingerprints
 const ABI = [
   "function registerFingerprint(string id, string name, string provider, string version, string fingerprintHash) external",
-  "function verifyFingerprint(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt)"
+  "function verifyFingerprint(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt)",
+  "function revokeFingerprint(string fingerprintHash) external",
+  "function isRevoked(string fingerprintHash) external view returns (bool revoked, uint256 revokedAt, address revokedBy)",
+  "function verifyFingerprintExtended(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt, bool revoked, uint256 revokedAt)"
 ];
 
 // Add Ethereum window type
@@ -24,7 +27,7 @@ declare global {
 
 export class BlockchainService {
   private provider!: ethers.JsonRpcProvider;
-  private contract!: ethers.Contract;
+  public contract!: ethers.Contract; // Changed to public to allow checking method existence
   private isConnected: boolean = false;
   private config: BlockchainConfig;
 
@@ -218,6 +221,36 @@ export class BlockchainService {
     }
   }
 
+  /**
+   * Check if the current contract supports extended verification
+   * @returns Boolean indicating whether extended verification is supported
+   */
+  public async supportsExtendedVerification(): Promise<boolean> {
+    if (!this.isConnected) {
+      return false;
+    }
+
+    try {
+      // Try to call verifyFingerprintExtended with a dummy hash to see if it exists
+      await this.contract.verifyFingerprintExtended('0x0000000000000000000000000000000000000000000000000000000000000000');
+      return true;
+    } catch (error: any) {
+      // Check error message to distinguish between method not existing and other errors
+      if (error.message && (
+          error.message.includes("method not supported") ||
+          error.message.includes("call revert exception") ||
+          error.message.includes("function selector was not recognized") ||
+          error.message.includes("not a function")
+      )) {
+        console.log('Contract does not support extended verification');
+        return false;
+      }
+
+      // For other errors, we assume the method exists but failed for other reasons
+      return true;
+    }
+  }
+
   public async verifyFingerprint(fingerprintHash: string): Promise<Agent | null> {
     if (!this.isConnected) {
       throw new Error('Not connected to blockchain');
@@ -226,39 +259,220 @@ export class BlockchainService {
     try {
       console.log('Verifying fingerprint:', fingerprintHash);
       console.log('Contract address:', this.contract.target);
-      // In ethers v6, the provider structure changed
       console.log('Provider connected:', this.isConnected);
 
-      // For read operations, we can use our existing provider or create a new one
-      // We'll use the contract as is since it's already connected to the provider
+      // Check feature support
+      const supportsRevocation = await this.supportsRevocation();
+      const supportsExtendedVerification = await this.supportsExtendedVerification();
+
+      console.log(`Contract capabilities: revocation=${supportsRevocation}, extendedVerification=${supportsExtendedVerification}`);
+
+      // For read operations, we can use our existing provider
       const contract = this.contract;
+      let result;
+      let isExtendedVerificationUsed = false;
 
-      // Call the read-only function
-      console.log('Calling contract.verifyFingerprint...');
-      const result = await contract.verifyFingerprint(fingerprintHash);
-      console.log('Raw verification result:', result);
-
-      const [isVerified, id, name, provider_name, version, createdAt] = result;
-      console.log('Parsed result - isVerified:', isVerified);
-
-      if (!isVerified) {
-        console.log('Fingerprint not verified - returning null');
-        return null;
+      // Try to use extended verification if supported
+      if (supportsExtendedVerification) {
+        try {
+          console.log('Calling contract.verifyFingerprintExtended...');
+          result = await contract.verifyFingerprintExtended(fingerprintHash);
+          console.log('Raw extended verification result:', result);
+          isExtendedVerificationUsed = true;
+        } catch (err) {
+          console.log('Extended verification failed, falling back to basic verification');
+          isExtendedVerificationUsed = false;
+        }
       }
 
-      const agentData = {
-        id,
-        name,
-        provider: provider_name,
-        version,
-        fingerprintHash,
-        createdAt: Number(createdAt)
-      };
+      // Fall back to regular verification if needed
+      if (!isExtendedVerificationUsed) {
+        console.log('Calling contract.verifyFingerprint...');
+        result = await contract.verifyFingerprint(fingerprintHash);
+        console.log('Raw verification result:', result);
+      }
+
+      // Parse results based on which verification method was used
+      let agentData: Agent;
+
+      if (isExtendedVerificationUsed) {
+        const [isVerified, id, name, provider_name, version, createdAt, revoked, revokedAt] = result;
+        console.log('Parsed extended result - isVerified:', isVerified);
+
+        if (!isVerified) {
+          console.log('Fingerprint not verified - returning null');
+          return null;
+        }
+
+        agentData = {
+          id,
+          name,
+          provider: provider_name,
+          version,
+          fingerprintHash,
+          createdAt: Number(createdAt),
+          revoked,
+          revokedAt: Number(revokedAt)
+        };
+      } else {
+        const [isVerified, id, name, provider_name, version, createdAt] = result;
+        console.log('Parsed basic result - isVerified:', isVerified);
+
+        if (!isVerified) {
+          console.log('Fingerprint not verified - returning null');
+          return null;
+        }
+
+        agentData = {
+          id,
+          name,
+          provider: provider_name,
+          version,
+          fingerprintHash,
+          createdAt: Number(createdAt)
+        };
+
+        // Try to get revocation info separately if basic verification is used and revocation is supported
+        if (supportsRevocation) {
+          try {
+            const revocationData = await this.isRevoked(fingerprintHash);
+            if (revocationData) {
+              agentData.revoked = revocationData.revoked;
+              agentData.revokedAt = revocationData.revokedAt;
+              agentData.revokedBy = revocationData.revokedBy;
+            }
+          } catch (revocationError) {
+            console.log('Revocation check failed:', revocationError);
+          }
+        } else {
+          console.log('Skipping revocation check - not supported by this contract');
+        }
+      }
 
       console.log('Verification successful, returning agent data:', agentData);
       return agentData;
     } catch (error) {
       console.error('Failed to verify fingerprint:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Revoke a fingerprint - can only be done by the original registrant
+   * @param fingerprintHash The hash of the fingerprint to revoke
+   * @returns Boolean indicating success or failure
+   */
+  public async revokeFingerprint(fingerprintHash: string): Promise<boolean> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to blockchain');
+    }
+
+    try {
+      // Instead of hardcoding addresses, check if the contract has the method
+      // First check if isRevoked method exists - if not, this contract doesn't support revocation
+      const supportsRevocation = await this.supportsRevocation();
+      if (!supportsRevocation) {
+        console.error('The deployed contract does not support revocation');
+        throw new Error("The current contract deployment does not support revocation. This feature requires a contract upgrade.");
+      }
+
+      // Ensure we have a connected wallet
+      if (!window.ethereum) {
+        throw new Error("No ethereum provider found. Please install MetaMask.");
+      }
+
+      // Re-connect with the signer to ensure we can send transactions
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contractWithSigner = new ethers.Contract(this.contract.target, ABI, signer);
+
+      // Use the contract with signer to make the transaction
+      const tx = await contractWithSigner.revokeFingerprint(fingerprintHash);
+      console.log("Revocation transaction sent:", tx.hash);
+
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      console.log("Revocation transaction confirmed in block:", receipt.blockNumber);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to revoke fingerprint:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a fingerprint has been revoked
+   * @param fingerprintHash The hash of the fingerprint to check
+   * @returns RevocationData if revoked, null if not supported or not revoked
+   */
+  /**
+   * Check if the current contract supports revocation functionality
+   * @returns Boolean indicating whether revocation is supported
+   */
+  public async supportsRevocation(): Promise<boolean> {
+    if (!this.isConnected) {
+      return false;
+    }
+
+    try {
+      // Try to call isRevoked function with a dummy hash to see if it exists
+      // We're catching the error here but not acting on it
+      // We only care if the method exists and can be called
+      await this.contract.isRevoked('0x0000000000000000000000000000000000000000000000000000000000000000');
+      return true;
+    } catch (error: any) {
+      // Check error message to distinguish between method not existing and other errors
+      // If the error mentions something about the method not existing, it means the contract doesn't support it
+      if (error.message && (
+          error.message.includes("method not supported") ||
+          error.message.includes("call revert exception") ||
+          error.message.includes("function selector was not recognized") ||
+          error.message.includes("not a function")
+      )) {
+        console.log('Contract does not support revocation');
+        return false;
+      }
+
+      // For other types of errors, we assume the method exists but failed for other reasons
+      // This is important because we don't want to incorrectly determine that revocation isn't supported
+      return true;
+    }
+  }
+
+  public async isRevoked(fingerprintHash: string): Promise<RevocationData | null> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to blockchain');
+    }
+
+    try {
+      // Check if revocation is supported by this contract
+      const supportsRevocation = await this.supportsRevocation();
+      if (!supportsRevocation) {
+        console.log('Revocation functionality not supported on this contract');
+        return null;
+      }
+
+      // Try to check revocation status
+      try {
+        const result = await this.contract.isRevoked(fingerprintHash);
+        const [revoked, revokedAt, revokedBy] = result;
+
+        if (revoked) {
+          return {
+            revoked,
+            revokedAt: Number(revokedAt),
+            revokedBy
+          };
+        } else {
+          return null;  // Not revoked
+        }
+      } catch (methodError) {
+        console.warn('Failed to check revocation status:', methodError);
+        return null;
+      }
+    } catch (error) {
+      console.error('Failed to check revocation status or not supported:', error);
       return null;
     }
   }

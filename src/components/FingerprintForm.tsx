@@ -67,7 +67,7 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ blockchainService, on
     
     // Validate form data
     for (const [key, value] of Object.entries(formData)) {
-      if (!value.trim()) {
+      if (typeof value === 'string' && !value.trim()) {
         setError(`${key} is required`);
         return;
       }

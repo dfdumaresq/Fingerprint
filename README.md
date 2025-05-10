@@ -96,7 +96,13 @@ The application will be available at http://localhost:3000.
    - Enter a fingerprint hash
    - Click "Verify" to check if it exists on the blockchain
    - View the registration details if verified
+   - Check revocation status to ensure the fingerprint is still valid
    - [View Verification Example](docs/Verify%20Agent%20Fingerprint.pdf)
+
+4. **Revoke an AI Agent Fingerprint**:
+   - Enter the fingerprint hash you wish to revoke
+   - Only the original registrant (wallet address) can revoke their fingerprints
+   - Once revoked, a fingerprint will be permanently marked as invalid
 
 The fingerprint hash is generated using the keccak256 algorithm, combining the agent's ID, name, provider, version, and a timestamp to ensure uniqueness.
 
@@ -108,6 +114,16 @@ This project also supports EIP-712 typed data signatures for enhanced security a
 - **Human-Readable Format**: Makes signatures more interpretable and prevents signature replay attacks
 - **Domain Separation**: Includes domain information to prevent cross-application signature reuse
 - **Optional Feature**: Can be enabled via a checkbox during agent registration
+
+### Revocation System
+
+The fingerprinting system includes a revocation mechanism to invalidate fingerprints:
+
+- **Permanence**: Once revoked, a fingerprint cannot be un-revoked
+- **Authority Control**: Only the original registrant can revoke their fingerprints
+- **Transparency**: Revocation information is stored on-chain with timestamp and revoker address
+- **Verification Integration**: All verification operations automatically check revocation status
+- **Backward Compatibility**: Works with both new and legacy contract deployments
 
 ## Blockchain Networks
 

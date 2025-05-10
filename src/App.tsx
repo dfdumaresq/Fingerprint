@@ -3,6 +3,7 @@ import './styles.css';
 import ConnectWallet from './components/ConnectWallet';
 import FingerprintForm from './components/FingerprintForm';
 import VerifyFingerprint from './components/VerifyFingerprint';
+import RevokeFingerprint from './components/RevokeFingerprint';
 import { BlockchainService } from './services/blockchain.service';
 import { BlockchainConfig, Agent } from './types';
 
@@ -18,7 +19,7 @@ const blockchainConfig: BlockchainConfig = {
 const App: React.FC = () => {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
-  const [activeTab, setActiveTab] = useState<'register' | 'verify'>('register');
+  const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke'>('register');
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredAgent, setRegisteredAgent] = useState<Omit<Agent, 'createdAt'> | null>(null);
 
@@ -33,6 +34,11 @@ const App: React.FC = () => {
   const handleRegistrationSuccess = (agent: Omit<Agent, 'createdAt'>) => {
     setRegistrationSuccess(true);
     setRegisteredAgent(agent);
+  };
+
+  const handleRevocationSuccess = () => {
+    // You could add specific handling for revocation success if needed
+    console.log('Fingerprint successfully revoked');
   };
 
   return (
@@ -67,17 +73,23 @@ const App: React.FC = () => {
             </div>
 
             <div className="tabs">
-              <button 
+              <button
                 className={`tab ${activeTab === 'register' ? 'active' : ''}`}
                 onClick={() => setActiveTab('register')}
               >
                 Register Fingerprint
               </button>
-              <button 
+              <button
                 className={`tab ${activeTab === 'verify' ? 'active' : ''}`}
                 onClick={() => setActiveTab('verify')}
               >
                 Verify Fingerprint
+              </button>
+              <button
+                className={`tab ${activeTab === 'revoke' ? 'active' : ''}`}
+                onClick={() => setActiveTab('revoke')}
+              >
+                Revoke Fingerprint
               </button>
             </div>
 
@@ -111,6 +123,13 @@ const App: React.FC = () => {
 
               {activeTab === 'verify' && (
                 <VerifyFingerprint blockchainService={blockchainService} />
+              )}
+
+              {activeTab === 'revoke' && (
+                <RevokeFingerprint
+                  blockchainService={blockchainService}
+                  onSuccess={handleRevocationSuccess}
+                />
               )}
             </div>
           </>

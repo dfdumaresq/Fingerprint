@@ -205,6 +205,25 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Revoke button */
+.revoke-button {
+  background-color: var(--error-color);
+}
+
+.revoke-button:hover {
+  background-color: #b02a37;
+}
+
+.revocation-warning {
+  background-color: #fff5f5;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-left: 3px solid var(--error-color);
+  font-weight: 500;
+  color: #842029;
+}
+
 .error-message {
   color: var(--error-color);
   margin-top: 1rem;
@@ -288,8 +307,22 @@ button:disabled {
   text-align: center;
 }
 
-.success-card h2 {
+.success-card h2, .success-card h3 {
   color: var(--success-color);
+  margin-bottom: 1rem;
+}
+
+.upgrade-required-card {
+  background-color: #fff8e6;
+  border: 1px solid #ffcc80;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.upgrade-required-card h3 {
+  color: #ff9800;
   margin-bottom: 1rem;
 }
 
@@ -358,6 +391,38 @@ footer {
 .signature-info h4 {
   color: var(--secondary-color);
   margin-bottom: 0.5rem;
+}
+
+/* Revocation Information */
+.revocation-info {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 3px solid;
+}
+
+.revocation-info.valid {
+  background-color: #f0fff0;
+  border-left-color: var(--success-color);
+}
+
+.revocation-info.revoked {
+  background-color: #fff5f5;
+  border-left-color: var(--error-color);
+}
+
+.revocation-info.not-supported {
+  background-color: #f8f9fa;
+  border-left-color: #6c757d;
+}
+
+.revocation-info h4 {
+  color: var(--secondary-color);
+  margin-bottom: 0.5rem;
+}
+
+.info-text {
+  color: #6c757d;
 }
 
 .valid-signature {

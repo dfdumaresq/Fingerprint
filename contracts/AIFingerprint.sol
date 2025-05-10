@@ -1,11 +1,38 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title AIFingerprint
  * @dev Smart contract for registering and verifying AI agent fingerprints
+ * @dev Uses OpenZeppelin's Ownable for access control and Pausable for emergency stops
  */
-contract AIFingerprint {
+contract AIFingerprint is Ownable, Pausable {
+    /**
+     * @dev Constructor for AIFingerprint contract
+     * @dev Initializes the Ownable contract with the deployer as the initial owner
+     */
+    constructor() Ownable(msg.sender) {
+        // Contract is initialized with deployer as owner
+    }
+
+    /**
+     * @dev Pause all contract functions
+     * @dev Can only be called by the contract owner
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpause all contract functions
+     * @dev Can only be called by the contract owner
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
     struct AgentData {
         string id;
         string name;
@@ -47,6 +74,14 @@ contract AIFingerprint {
         uint256 revokedAt
     );
 
+    // Event emitted when a fingerprint ownership is transferred
+    event FingerprintOwnershipTransferred(
+        string fingerprintHash,
+        address previousOwner,
+        address newOwner,
+        uint256 transferredAt
+    );
+
     /**
      * @dev Register a new AI agent fingerprint
      * @param id The unique identifier for the AI agent
@@ -61,7 +96,7 @@ contract AIFingerprint {
         string calldata provider,
         string calldata version,
         string calldata fingerprintHash
-    ) external {
+    ) external whenNotPaused {
         // Ensure the fingerprint doesn't already exist
         require(!fingerprints[fingerprintHash].exists, "Fingerprint already registered");
         
@@ -139,33 +174,91 @@ contract AIFingerprint {
     }
 
     /**
-     * @dev Revoke an existing fingerprint
+     * @dev Revoke a fingerprint (by original registrant)
      * @param fingerprintHash The hash of the fingerprint to revoke
      */
-    function revokeFingerprint(string calldata fingerprintHash) external {
+    function revokeFingerprint(string calldata fingerprintHash) external whenNotPaused {
         // Ensure the fingerprint exists
         require(fingerprints[fingerprintHash].exists, "Fingerprint does not exist");
-        
+
         // Only the original registrant can revoke the fingerprint
         require(
             fingerprints[fingerprintHash].registeredBy == msg.sender,
             "Only the original registrant can revoke the fingerprint"
         );
-        
+
         // Ensure the fingerprint is not already revoked
         require(!revocations[fingerprintHash].revoked, "Fingerprint already revoked");
-        
+
+        // Use internal function to process the revocation
+        _revokeFingerprint(fingerprintHash, msg.sender);
+    }
+
+    /**
+     * @dev Admin function to revoke a fingerprint (only callable by contract owner)
+     * @param fingerprintHash The hash of the fingerprint to revoke
+     */
+    function adminRevokeFingerprint(string calldata fingerprintHash) external onlyOwner whenNotPaused {
+        // Ensure the fingerprint exists
+        require(fingerprints[fingerprintHash].exists, "Fingerprint does not exist");
+
+        // Ensure the fingerprint is not already revoked
+        require(!revocations[fingerprintHash].revoked, "Fingerprint already revoked");
+
+        // Use internal function to process the revocation
+        _revokeFingerprint(fingerprintHash, msg.sender);
+    }
+
+    /**
+     * @dev Internal function to process fingerprint revocation
+     * @param fingerprintHash The hash of the fingerprint to revoke
+     * @param revoker The address that is performing the revocation
+     */
+    function _revokeFingerprint(string calldata fingerprintHash, address revoker) internal {
         // Store revocation data
         revocations[fingerprintHash] = RevocationData({
             revoked: true,
             revokedAt: block.timestamp,
-            revokedBy: msg.sender
+            revokedBy: revoker
         });
-        
+
         // Emit the revocation event
         emit FingerprintRevoked(
             fingerprintHash,
-            msg.sender,
+            revoker,
+            block.timestamp
+        );
+    }
+
+    /**
+     * @dev Admin function to transfer ownership of a fingerprint
+     * @param fingerprintHash The hash of the fingerprint to transfer
+     * @param newOwner The new owner address for the fingerprint
+     */
+    function transferFingerprintOwnership(
+        string calldata fingerprintHash,
+        address newOwner
+    ) external onlyOwner whenNotPaused {
+        // Ensure the fingerprint exists
+        require(fingerprints[fingerprintHash].exists, "Fingerprint does not exist");
+
+        // Ensure the new owner is not the zero address
+        require(newOwner != address(0), "New owner cannot be the zero address");
+
+        // Store the previous owner for the event
+        address previousOwner = fingerprints[fingerprintHash].registeredBy;
+
+        // Ensure the new owner is different from the current owner
+        require(previousOwner != newOwner, "New owner must be different from current owner");
+
+        // Update the registeredBy address
+        fingerprints[fingerprintHash].registeredBy = newOwner;
+
+        // Emit the ownership transfer event
+        emit FingerprintOwnershipTransferred(
+            fingerprintHash,
+            previousOwner,
+            newOwner,
             block.timestamp
         );
     }

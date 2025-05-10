@@ -88,6 +88,7 @@ The application will be available at http://localhost:3000.
 2. **Register an AI Agent Fingerprint**:
    - Fill in the agent details (ID, name, provider, version)
    - Click "Generate" to create a unique fingerprint hash based on the agent details, or manually input a hash
+   - Optionally enable EIP-712 typed data signatures for enhanced security
    - Submit the form to register on the blockchain
    - [View Registration Example](docs/Register%20Agent%20Fingerprint.pdf)
 
@@ -98,6 +99,15 @@ The application will be available at http://localhost:3000.
    - [View Verification Example](docs/Verify%20Agent%20Fingerprint.pdf)
 
 The fingerprint hash is generated using the keccak256 algorithm, combining the agent's ID, name, provider, version, and a timestamp to ensure uniqueness.
+
+### EIP-712 Typed Data Signatures
+
+This project also supports EIP-712 typed data signatures for enhanced security and structure:
+
+- **Structured Data**: EIP-712 provides a structured format with explicit typing for all fields
+- **Human-Readable Format**: Makes signatures more interpretable and prevents signature replay attacks
+- **Domain Separation**: Includes domain information to prevent cross-application signature reuse
+- **Optional Feature**: Can be enabled via a checkbox during agent registration
 
 ## Blockchain Networks
 

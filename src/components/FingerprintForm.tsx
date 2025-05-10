@@ -19,14 +19,22 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ blockchainService, on
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedHash, setGeneratedHash] = useState(false);
+  const [useEIP712, setUseEIP712] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Reset generated hash state if any field other than fingerprintHash changes
-    if (name !== 'fingerprintHash' && generatedHash) {
-      setGeneratedHash(false);
+    const { name, value, type, checked } = e.target;
+
+    if (type === 'checkbox') {
+      if (name === 'useEIP712') {
+        setUseEIP712(checked);
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+
+      // Reset generated hash state if any field other than fingerprintHash changes
+      if (name !== 'fingerprintHash' && generatedHash) {
+        setGeneratedHash(false);
+      }
     }
   };
   
@@ -75,8 +83,9 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ blockchainService, on
     setError(null);
     
     try {
-      const success = await blockchainService.registerFingerprint(formData);
-      
+      // Pass the useEIP712 flag to the blockchain service
+      const success = await blockchainService.registerFingerprint(formData, useEIP712);
+
       if (success) {
         onSuccess(formData);
       } else {
@@ -168,7 +177,23 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ blockchainService, on
             Format: 0x followed by 64 hexadecimal characters, or click "Generate" to create automatically
           </div>
         </div>
-        
+
+        <div className="form-group checkbox-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              name="useEIP712"
+              checked={useEIP712}
+              onChange={handleChange}
+              disabled={submitting}
+            />
+            Use EIP-712 typed data signature (enhanced security)
+          </label>
+          <div className="input-help">
+            EIP-712 provides better security with human-readable, structured data in signatures
+          </div>
+        </div>
+
         <button type="submit" disabled={submitting}>
           {submitting ? 'Registering...' : 'Register Fingerprint'}
         </button>

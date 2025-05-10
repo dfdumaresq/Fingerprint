@@ -230,6 +230,23 @@ button:disabled {
   margin-top: 0.3rem;
 }
 
+.checkbox-group {
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+}
+
 .valid-input {
   border-color: var(--success-color) !important;
   background-color: #f0fff0;
@@ -329,4 +346,26 @@ footer {
   word-break: break-all;
   color: var(--secondary-color);
   font-size: 0.75rem;
+}
+
+/* Signature Information */
+.signature-info {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.signature-info h4 {
+  color: var(--secondary-color);
+  margin-bottom: 0.5rem;
+}
+
+.valid-signature {
+  color: var(--success-color);
+  font-weight: bold;
+}
+
+.invalid-signature {
+  color: var(--error-color);
+  font-weight: bold;
 }

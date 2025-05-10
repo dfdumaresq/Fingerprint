@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BlockchainService } from '../services/blockchain.service';
 import { Agent } from '../types';
-import { isValidFingerprintFormat, formatTimestamp } from '../utils/fingerprint.utils';
+import { isValidFingerprintFormat, formatTimestamp, formatAddress } from '../utils/fingerprint.utils';
 
 interface VerifyFingerprintProps {
   blockchainService: BlockchainService;
@@ -11,7 +11,12 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
   const [fingerprintHash, setFingerprintHash] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verificationAttempted, setVerificationAttempted] = useState(false);
-  const [result, setResult] = useState<{ verified: boolean; agent: Agent | null }>({
+  const [result, setResult] = useState<{
+    verified: boolean;
+    agent: Agent | null;
+    signatureValid?: boolean;
+    signerAddress?: string;
+  }>({
     verified: false,
     agent: null
   });
@@ -93,10 +98,41 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
     try {
       const agent = await blockchainService.verifyFingerprint(fingerprintHash);
 
-      setResult({
-        verified: agent !== null,
-        agent
-      });
+      if (agent) {
+        let signatureValid = undefined;
+        let signerAddress = undefined;
+
+        // Check for EIP-712 signature information if available
+        if (agent.signature && agent.signerAddress) {
+          // Verify the EIP-712 signature
+          const recoveredAddress = blockchainService.verifyEIP712Signature(
+            agent.signature,
+            {
+              id: agent.id,
+              name: agent.name,
+              provider: agent.provider,
+              version: agent.version
+            },
+            agent.createdAt
+          );
+
+          signatureValid = recoveredAddress === agent.signerAddress;
+          signerAddress = agent.signerAddress;
+        }
+
+        setResult({
+          verified: true,
+          agent,
+          signatureValid,
+          signerAddress
+        });
+      } else {
+        setResult({
+          verified: false,
+          agent: null
+        });
+      }
+
       // Mark that verification has been attempted
       setVerificationAttempted(true);
     } catch (err) {
@@ -151,6 +187,19 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
           <p><strong>Provider:</strong> {result.agent.provider}</p>
           <p><strong>Version:</strong> {result.agent.version}</p>
           <p><strong>Created At:</strong> {formatTimestamp(result.agent.createdAt)}</p>
+
+          {result.agent.signature && (
+            <div className="signature-info">
+              <h4>EIP-712 Signature Information</h4>
+              <p><strong>Signature Valid:</strong> {result.signatureValid ?
+                <span className="valid-signature">✓ Valid</span> :
+                <span className="invalid-signature">✗ Invalid</span>
+              }</p>
+              {result.signerAddress && (
+                <p><strong>Signed By:</strong> {formatAddress(result.signerAddress)}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
       

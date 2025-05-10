@@ -6,6 +6,8 @@ export interface Agent {
   version: string;
   fingerprintHash: string;
   createdAt: number;
+  signature?: string;
+  signerAddress?: string;
 }
 
 // Blockchain types
@@ -20,4 +22,13 @@ export interface VerificationResult {
   isVerified: boolean;
   fingerprintData?: Agent;
   error?: string;
+  signatureValid?: boolean;
+  signerAddress?: string;
+}
+
+// EIP-712 types
+export interface SignatureData {
+  signature: string;
+  signerAddress: string;
+  timestamp: number;
 }

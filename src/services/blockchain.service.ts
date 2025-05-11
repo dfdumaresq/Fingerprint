@@ -6,8 +6,26 @@ import {
   signAgentFingerprint,
   verifyAgentFingerprintSignature,
   EIP712Domain,
-  AgentFingerprintMessage
+  AgentFingerprintMessage,
+  TypedData
 } from '../utils/eip712.utils';
+import {
+  isEIP712Domain,
+  isAgentFingerprintMessage,
+  isValidEIP712Signature,
+  validateAgentFingerprintMessage
+} from '../utils/eip712.guards';
+import {
+  EIP712Error,
+  EIP712SigningError,
+  EIP712DomainError,
+  EIP712MessageError,
+  EIP712VerificationError,
+  WalletNotConnectedError,
+  UserRejectedSignatureError,
+  isUserRejectionError,
+  createProperError
+} from '../utils/eip712.errors';
 
 // Simple ABI for interacting with a smart contract that stores fingerprints
 const ABI = [
@@ -49,7 +67,7 @@ export class BlockchainService {
    * @param agent Agent information (without the fingerprint hash)
    * @returns A unique fingerprint hash
    */
-  public generateFingerprintHash(agent: Omit<Agent, 'createdAt' | 'fingerprintHash'>): string {
+  public generateFingerprintHash(agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>): string {
     // Combine agent data into a single string
     const dataString = `${agent.id}-${agent.name}-${agent.provider}-${agent.version}-${Date.now()}`;
     
@@ -65,8 +83,7 @@ export class BlockchainService {
       console.log('Connecting wallet...');
       // This is a simplified example. In a real application, you would use Web3Modal or similar
       if (!window.ethereum) {
-        console.error('No ethereum provider found. Please install MetaMask.');
-        throw new Error("No ethereum provider found. Please install MetaMask.");
+        throw new WalletNotConnectedError("No ethereum provider found. Please install MetaMask.");
       }
 
       console.log('Ethereum provider found, checking if already connected...');
@@ -87,7 +104,6 @@ export class BlockchainService {
           
           // Convert to decimal and check
           if (parseInt(chainId, 16) !== 11155111) {
-            console.error('Please connect to Sepolia testnet (Chain ID: 11155111)');
             throw new Error('Please connect to Sepolia testnet (Chain ID: 11155111)');
           }
           
@@ -117,7 +133,12 @@ export class BlockchainService {
         });
         console.log('Account access granted');
       } catch (err: any) {
-        // Handle the case where the user denies the request or it's already in progress
+        // Check if the user rejected the request
+        if (isUserRejectionError(err)) {
+          throw new UserRejectedSignatureError();
+        }
+        
+        // Handle the case where the request is already in progress
         if (err && err.code === -32002) {
           console.log('MetaMask is already processing a request. Please check the MetaMask extension and approve the connection.');
           throw new Error('MetaMask connection already in progress. Please check the MetaMask extension.');
@@ -131,7 +152,6 @@ export class BlockchainService {
       
       // Convert to decimal and check
       if (parseInt(chainId, 16) !== 11155111) {
-        console.error('Please connect to Sepolia testnet (Chain ID: 11155111)');
         throw new Error('Please connect to Sepolia testnet (Chain ID: 11155111)');
       }
       
@@ -148,6 +168,12 @@ export class BlockchainService {
       return address;
     } catch (error) {
       console.error('Failed to connect wallet:', error);
+      
+      // Re-throw user rejection errors
+      if (error instanceof UserRejectedSignatureError) {
+        throw error;
+      }
+      
       this.isConnected = false;
       return null;
     }
@@ -158,19 +184,20 @@ export class BlockchainService {
    * @param agent Agent information including fingerprint hash
    * @param useEIP712 Whether to use EIP-712 typed data for signature
    * @returns Boolean indicating success or failure
+   * @throws Various EIP712 errors if signing fails
    */
   public async registerFingerprint(
     agent: Omit<Agent, 'createdAt'>,
     useEIP712: boolean = false
   ): Promise<boolean> {
     if (!this.isConnected) {
-      throw new Error('Not connected to blockchain');
+      throw new WalletNotConnectedError('Not connected to blockchain');
     }
 
     try {
       // Ensure we have a connected wallet
       if (!window.ethereum) {
-        throw new Error("No ethereum provider found. Please install MetaMask.");
+        throw new WalletNotConnectedError("No ethereum provider found. Please install MetaMask.");
       }
 
       // Re-connect with the signer to ensure we can send transactions
@@ -190,7 +217,7 @@ export class BlockchainService {
         // Generate and add the EIP-712 signature
         const signatureData = await this.generateEIP712Signature(agentData);
         if (!signatureData) {
-          throw new Error('Failed to generate EIP-712 signature');
+          throw new EIP712SigningError('Failed to generate EIP-712 signature');
         }
 
         // Store the signature data for later verification
@@ -216,8 +243,13 @@ export class BlockchainService {
 
       return true;
     } catch (error) {
+      // Check for specific error types
+      if (isUserRejectionError(error)) {
+        throw new UserRejectedSignatureError();
+      }
+      
       console.error('Failed to register fingerprint:', error);
-      return false;
+      throw createProperError(error, 'Failed to register fingerprint');
     }
   }
 
@@ -253,7 +285,7 @@ export class BlockchainService {
 
   public async verifyFingerprint(fingerprintHash: string): Promise<Agent | null> {
     if (!this.isConnected) {
-      throw new Error('Not connected to blockchain');
+      throw new WalletNotConnectedError('Not connected to blockchain');
     }
 
     try {
@@ -364,7 +396,7 @@ export class BlockchainService {
    */
   public async revokeFingerprint(fingerprintHash: string): Promise<boolean> {
     if (!this.isConnected) {
-      throw new Error('Not connected to blockchain');
+      throw new WalletNotConnectedError('Not connected to blockchain');
     }
 
     try {
@@ -378,7 +410,7 @@ export class BlockchainService {
 
       // Ensure we have a connected wallet
       if (!window.ethereum) {
-        throw new Error("No ethereum provider found. Please install MetaMask.");
+        throw new WalletNotConnectedError("No ethereum provider found. Please install MetaMask.");
       }
 
       // Re-connect with the signer to ensure we can send transactions
@@ -396,16 +428,16 @@ export class BlockchainService {
 
       return true;
     } catch (error) {
+      // Check for user rejection
+      if (isUserRejectionError(error)) {
+        throw new UserRejectedSignatureError();
+      }
+      
       console.error('Failed to revoke fingerprint:', error);
       return false;
     }
   }
 
-  /**
-   * Check if a fingerprint has been revoked
-   * @param fingerprintHash The hash of the fingerprint to check
-   * @returns RevocationData if revoked, null if not supported or not revoked
-   */
   /**
    * Check if the current contract supports revocation functionality
    * @returns Boolean indicating whether revocation is supported
@@ -440,9 +472,14 @@ export class BlockchainService {
     }
   }
 
+  /**
+   * Check if a fingerprint has been revoked
+   * @param fingerprintHash The hash of the fingerprint to check
+   * @returns RevocationData if revoked, null if not supported or not revoked
+   */
   public async isRevoked(fingerprintHash: string): Promise<RevocationData | null> {
     if (!this.isConnected) {
-      throw new Error('Not connected to blockchain');
+      throw new WalletNotConnectedError('Not connected to blockchain');
     }
 
     try {
@@ -481,12 +518,15 @@ export class BlockchainService {
    * Generate a typed data signature for agent fingerprint using EIP-712
    * @param agent Agent information (without the fingerprint hash and createdAt)
    * @returns Object containing signature, signer address and timestamp
+   * @throws EIP712Error if any part of the process fails
    */
-  public async generateEIP712Signature(agent: Omit<Agent, 'createdAt' | 'fingerprintHash'>): Promise<SignatureData | null> {
+  public async generateEIP712Signature(
+    agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>
+  ): Promise<SignatureData> {
     try {
       // Ensure we have a connected wallet
       if (!window.ethereum) {
-        throw new Error("No ethereum provider found. Please install MetaMask.");
+        throw new WalletNotConnectedError("No ethereum provider found. Please install MetaMask.");
       }
 
       // Get the provider and signer
@@ -500,19 +540,61 @@ export class BlockchainService {
 
       // Create the EIP-712 domain and message
       const domain = createEIP712Domain(chainIdNumber, this.contract.target as string);
+      
+      // Validate the domain
+      if (!isEIP712Domain(domain)) {
+        throw new EIP712DomainError('Invalid EIP-712 domain parameters', domain);
+      }
+      
       const message = createAgentFingerprintMessage(agent);
+      
+      // Validate the message
+      const messageErrors = validateAgentFingerprintMessage(message);
+      if (messageErrors.length > 0) {
+        throw new EIP712MessageError(
+          `Invalid EIP-712 message: ${messageErrors.join(', ')}`,
+          message,
+          messageErrors
+        );
+      }
 
       // Sign the message
-      const signature = await signAgentFingerprint(signer, domain, message);
+      try {
+        const signature = await signAgentFingerprint(signer, domain, message);
+        
+        // Validate the returned signature
+        if (!isValidEIP712Signature(signature)) {
+          throw new EIP712SigningError(`Invalid signature format: ${signature}`);
+        }
 
-      return {
-        signature,
-        signerAddress,
-        timestamp: message.timestamp
-      };
+        return {
+          signature,
+          signerAddress,
+          timestamp: message.timestamp
+        };
+      } catch (error) {
+        // Check if the user rejected the signing request
+        if (isUserRejectionError(error)) {
+          throw new UserRejectedSignatureError();
+        }
+        
+        // Otherwise, wrap in a signing error
+        throw new EIP712SigningError(
+          'Failed to sign EIP-712 message',
+          createProperError(error)
+        );
+      }
     } catch (error) {
+      // Re-throw EIP712 errors
+      if (error instanceof EIP712Error) {
+        throw error;
+      }
+      
       console.error('Failed to generate EIP-712 signature:', error);
-      return null;
+      throw new EIP712SigningError(
+        'Failed to generate EIP-712 signature', 
+        createProperError(error)
+      );
     }
   }
 
@@ -522,19 +604,35 @@ export class BlockchainService {
    * @param agent The agent data
    * @param timestamp The timestamp when the signature was created
    * @returns The address that signed the message, or null if invalid
+   * @throws EIP712VerificationError if verification fails
    */
   public verifyEIP712Signature(
     signature: string,
-    agent: Omit<Agent, 'createdAt' | 'fingerprintHash'>,
+    agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>,
     timestamp: number
   ): string | null {
     try {
+      // Validate signature format
+      if (!isValidEIP712Signature(signature)) {
+        throw new EIP712VerificationError(
+          'Invalid EIP-712 signature format',
+          signature
+        );
+      }
+      
       // Get the chainId from the configuration
       // Use the chainId from the BlockchainConfig to ensure backward compatibility
       const chainId = this.provider._network?.chainId || this.config.chainId;
 
       // Create the domain and message objects
       const domain = createEIP712Domain(chainId, this.contract.target as string);
+      
+      // Validate domain
+      if (!isEIP712Domain(domain)) {
+        throw new EIP712DomainError('Invalid EIP-712 domain parameters', domain);
+      }
+      
+      // Create message with provided timestamp
       const message: AgentFingerprintMessage = {
         id: agent.id,
         name: agent.name,
@@ -542,10 +640,20 @@ export class BlockchainService {
         version: agent.version,
         timestamp: timestamp
       };
+      
+      // Validate message
+      if (!isAgentFingerprintMessage(message)) {
+        throw new EIP712MessageError('Invalid EIP-712 message format', message);
+      }
 
       // Verify the signature
       return verifyAgentFingerprintSignature(signature, domain, message);
     } catch (error) {
+      // Re-throw EIP712 errors
+      if (error instanceof EIP712Error) {
+        throw error;
+      }
+      
       console.error('Failed to verify EIP-712 signature:', error);
       return null;
     }

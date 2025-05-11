@@ -19,22 +19,23 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
 
   // Check if revocation is supported on component mount
   useEffect(() => {
-    // Check if we're using the live contract that doesn't support revocation
-    const liveContractWithoutRevocation = "0x92eF65Ba802b38F3A87a3Ae292a4624FA3040930";
-    const isUsingLiveContract = blockchainService.contract.target === liveContractWithoutRevocation;
+    // Use the BlockchainService's supportsRevocation method to check for compatibility
+    const checkRevocationSupport = async () => {
+      try {
+        const isSupported = await blockchainService.supportsRevocation();
+        setIsRevocationSupported(isSupported);
 
-    // Check if the contract has the isRevoked method
-    const hasIsRevokedMethod = typeof blockchainService.contract.isRevoked === 'function';
+        if (!isSupported) {
+          setError("The current contract deployment does not support revocation. This feature requires a contract upgrade.");
+        }
+      } catch (err) {
+        console.error("Error checking revocation support:", err);
+        setIsRevocationSupported(false);
+        setError("Unable to determine if revocation is supported. This feature may not be available.");
+      }
+    };
 
-    // Contract must both NOT be the live contract and HAVE the isRevoked method
-    const isSupported = !isUsingLiveContract && hasIsRevokedMethod;
-    setIsRevocationSupported(isSupported);
-
-    if (isUsingLiveContract) {
-      setError("This is the production contract on Sepolia testnet which does not support revocation. This feature requires a contract upgrade.");
-    } else if (!hasIsRevokedMethod) {
-      setError("The current contract deployment does not support revocation. This feature requires a contract upgrade.");
-    }
+    checkRevocationSupport();
   }, [blockchainService]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,15 +128,30 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
     
     try {
       const success = await blockchainService.revokeFingerprint(fingerprintHash);
-      
+
       if (success) {
         setSuccess(true);
         onSuccess(); // Callback to parent component
       } else {
-        setError('Failed to revoke fingerprint');
+        setError('Failed to revoke fingerprint. This could be due to a transaction rejection, network issue, or insufficient permissions.');
       }
     } catch (err) {
-      setError('Error revoking fingerprint: ' + (err instanceof Error ? err.message : String(err)));
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      // Handle possible errors with more friendly messages
+      if (errorMessage.includes("Only the original registrant")) {
+        setError('You are not authorized to revoke this fingerprint. Only the original registrant can revoke their fingerprints.');
+      } else if (errorMessage.includes("already revoked")) {
+        setError('This fingerprint has already been revoked.');
+      } else if (errorMessage.includes("does not exist")) {
+        setError('This fingerprint does not exist on the blockchain.');
+      } else if (errorMessage.includes("user denied")) {
+        setError('Transaction was rejected in your wallet. You must approve the transaction to revoke the fingerprint.');
+      } else if (errorMessage.includes("Pausable: paused")) {
+        setError('The contract is currently paused by the administrator. Please try again later.');
+      } else {
+        setError('Error revoking fingerprint: ' + errorMessage);
+      }
     } finally {
       setRevoking(false);
     }
@@ -149,13 +165,15 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
         <div className="upgrade-required-card">
           <h3>Feature Not Available</h3>
           <p>The current contract deployment does not support revocation.</p>
-          <p>This feature requires a contract upgrade to implement revocation functionality.</p>
+          <p>This feature requires a contract that implements OpenZeppelin's Ownable and revocation functionality.</p>
+          <p>Please contact the contract administrator if you believe this is an error.</p>
         </div>
       ) : (
         <>
           <p className="revocation-warning">
             ⚠️ Warning: Revoking a fingerprint is permanent and cannot be undone.
             Only the original registrant of the fingerprint can revoke it.
+            (Contract owners with "onlyOwner" permissions can also manage revocations through administrative functions.)
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -196,6 +214,8 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
             <div className="success-card">
               <h3>Fingerprint Successfully Revoked</h3>
               <p>The fingerprint has been permanently marked as revoked on the blockchain.</p>
+              <p>All verification requests for this fingerprint will now show it as invalid.</p>
+              <p>The revocation transaction has been recorded with a timestamp and your wallet address.</p>
             </div>
           )}
         </>

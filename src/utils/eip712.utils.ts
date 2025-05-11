@@ -6,9 +6,34 @@ import { ethers } from 'ethers';
 import { Agent } from '../types';
 
 /**
+ * TypedDataField defines a field in an EIP-712 struct
+ */
+export interface TypedDataField {
+  name: string;
+  type: string;
+}
+
+/**
+ * TypedDataTypes defines the types used in an EIP-712 typed data structure
+ */
+export interface TypedDataTypes {
+  [typeName: string]: Array<TypedDataField>;
+}
+
+/**
+ * EIP-712 Domain parameters
+ */
+export interface EIP712Domain {
+  name: string;
+  version: string;
+  chainId: number;
+  verifyingContract: string;
+}
+
+/**
  * EIP-712 Domain definition for AI Fingerprint app
  */
-export const EIP712_DOMAIN = {
+export const EIP712_DOMAIN: Omit<EIP712Domain, 'chainId' | 'verifyingContract'> = {
   name: 'AIFingerprint',
   version: '1',
   // chainId is set dynamically at runtime
@@ -18,7 +43,7 @@ export const EIP712_DOMAIN = {
 /**
  * EIP-712 Message type definitions for agent fingerprinting
  */
-export const AGENT_FINGERPRINT_TYPES = {
+export const AGENT_FINGERPRINT_TYPES: TypedDataTypes = {
   EIP712Domain: [
     { name: 'name', type: 'string' },
     { name: 'version', type: 'string' },
@@ -46,13 +71,13 @@ export interface AgentFingerprintMessage {
 }
 
 /**
- * EIP-712 domain configuration
+ * Generic typed data object structure
  */
-export interface EIP712Domain {
-  name: string;
-  version: string;
-  chainId: number;  // We'll convert bigint to number in the createEIP712Domain function
-  verifyingContract: string;
+export interface TypedData<T extends Record<string, any>> {
+  types: TypedDataTypes;
+  primaryType: string;
+  domain: EIP712Domain;
+  message: T;
 }
 
 /**
@@ -75,7 +100,7 @@ export function createEIP712Domain(chainId: number | bigint, contractAddress: st
  * @returns EIP-712 formatted message
  */
 export function createAgentFingerprintMessage(
-  agent: Omit<Agent, 'createdAt' | 'fingerprintHash'>
+  agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>
 ): AgentFingerprintMessage {
   return {
     id: agent.id,
@@ -97,7 +122,7 @@ export function hashAgentFingerprint(
   message: AgentFingerprintMessage
 ): string {
   // Create the typed data object
-  const typedData = {
+  const typedData: TypedData<AgentFingerprintMessage> = {
     types: AGENT_FINGERPRINT_TYPES,
     primaryType: 'AgentFingerprint',
     domain,
@@ -124,22 +149,16 @@ export async function signAgentFingerprint(
   domain: EIP712Domain,
   message: AgentFingerprintMessage
 ): Promise<string> {
-  // Create the typed data object
-  const typedData = {
-    domain,
-    types: {
-      AgentFingerprint: AGENT_FINGERPRINT_TYPES.AgentFingerprint
-    },
-    primaryType: 'AgentFingerprint',
-    message
+  // Create the typed data types object
+  const types = {
+    AgentFingerprint: AGENT_FINGERPRINT_TYPES.AgentFingerprint
   };
 
   // Use ethers.js v6 to sign the typed data
-  // In ethers v6, signTypedData is used instead of _signTypedData
   return await signer.signTypedData(
-    typedData.domain,
-    typedData.types,
-    typedData.message
+    domain,
+    types,
+    message
   );
 }
 
@@ -162,7 +181,6 @@ export function verifyAgentFingerprintSignature(
     };
 
     // Recover the signer address from the signature
-    // In ethers v6, this is the correct way to verify a typed data signature
     const recoveredAddress = ethers.verifyTypedData(
       domain,
       types,
@@ -187,8 +205,8 @@ export function verifyAgentFingerprintSignature(
 export function createAgentFingerprintTypedData(
   chainId: number,
   contractAddress: string,
-  agent: Omit<Agent, 'createdAt' | 'fingerprintHash'>
-) {
+  agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>
+): TypedData<AgentFingerprintMessage> {
   const domain = createEIP712Domain(chainId, contractAddress);
   const message = createAgentFingerprintMessage(agent);
 

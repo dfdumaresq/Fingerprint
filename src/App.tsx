@@ -4,32 +4,26 @@ import ConnectWallet from './components/ConnectWallet';
 import FingerprintForm from './components/FingerprintForm';
 import VerifyFingerprint from './components/VerifyFingerprint';
 import RevokeFingerprint from './components/RevokeFingerprint';
-import { BlockchainService } from './services/blockchain.service';
-import { BlockchainConfig, Agent } from './types';
+import { Agent } from './types';
+import { BlockchainProvider, useBlockchain } from './contexts/BlockchainContext';
 
-// Blockchain configuration - would typically come from environment variables
-const blockchainConfig: BlockchainConfig = {
-  // For development use Sepolia testnet
-  networkUrl: 'https://eth-sepolia.g.alchemy.com/v2/HFnhVrrSQ3ZuUoP7csCxDfSIvJ2Cm9GE', 
-  chainId: 11155111, // Sepolia testnet
-  // Deployed contract address on Sepolia
-  contractAddress: '0x92eF65Ba802b38F3A87a3Ae292a4624FA3040930'
+// Main App wrapper to provide the BlockchainProvider context
+const AppWrapper: React.FC = () => {
+  return (
+    <BlockchainProvider>
+      <AppContent />
+    </BlockchainProvider>
+  );
 };
 
-const App: React.FC = () => {
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
+// Actual App content that uses the BlockchainContext
+const AppContent: React.FC = () => {
+  // Get blockchain context
+  const { walletAddress, isConnected, service } = useBlockchain();
+  
   const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke'>('register');
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredAgent, setRegisteredAgent] = useState<Omit<Agent, 'createdAt'> | null>(null);
-
-  // Initialize blockchain service
-  const blockchainService = new BlockchainService(blockchainConfig);
-
-  const handleWalletConnect = (address: string) => {
-    setWalletConnected(true);
-    setWalletAddress(address);
-  };
 
   const handleRegistrationSuccess = (agent: Omit<Agent, 'createdAt'>) => {
     setRegistrationSuccess(true);
@@ -49,7 +43,7 @@ const App: React.FC = () => {
       </header>
 
       <main>
-        {!walletConnected ? (
+        {!isConnected ? (
           <section className="connect-section">
             <h2>Connect Your Wallet</h2>
             <p>Connect your Ethereum wallet to register or verify AI agent fingerprints</p>
@@ -61,10 +55,7 @@ const App: React.FC = () => {
               </ol>
               <p><small>Need Sepolia ETH? Get it from <a href="https://sepoliafaucet.com/" target="_blank" rel="noopener noreferrer">Sepolia Faucet</a></small></p>
             </div>
-            <ConnectWallet 
-              blockchainService={blockchainService} 
-              onConnect={handleWalletConnect} 
-            />
+            <ConnectWallet/>
           </section>
         ) : (
           <>
@@ -113,21 +104,18 @@ const App: React.FC = () => {
                       }}>Register Another</button>
                     </div>
                   ) : (
-                    <FingerprintForm 
-                      blockchainService={blockchainService}
-                      onSuccess={handleRegistrationSuccess}
-                    />
+                    <FingerprintForm onSuccess={handleRegistrationSuccess} />
                   )}
                 </>
               )}
 
               {activeTab === 'verify' && (
-                <VerifyFingerprint blockchainService={blockchainService} />
+                <VerifyFingerprint blockchainService={service!} />
               )}
 
               {activeTab === 'revoke' && (
                 <RevokeFingerprint
-                  blockchainService={blockchainService}
+                  blockchainService={service!}
                   onSuccess={handleRevocationSuccess}
                 />
               )}
@@ -153,4 +141,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default AppWrapper;

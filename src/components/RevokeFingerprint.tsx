@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { BlockchainService } from '../services/blockchain.service';
 import { isValidFingerprintFormat } from '../utils/fingerprint.utils';
+import { useBlockchain } from '../contexts/BlockchainContext';
 
 interface RevokeFingerprintProps {
-  blockchainService: BlockchainService;
+  blockchainService?: any; // Keep for backward compatibility, but we'll use context
   onSuccess: () => void;
 }
 
-const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService, onSuccess }) => {
+const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService: propBlockchainService, onSuccess }) => {
+  // Get blockchain service from context
+  const { service: contextService } = useBlockchain();
+  
+  // Use the provided service or fall back to the context
+  const service = propBlockchainService || contextService;
   const [fingerprintHash, setFingerprintHash] = useState('');
   const [revoking, setRevoking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,10 +24,16 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
 
   // Check if revocation is supported on component mount
   useEffect(() => {
-    // Use the BlockchainService's supportsRevocation method to check for compatibility
+    // Use the service's supportsRevocation method to check for compatibility
     const checkRevocationSupport = async () => {
       try {
-        const isSupported = await blockchainService.supportsRevocation();
+        if (!service) {
+          setIsRevocationSupported(false);
+          setError("Blockchain service not available");
+          return;
+        }
+
+        const isSupported = await service.supportsRevocation();
         setIsRevocationSupported(isSupported);
 
         if (!isSupported) {
@@ -36,7 +47,7 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
     };
 
     checkRevocationSupport();
-  }, [blockchainService]);
+  }, [service]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -105,9 +116,14 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
       return;
     }
     
+    if (!service) {
+      setError('Blockchain service not available');
+      return;
+    }
+    
     // First check if the fingerprint exists and is not already revoked
     try {
-      const agent = await blockchainService.verifyFingerprint(fingerprintHash);
+      const agent = await service.verifyFingerprint(fingerprintHash);
       
       if (!agent) {
         setError('Fingerprint does not exist');
@@ -127,7 +143,7 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
     setError(null);
     
     try {
-      const success = await blockchainService.revokeFingerprint(fingerprintHash);
+      const success = await service.revokeFingerprint(fingerprintHash);
 
       if (success) {
         setSuccess(true);

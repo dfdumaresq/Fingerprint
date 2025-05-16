@@ -111,7 +111,8 @@ async function exampleNodeUsage() {
     const blockchainService = new SecureBlockchainService({
       networkUrl,
       contractAddress,
-      chainId
+      chainId,
+      name: 'sepolia'
     });
     
     // Connect to wallet using stored key

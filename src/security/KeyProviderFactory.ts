@@ -212,21 +212,68 @@ export class KeyProviderFactory {
    * @param config New configuration options
    */
   public updateConfig(config: Partial<KeyProviderFactoryConfig>): void {
-    this.config = {
-      ...this.config,
-      ...config,
-      envOptions: {
-        ...this.config.envOptions,
+    // Create a new config object starting with current config
+    const newConfig: KeyProviderFactoryConfig = { ...this.config };
+    
+    // Copy over simple properties
+    if (config.defaultProviderType !== undefined) {
+      newConfig.defaultProviderType = config.defaultProviderType;
+    }
+    if (config.masterKeyPassword !== undefined) {
+      newConfig.masterKeyPassword = config.masterKeyPassword;
+    }
+    if (config.masterKeySalt !== undefined) {
+      newConfig.masterKeySalt = config.masterKeySalt;
+    }
+    
+    // Handle envOptions
+    if (config.envOptions) {
+      newConfig.envOptions = {
+        ...(this.config.envOptions || {}),
         ...config.envOptions
-      },
-      encryptedFileOptions: {
-        ...this.config.encryptedFileOptions,
-        ...config.encryptedFileOptions
-      },
-      vaultOptions: {
-        ...this.config.vaultOptions,
+      };
+    }
+    
+    // Handle vaultOptions
+    if (config.vaultOptions) {
+      newConfig.vaultOptions = {
+        ...(this.config.vaultOptions || {}),
         ...config.vaultOptions
+      };
+    }
+    
+    // Handle encryptedFileOptions specially to ensure required properties are never undefined
+    if (config.encryptedFileOptions) {
+      // Start with new options
+      const newOptions = config.encryptedFileOptions;
+      
+      // Extract existing options
+      const existingOptions = this.config.encryptedFileOptions || {};
+      
+      // Create merged options ensuring required fields have values
+      const mergedOptions = {
+        ...existingOptions,       // First apply existing options
+        ...newOptions,            // Then apply new options
+      };
+
+      // Create properly typed options with guaranteed required fields
+      const newEncryptedFileOptions: EncryptedFileKeyProviderOptions = {
+        keyDirectory: mergedOptions.keyDirectory || './keys',
+        masterKey: mergedOptions.masterKey || '',
+        algorithm: mergedOptions.algorithm || 'aes-256-gcm',
+      };
+      
+      // Copy any other properties that might exist
+      for (const key in mergedOptions) {
+        if (key !== 'keyDirectory' && key !== 'masterKey' && key !== 'algorithm') {
+          (newEncryptedFileOptions as any)[key] = (mergedOptions as any)[key];
+        }
       }
-    };
+      
+      newConfig.encryptedFileOptions = newEncryptedFileOptions;
+    }
+    
+    // Set the updated config
+    this.config = newConfig;
   }
 }

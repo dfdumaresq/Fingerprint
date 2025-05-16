@@ -44,10 +44,24 @@ declare global {
 }
 
 export class BlockchainService {
+//   static generateFingerprintHash(arg0: { id: string; name: string; provider: string; version: string; }) {
+//       throw new Error('Method not implemented.');
+//   }
   private provider!: ethers.JsonRpcProvider;
   public contract!: ethers.Contract; // Changed to public to allow checking method existence
   private isConnected: boolean = false;
   private config: BlockchainConfig;
+
+  public generateFingerprintHash(agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>): string {
+    // Combine agent data into a single string
+    const dataString = `${agent.id}-${agent.name}-${agent.provider}-${agent.version}-${Date.now()}`;
+    
+    // Convert string to bytes and hash it using ethers.js keccak256
+    const dataBytes = ethers.toUtf8Bytes(dataString);
+    const hash = ethers.keccak256(dataBytes);
+    
+    return hash;
+  }
 
   constructor(config: BlockchainConfig) {
     this.config = config;
@@ -67,16 +81,16 @@ export class BlockchainService {
    * @param agent Agent information (without the fingerprint hash)
    * @returns A unique fingerprint hash
    */
-  public generateFingerprintHash(agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>): string {
-    // Combine agent data into a single string
-    const dataString = `${agent.id}-${agent.name}-${agent.provider}-${agent.version}-${Date.now()}`;
+//   public generateFingerprintHash(agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>): string {
+//     // Combine agent data into a single string
+//     const dataString = `${agent.id}-${agent.name}-${agent.provider}-${agent.version}-${Date.now()}`;
     
-    // Convert string to bytes and hash it using ethers.js keccak256
-    const dataBytes = ethers.toUtf8Bytes(dataString);
-    const hash = ethers.keccak256(dataBytes);
+//     // Convert string to bytes and hash it using ethers.js keccak256
+//     const dataBytes = ethers.toUtf8Bytes(dataString);
+//     const hash = ethers.keccak256(dataBytes);
     
-    return hash;
-  }
+//     return hash;
+//   }
 
   public async connectWallet(): Promise<string | null> {
     try {
@@ -103,8 +117,8 @@ export class BlockchainService {
           console.log('Current chain ID:', chainId);
           
           // Convert to decimal and check
-          if (parseInt(chainId, 16) !== 11155111) {
-            throw new Error('Please connect to Sepolia testnet (Chain ID: 11155111)');
+          if (parseInt(chainId, 16) !== this.config.chainId) {
+            throw new Error(`Please connect to ${this.config.name} (Chain ID: ${this.config.chainId})`);
           }
           
           console.log('Creating new provider and signer...');
@@ -151,8 +165,8 @@ export class BlockchainService {
       console.log('Current chain ID:', chainId);
       
       // Convert to decimal and check
-      if (parseInt(chainId, 16) !== 11155111) {
-        throw new Error('Please connect to Sepolia testnet (Chain ID: 11155111)');
+      if (parseInt(chainId, 16) !== this.config.chainId) {
+        throw new Error(`Please connect to ${this.config.name} (Chain ID: ${this.config.chainId})`);
       }
       
       console.log('Creating new provider and signer...');

@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { BlockchainService } from '../services/blockchain.service';
 import { Agent } from '../types';
 import { isValidFingerprintFormat, formatTimestamp, formatAddress } from '../utils/fingerprint.utils';
+import { useBlockchain } from '../contexts/BlockchainContext';
 
 interface VerifyFingerprintProps {
-  blockchainService: BlockchainService;
+  blockchainService?: any; // Keep for backward compatibility, but we'll use context
 }
 
-const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService }) => {
+const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService: propBlockchainService }) => {
+  // Get blockchain service from context
+  const { service: contextService } = useBlockchain();
+  
+  // Use the provided service or fall back to the context
+  const service = propBlockchainService || contextService;
   const [fingerprintHash, setFingerprintHash] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verificationAttempted, setVerificationAttempted] = useState(false);
@@ -96,7 +101,11 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
     setResult({ verified: false, agent: null });
 
     try {
-      const agent = await blockchainService.verifyFingerprint(fingerprintHash);
+      if (!service) {
+        throw new Error("Blockchain service not available");
+      }
+
+      const agent = await service.verifyFingerprint(fingerprintHash);
 
       if (agent) {
         let signatureValid = undefined;
@@ -105,7 +114,7 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
         // Check for EIP-712 signature information if available
         if (agent.signature && agent.signerAddress) {
           // Verify the EIP-712 signature
-          const recoveredAddress = blockchainService.verifyEIP712Signature(
+          const recoveredAddress = service.verifyEIP712Signature(
             agent.signature,
             {
               id: agent.id,

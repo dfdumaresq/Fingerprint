@@ -71,9 +71,11 @@ export class KeyManager {
     } else {
       // In development, use encrypted file storage with the provided password
       this.factory.updateConfig({
-        masterKeyPassword,
+        masterKeyPassword: process.env.MASTER_KEY_PASSWORD || '',
         encryptedFileOptions: {
-          keyDirectory: process.env.KEY_DIRECTORY || undefined
+          keyDirectory: process.env.KEY_DIRECTORY || './keys',
+          masterKey: process.env.MASTER_KEY || '',
+          algorithm: process.env.ALGORITHM || ''
         }
       });
     }
@@ -95,7 +97,7 @@ export class KeyManager {
    * @private
    */
   private getProviderForKeyType(keyType: KeyType): KeyProvider {
-    const providerType = this.keyTypeProviders.get(keyType) || this.factory.getProvider();
+    const providerType = this.keyTypeProviders.get(keyType) || KeyProviderType.ENV;
     return this.factory.getProvider(providerType);
   }
   

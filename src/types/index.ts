@@ -13,11 +13,15 @@ export interface Agent {
   revokedBy?: string;        // Address of account that revoked the fingerprint
 }
 
+// Network type
+export type NetworkType = 'sepolia' | 'goerli' | 'mainnet' | 'arbitrum' | 'polygon';
+
 // Blockchain types
 export interface BlockchainConfig {
   networkUrl: string;
   chainId: number;
   contractAddress: string;
+  name: string;
 }
 
 // Response types

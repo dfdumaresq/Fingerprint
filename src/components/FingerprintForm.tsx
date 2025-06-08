@@ -94,12 +94,13 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
 
         try {
             // Pass the useEIP712 flag to the blockchain service
-            const success = await service?.registerFingerprint(formData, useEIP712);
+            const result = await service?.registerFingerprint(formData, useEIP712);
 
-            if (success) {
+            if (result?.success) {
+                console.log('Registration successful:', result.transactionHash);
                 onSuccess(formData);
             } else {
-                setError('Failed to register fingerprint');
+                setError(result?.error || 'Failed to register fingerprint');
             }
         } catch (err) {
             setError('Error registering fingerprint: ' + (err instanceof Error ? err.message : String(err)));

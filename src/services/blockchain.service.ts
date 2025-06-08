@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { BlockchainConfig, Agent, SignatureData, RevocationData } from '../types';
+import { BlockchainConfig, Agent, SignatureData, RevocationData, RegistrationResult, RevocationResult } from '../types';
 import {
   createEIP712Domain,
   createAgentFingerprintMessage,
@@ -197,13 +197,13 @@ export class BlockchainService {
    * Register a fingerprint on the blockchain
    * @param agent Agent information including fingerprint hash
    * @param useEIP712 Whether to use EIP-712 typed data for signature
-   * @returns Boolean indicating success or failure
+   * @returns RegistrationResult with transaction details
    * @throws Various EIP712 errors if signing fails
    */
   public async registerFingerprint(
     agent: Omit<Agent, 'createdAt'>,
     useEIP712: boolean = false
-  ): Promise<boolean> {
+  ): Promise<RegistrationResult> {
     if (!this.isConnected) {
       throw new WalletNotConnectedError('Not connected to blockchain');
     }
@@ -255,7 +255,12 @@ export class BlockchainService {
       const receipt = await tx.wait();
       console.log("Transaction confirmed in block:", receipt.blockNumber);
 
-      return true;
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber,
+        fingerprintHash: agent.fingerprintHash
+      };
     } catch (error) {
       // Check for specific error types
       if (isUserRejectionError(error)) {
@@ -263,7 +268,11 @@ export class BlockchainService {
       }
       
       console.error('Failed to register fingerprint:', error);
-      throw createProperError(error, 'Failed to register fingerprint');
+      // Return error result instead of throwing for non-user-rejection errors
+      return {
+        success: false,
+        error: createProperError(error, 'Failed to register fingerprint').message
+      };
     }
   }
 
@@ -406,9 +415,9 @@ export class BlockchainService {
   /**
    * Revoke a fingerprint - can only be done by the original registrant
    * @param fingerprintHash The hash of the fingerprint to revoke
-   * @returns Boolean indicating success or failure
+   * @returns RevocationResult with transaction details
    */
-  public async revokeFingerprint(fingerprintHash: string): Promise<boolean> {
+  public async revokeFingerprint(fingerprintHash: string): Promise<RevocationResult> {
     if (!this.isConnected) {
       throw new WalletNotConnectedError('Not connected to blockchain');
     }
@@ -440,7 +449,12 @@ export class BlockchainService {
       const receipt = await tx.wait();
       console.log("Revocation transaction confirmed in block:", receipt.blockNumber);
 
-      return true;
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber,
+        revokedAt: Math.floor(Date.now() / 1000) // Current timestamp
+      };
     } catch (error) {
       // Check for user rejection
       if (isUserRejectionError(error)) {
@@ -448,7 +462,10 @@ export class BlockchainService {
       }
       
       console.error('Failed to revoke fingerprint:', error);
-      return false;
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
     }
   }
 

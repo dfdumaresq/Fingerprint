@@ -1,7 +1,15 @@
 // src/contexts/BlockchainContext.ts
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { BlockchainService } from '../services/blockchain.service';
-import { BlockchainConfig, NetworkType } from '../types';
+import { BlockchainConfig, NetworkType, Agent, VerificationResult } from '../types';
+
+// Define structured response types for CopilotKit actions
+interface BlockchainActionResult<T = any> {
+    success: boolean;
+    data?: T;
+    error?: string;
+    details?: string;
+}
 
 // Define the context type
 interface BlockchainContextType {
@@ -13,7 +21,17 @@ interface BlockchainContextType {
     network: NetworkType;
     connectWallet: () => Promise<boolean>;
     switchNetwork: (network: NetworkType) => Promise<boolean>;
-    // Add more functions as needed
+    
+    // CopilotKit-friendly action methods
+    registerAgent: (agent: { id: string; name: string; provider: string; version: string }, useEIP712?: boolean) => Promise<BlockchainActionResult<{ fingerprintHash: string; transactionHash?: string }>>;
+    verifyAgent: (fingerprintHash: string) => Promise<BlockchainActionResult<Agent>>;
+    revokeAgent: (fingerprintHash: string) => Promise<BlockchainActionResult<{ transactionHash: string }>>;
+    generateFingerprint: (agent: { id: string; name: string; provider: string; version: string }) => Promise<BlockchainActionResult<{ fingerprintHash: string }>>;
+    
+    // Additional utility methods for agents
+    getNetworkInfo: () => { name: string; chainId: number; contractAddress: string };
+    isWalletReady: () => boolean;
+    getConnectionStatus: () => { connected: boolean; address: string; network: string; loading: boolean; error: string | null };
 }
 
 // Create the context with a default value
@@ -151,6 +169,176 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     };
 
+    // CopilotKit-friendly action methods
+    const registerAgent = async (
+        agent: { id: string; name: string; provider: string; version: string }, 
+        useEIP712: boolean = false
+    ): Promise<BlockchainActionResult<{ fingerprintHash: string; transactionHash?: string }>> => {
+        if (!service || !isConnected) {
+            return {
+                success: false,
+                error: 'Blockchain service not available or wallet not connected',
+                details: !service ? 'Service not initialized' : 'Wallet not connected'
+            };
+        }
+
+        try {
+            // Generate fingerprint hash
+            const fingerprintHash = service.generateFingerprintHash(agent);
+            
+            // Create full agent object for registration
+            const fullAgent: Omit<Agent, 'createdAt'> = {
+                ...agent,
+                fingerprintHash
+            };
+
+            // Register on blockchain
+            const result = await service.registerFingerprint(fullAgent, useEIP712);
+            
+            if (result.success) {
+                return {
+                    success: true,
+                    data: { 
+                        fingerprintHash,
+                        transactionHash: result.transactionHash
+                    },
+                    details: `Agent ${agent.name} successfully registered with fingerprint ${fingerprintHash}`
+                };
+            } else {
+                return {
+                    success: false,
+                    error: result.error || 'Registration failed',
+                    details: 'Blockchain transaction was not successful'
+                };
+            }
+        } catch (err) {
+            return {
+                success: false,
+                error: 'Registration error',
+                details: err instanceof Error ? err.message : String(err)
+            };
+        }
+    };
+
+    const verifyAgent = async (fingerprintHash: string): Promise<BlockchainActionResult<Agent>> => {
+        if (!service) {
+            return {
+                success: false,
+                error: 'Blockchain service not available',
+                details: 'Service not initialized'
+            };
+        }
+
+        try {
+            const agent = await service.verifyFingerprint(fingerprintHash);
+            
+            if (agent) {
+                return {
+                    success: true,
+                    data: agent,
+                    details: `Agent verified: ${agent.name} (${agent.id}) from ${agent.provider}`
+                };
+            } else {
+                return {
+                    success: false,
+                    error: 'Verification failed',
+                    details: 'Fingerprint not found or invalid'
+                };
+            }
+        } catch (err) {
+            return {
+                success: false,
+                error: 'Verification error',
+                details: err instanceof Error ? err.message : String(err)
+            };
+        }
+    };
+
+    const revokeAgent = async (fingerprintHash: string): Promise<BlockchainActionResult<{ transactionHash: string }>> => {
+        if (!service || !isConnected) {
+            return {
+                success: false,
+                error: 'Blockchain service not available or wallet not connected',
+                details: !service ? 'Service not initialized' : 'Wallet not connected'
+            };
+        }
+
+        try {
+            const result = await service.revokeFingerprint(fingerprintHash);
+            
+            if (result.success) {
+                return {
+                    success: true,
+                    data: { transactionHash: result.transactionHash || 'Transaction completed' },
+                    details: `Fingerprint ${fingerprintHash} successfully revoked`
+                };
+            } else {
+                return {
+                    success: false,
+                    error: result.error || 'Revocation failed',
+                    details: 'Blockchain transaction was not successful'
+                };
+            }
+        } catch (err) {
+            return {
+                success: false,
+                error: 'Revocation error',
+                details: err instanceof Error ? err.message : String(err)
+            };
+        }
+    };
+
+    const generateFingerprint = async (
+        agent: { id: string; name: string; provider: string; version: string }
+    ): Promise<BlockchainActionResult<{ fingerprintHash: string }>> => {
+        if (!service) {
+            return {
+                success: false,
+                error: 'Blockchain service not available',
+                details: 'Service not initialized'
+            };
+        }
+
+        try {
+            const fingerprintHash = service.generateFingerprintHash(agent);
+            return {
+                success: true,
+                data: { fingerprintHash },
+                details: `Generated fingerprint for ${agent.name}: ${fingerprintHash}`
+            };
+        } catch (err) {
+            return {
+                success: false,
+                error: 'Fingerprint generation error',
+                details: err instanceof Error ? err.message : String(err)
+            };
+        }
+    };
+
+    // Utility methods
+    const getNetworkInfo = () => {
+        const networkConfig = NETWORKS[network];
+        return {
+            name: networkConfig.name,
+            chainId: networkConfig.chainId,
+            contractAddress: networkConfig.contractAddress
+        };
+    };
+
+    const isWalletReady = () => {
+        return !!(service && isConnected && walletAddress);
+    };
+
+    const getConnectionStatus = () => {
+        return {
+            connected: isConnected,
+            address: walletAddress,
+            network: NETWORKS[network].name,
+            loading: isLoading,
+            error
+        };
+    };
+
     // Create the context value
     const contextValue: BlockchainContextType = {
         service,
@@ -160,7 +348,14 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         error,
         network,
         connectWallet,
-        switchNetwork
+        switchNetwork,
+        registerAgent,
+        verifyAgent,
+        revokeAgent,
+        generateFingerprint,
+        getNetworkInfo,
+        isWalletReady,
+        getConnectionStatus
     };
 
     // Return the provider with the context value

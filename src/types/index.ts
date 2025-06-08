@@ -49,3 +49,19 @@ export interface RevocationData {
   revokedAt: number;
   revokedBy: string;
 }
+
+// Transaction result types for enhanced blockchain operations
+export interface TransactionResult {
+  success: boolean;
+  transactionHash?: string;
+  blockNumber?: number;
+  error?: string;
+}
+
+export interface RegistrationResult extends TransactionResult {
+  fingerprintHash?: string;
+}
+
+export interface RevocationResult extends TransactionResult {
+  revokedAt?: number;
+}

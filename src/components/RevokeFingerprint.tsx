@@ -143,13 +143,14 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
     setError(null);
     
     try {
-      const success = await service.revokeFingerprint(fingerprintHash);
+      const result = await service.revokeFingerprint(fingerprintHash);
 
-      if (success) {
+      if (result.success) {
+        console.log('Revocation successful:', result.transactionHash);
         setSuccess(true);
         onSuccess(); // Callback to parent component
       } else {
-        setError('Failed to revoke fingerprint. This could be due to a transaction rejection, network issue, or insufficient permissions.');
+        setError(result.error || 'Failed to revoke fingerprint. This could be due to a transaction rejection, network issue, or insufficient permissions.');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);

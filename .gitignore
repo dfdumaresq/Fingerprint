@@ -1,3 +1,8 @@
+# Custom .gitignore for excluding Claude Code generated content
+# Exclude the Claude Code attribution line
+*🤖 Generated with [Claude Code]*
+*Co-Authored-By: Claude <noreply@anthropic.com>*
+
 # Dependencies
 /node_modules
 /.pnp

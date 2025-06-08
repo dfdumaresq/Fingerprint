@@ -4,15 +4,21 @@ import ConnectWallet from './components/ConnectWallet';
 import FingerprintForm from './components/FingerprintForm';
 import VerifyFingerprint from './components/VerifyFingerprint';
 import RevokeFingerprint from './components/RevokeFingerprint';
+import CopilotKitActions from './components/CopilotKitActions';
 import { Agent } from './types';
 import { BlockchainProvider, useBlockchain } from './contexts/BlockchainContext';
+import { CopilotKit } from '@copilotkit/react-core';
+import { CopilotChat } from '@copilotkit/react-ui';
 
-// Main App wrapper to provide the BlockchainProvider context
+// Main App wrapper to provide the BlockchainProvider and CopilotKit context
 const AppWrapper: React.FC = () => {
   return (
-    <BlockchainProvider>
-      <AppContent />
-    </BlockchainProvider>
+    <CopilotKit runtimeUrl="/api/copilotkit">
+      <BlockchainProvider>
+        <CopilotKitActions />
+        <AppContent />
+      </BlockchainProvider>
+    </CopilotKit>
   );
 };
 
@@ -21,7 +27,7 @@ const AppContent: React.FC = () => {
   // Get blockchain context
   const { walletAddress, isConnected, service } = useBlockchain();
   
-  const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke'>('register');
+  const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke' | 'ai-assistant'>('register');
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredAgent, setRegisteredAgent] = useState<Omit<Agent, 'createdAt'> | null>(null);
 
@@ -82,6 +88,12 @@ const AppContent: React.FC = () => {
               >
                 Revoke Fingerprint
               </button>
+              <button
+                className={`tab ${activeTab === 'ai-assistant' ? 'active' : ''}`}
+                onClick={() => setActiveTab('ai-assistant')}
+              >
+                🤖 AI Assistant
+              </button>
             </div>
 
             <div className="tab-content">
@@ -118,6 +130,39 @@ const AppContent: React.FC = () => {
                   blockchainService={service!}
                   onSuccess={handleRevocationSuccess}
                 />
+              )}
+
+              {activeTab === 'ai-assistant' && (
+                <div className="ai-assistant-tab">
+                  <h2>🤖 AI Assistant for Blockchain Operations</h2>
+                  <div className="ai-assistant-info">
+                    <p>
+                      <strong>Your AI-powered blockchain assistant is ready!</strong> 
+                      You can use natural language to interact with the fingerprinting system.
+                    </p>
+                    <div className="ai-capabilities">
+                      <h3>✨ What I can help you with:</h3>
+                      <ul>
+                        <li><strong>Register agents:</strong> "Register a new agent called GPT-4 from OpenAI"</li>
+                        <li><strong>Verify fingerprints:</strong> "Check if this fingerprint is valid: 0x123..."</li>
+                        <li><strong>Generate fingerprints:</strong> "Generate a fingerprint for Claude-3 from Anthropic"</li>
+                        <li><strong>Revoke fingerprints:</strong> "Revoke this agent fingerprint: 0x456..."</li>
+                        <li><strong>Check status:</strong> "What's my wallet status?" or "Show blockchain info"</li>
+                        <li><strong>Connect wallet:</strong> "Help me connect my MetaMask wallet"</li>
+                      </ul>
+                    </div>
+                    {!isConnected && (
+                      <div className="ai-wallet-notice">
+                        <p>💡 <strong>Note:</strong> Connect your wallet first to enable agent registration and revocation through the AI assistant.</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="ai-chat-container">
+                    <CopilotChat
+                      instructions="You are an AI assistant for the Blockchain AI Agent Fingerprinting System. Help users register, verify, and manage AI agent fingerprints on the blockchain. Always provide clear explanations about blockchain transactions and agent verification. Use the available actions to perform blockchain operations when requested."
+                    />
+                  </div>
+                </div>
               )}
             </div>
           </>

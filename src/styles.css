@@ -434,3 +434,71 @@ footer {
   color: var(--error-color);
   font-weight: bold;
 }
+
+/* AI Assistant Tab Styles */
+.ai-assistant-tab {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.ai-assistant-info {
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid #d1e7dd;
+}
+
+.ai-capabilities {
+  margin-top: 1rem;
+}
+
+.ai-capabilities h3 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.ai-capabilities ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ai-capabilities li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(69, 90, 239, 0.1);
+}
+
+.ai-capabilities li:last-child {
+  border-bottom: none;
+}
+
+.ai-wallet-notice {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.ai-wallet-notice p {
+  margin: 0;
+  color: #856404;
+}
+
+.ai-chat-container {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  min-height: 500px;
+}
+
+/* CopilotChat styling integration */
+.ai-chat-container [data-copilot-chat] {
+  height: 500px;
+  border: none;
+  border-radius: 0;
+}

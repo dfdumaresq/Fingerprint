@@ -4,6 +4,8 @@ import ConnectWallet from './components/ConnectWallet';
 import FingerprintForm from './components/FingerprintForm';
 import VerifyFingerprint from './components/VerifyFingerprint';
 import RevokeFingerprint from './components/RevokeFingerprint';
+import { BehavioralRegistration } from './components/BehavioralRegistration';
+import { BehavioralVerification } from './components/BehavioralVerification';
 import { Agent } from './types';
 import { BlockchainProvider, useBlockchain } from './contexts/BlockchainContext';
 
@@ -21,9 +23,10 @@ const AppContent: React.FC = () => {
   // Get blockchain context
   const { walletAddress, isConnected, service } = useBlockchain();
   
-  const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke'>('register');
+  const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke' | 'behavior-register' | 'behavior-verify'>('register');
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredAgent, setRegisteredAgent] = useState<Omit<Agent, 'createdAt'> | null>(null);
+  const [fingerprintHashForBehavior, setFingerprintHashForBehavior] = useState<string>('');
 
   const handleRegistrationSuccess = (agent: Omit<Agent, 'createdAt'>) => {
     setRegistrationSuccess(true);
@@ -67,20 +70,37 @@ const AppContent: React.FC = () => {
               <button
                 className={`tab ${activeTab === 'register' ? 'active' : ''}`}
                 onClick={() => setActiveTab('register')}
+                title="Register a new AI agent fingerprint on the blockchain"
               >
                 Register Fingerprint
               </button>
               <button
                 className={`tab ${activeTab === 'verify' ? 'active' : ''}`}
                 onClick={() => setActiveTab('verify')}
+                title="Verify an existing fingerprint against blockchain records"
               >
                 Verify Fingerprint
               </button>
               <button
                 className={`tab ${activeTab === 'revoke' ? 'active' : ''}`}
                 onClick={() => setActiveTab('revoke')}
+                title="Revoke a fingerprint you previously registered"
               >
                 Revoke Fingerprint
+              </button>
+              <button
+                className={`tab ${activeTab === 'behavior-register' ? 'active' : ''}`}
+                onClick={() => setActiveTab('behavior-register')}
+                title="Register behavioral traits for an AI agent to detect future model changes"
+              >
+                Register Behavioral Trait
+              </button>
+              <button
+                className={`tab ${activeTab === 'behavior-verify' ? 'active' : ''}`}
+                onClick={() => setActiveTab('behavior-verify')}
+                title="Verify behavioral traits to detect model drift or substitution"
+              >
+                Verify Behavioral Trait
               </button>
             </div>
 
@@ -118,6 +138,98 @@ const AppContent: React.FC = () => {
                   blockchainService={service!}
                   onSuccess={handleRevocationSuccess}
                 />
+              )}
+
+              {activeTab === 'behavior-register' && (
+                <>
+                  {!fingerprintHashForBehavior ? (
+                    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '5px' }}>
+                      <h3>Register Behavioral Trait</h3>
+                      <p>Enter the fingerprint hash for which you want to register behavioral traits:</p>
+                      <input
+                        type="text"
+                        placeholder="0x..."
+                        value={fingerprintHashForBehavior}
+                        onChange={(e) => setFingerprintHashForBehavior(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          fontSize: '14px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          marginBottom: '10px'
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (fingerprintHashForBehavior.trim()) {
+                            // Keep the hash and show the registration component
+                          }
+                        }}
+                        disabled={!fingerprintHashForBehavior.trim()}
+                        style={{ padding: '10px 20px' }}
+                      >
+                        Continue to Registration
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setFingerprintHashForBehavior('')}
+                        style={{ marginBottom: '15px', padding: '8px 16px' }}
+                      >
+                        ← Change Fingerprint Hash
+                      </button>
+                      <BehavioralRegistration fingerprintHash={fingerprintHashForBehavior} />
+                    </>
+                  )}
+                </>
+              )}
+
+              {activeTab === 'behavior-verify' && (
+                <>
+                  {!fingerprintHashForBehavior ? (
+                    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '5px' }}>
+                      <h3>Verify Behavioral Trait</h3>
+                      <p>Enter the fingerprint hash for which you want to verify behavioral traits:</p>
+                      <input
+                        type="text"
+                        placeholder="0x..."
+                        value={fingerprintHashForBehavior}
+                        onChange={(e) => setFingerprintHashForBehavior(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          fontSize: '14px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          marginBottom: '10px'
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (fingerprintHashForBehavior.trim()) {
+                            // Keep the hash and show the verification component
+                          }
+                        }}
+                        disabled={!fingerprintHashForBehavior.trim()}
+                        style={{ padding: '10px 20px' }}
+                      >
+                        Continue to Verification
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setFingerprintHashForBehavior('')}
+                        style={{ marginBottom: '15px', padding: '8px 16px' }}
+                      >
+                        ← Change Fingerprint Hash
+                      </button>
+                      <BehavioralVerification fingerprintHash={fingerprintHashForBehavior} />
+                    </>
+                  )}
+                </>
               )}
             </div>
           </>

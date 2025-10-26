@@ -33,7 +33,11 @@ const ABI = [
   "function verifyFingerprint(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt)",
   "function revokeFingerprint(string fingerprintHash) external",
   "function isRevoked(string fingerprintHash) external view returns (bool revoked, uint256 revokedAt, address revokedBy)",
-  "function verifyFingerprintExtended(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt, bool revoked, uint256 revokedAt)"
+  "function verifyFingerprintExtended(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt, bool revoked, uint256 revokedAt)",
+  "function registerBehavioralTrait(string fingerprintHash, string traitHash, string traitVersion) external",
+  "function updateBehavioralTrait(string fingerprintHash, string newTraitHash, string traitVersion) external",
+  "function getBehavioralTraitData(string fingerprintHash) external view returns (bool exists, string traitHash, string traitVersion, uint256 registeredAt, uint256 lastUpdatedAt)",
+  "function verifyBehavioralMatch(string fingerprintHash, string currentTraitHash) external view returns (bool matches)"
 ];
 
 // Add Ethereum window type
@@ -44,9 +48,6 @@ declare global {
 }
 
 export class BlockchainService {
-//   static generateFingerprintHash(arg0: { id: string; name: string; provider: string; version: string; }) {
-//       throw new Error('Method not implemented.');
-//   }
   private provider!: ethers.JsonRpcProvider;
   public contract!: ethers.Contract; // Changed to public to allow checking method existence
   private isConnected: boolean = false;
@@ -75,22 +76,6 @@ export class BlockchainService {
       this.isConnected = false;
     }
   }
-
-  /**
-   * Generate a fingerprint hash based on agent details
-   * @param agent Agent information (without the fingerprint hash)
-   * @returns A unique fingerprint hash
-   */
-//   public generateFingerprintHash(agent: Pick<Agent, 'id' | 'name' | 'provider' | 'version'>): string {
-//     // Combine agent data into a single string
-//     const dataString = `${agent.id}-${agent.name}-${agent.provider}-${agent.version}-${Date.now()}`;
-    
-//     // Convert string to bytes and hash it using ethers.js keccak256
-//     const dataBytes = ethers.toUtf8Bytes(dataString);
-//     const hash = ethers.keccak256(dataBytes);
-    
-//     return hash;
-//   }
 
   public async connectWallet(): Promise<string | null> {
     try {
@@ -670,6 +655,177 @@ export class BlockchainService {
       
       console.error('Failed to verify EIP-712 signature:', error);
       return null;
+    }
+  }
+
+  /**
+   * Register a behavioral trait for an AI agent fingerprint
+   * @param fingerprintHash The fingerprint hash to associate the behavioral trait with
+   * @param traitHash The hash of the behavioral response patterns
+   * @param traitVersion The version of the test suite used (e.g., "reasoning-v1.0")
+   * @returns Transaction receipt with block number and transaction hash
+   */
+  public async registerBehavioralTrait(
+    fingerprintHash: string,
+    traitHash: string,
+    traitVersion: string
+  ): Promise<{ success: boolean; transactionHash?: string; blockNumber?: number }> {
+    if (!this.isConnected) {
+      throw new WalletNotConnectedError('Not connected to blockchain');
+    }
+
+    try {
+      if (!window.ethereum) {
+        throw new WalletNotConnectedError("No ethereum provider found. Please install MetaMask.");
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contractWithSigner = new ethers.Contract(this.contract.target, ABI, signer);
+
+      const tx = await contractWithSigner.registerBehavioralTrait(fingerprintHash, traitHash, traitVersion);
+      console.log("Behavioral trait registration transaction sent:", tx.hash);
+
+      const receipt = await tx.wait();
+      console.log("Behavioral trait registration confirmed in block:", receipt.blockNumber);
+
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber
+      };
+    } catch (error) {
+      if (isUserRejectionError(error)) {
+        throw new UserRejectedSignatureError();
+      }
+      console.error('Failed to register behavioral trait:', error);
+      throw createProperError(error, 'Failed to register behavioral trait');
+    }
+  }
+
+  /**
+   * Update a behavioral trait for an AI agent fingerprint
+   * @param fingerprintHash The fingerprint hash to update the behavioral trait for
+   * @param newTraitHash The new hash of the behavioral response patterns
+   * @param traitVersion The version of the test suite used
+   * @returns Transaction receipt with block number and transaction hash
+   */
+  public async updateBehavioralTrait(
+    fingerprintHash: string,
+    newTraitHash: string,
+    traitVersion: string
+  ): Promise<{ success: boolean; transactionHash?: string; blockNumber?: number }> {
+    if (!this.isConnected) {
+      throw new WalletNotConnectedError('Not connected to blockchain');
+    }
+
+    try {
+      if (!window.ethereum) {
+        throw new WalletNotConnectedError("No ethereum provider found. Please install MetaMask.");
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contractWithSigner = new ethers.Contract(this.contract.target, ABI, signer);
+
+      const tx = await contractWithSigner.updateBehavioralTrait(fingerprintHash, newTraitHash, traitVersion);
+      console.log("Behavioral trait update transaction sent:", tx.hash);
+
+      const receipt = await tx.wait();
+      console.log("Behavioral trait update confirmed in block:", receipt.blockNumber);
+
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber
+      };
+    } catch (error) {
+      if (isUserRejectionError(error)) {
+        throw new UserRejectedSignatureError();
+      }
+      console.error('Failed to update behavioral trait:', error);
+      throw createProperError(error, 'Failed to update behavioral trait');
+    }
+  }
+
+  /**
+   * Get behavioral trait data for a fingerprint
+   * @param fingerprintHash The fingerprint hash to look up
+   * @returns Behavioral trait data or null if not found
+   */
+  public async getBehavioralTraitData(
+    fingerprintHash: string
+  ): Promise<{
+    exists: boolean;
+    traitHash: string;
+    traitVersion: string;
+    registeredAt: number;
+    lastUpdatedAt: number;
+  } | null> {
+    if (!this.isConnected) {
+      throw new WalletNotConnectedError('Not connected to blockchain');
+    }
+
+    try {
+      const result = await this.contract.getBehavioralTraitData(fingerprintHash);
+      const [exists, traitHash, traitVersion, registeredAt, lastUpdatedAt] = result;
+
+      if (!exists) {
+        return null;
+      }
+
+      return {
+        exists,
+        traitHash,
+        traitVersion,
+        registeredAt: Number(registeredAt),
+        lastUpdatedAt: Number(lastUpdatedAt)
+      };
+    } catch (error) {
+      console.error('Failed to get behavioral trait data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Verify if a current behavioral trait hash matches the registered one
+   * @param fingerprintHash The fingerprint hash to verify against
+   * @param currentTraitHash The current behavioral trait hash to compare
+   * @returns Object with match status and additional context
+   */
+  public async verifyBehavioralMatch(
+    fingerprintHash: string,
+    currentTraitHash: string
+  ): Promise<{
+    matches: boolean;
+    registeredHash?: string;
+    currentHash: string;
+    driftDetected: boolean;
+    lastUpdated?: Date;
+  }> {
+    if (!this.isConnected) {
+      throw new WalletNotConnectedError('Not connected to blockchain');
+    }
+
+    try {
+      const traitData = await this.getBehavioralTraitData(fingerprintHash);
+
+      if (!traitData) {
+        throw new Error('No behavioral trait registered for this fingerprint');
+      }
+
+      const matches = await this.contract.verifyBehavioralMatch(fingerprintHash, currentTraitHash);
+
+      return {
+        matches,
+        registeredHash: traitData.traitHash,
+        currentHash: currentTraitHash,
+        driftDetected: !matches,
+        lastUpdated: new Date(traitData.lastUpdatedAt * 1000)
+      };
+    } catch (error) {
+      console.error('Failed to verify behavioral match:', error);
+      throw createProperError(error, 'Failed to verify behavioral match');
     }
   }
 }

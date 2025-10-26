@@ -50,11 +50,23 @@ contract AIFingerprint is Ownable, Pausable {
         address revokedBy;
     }
 
+    // Struct for behavioral trait verification data
+    struct BehavioralTraitData {
+        string traitHash;        // Hash of behavioral response patterns
+        string traitVersion;     // Version of test suite used (e.g., "reasoning-v1.0")
+        uint256 registeredAt;    // Initial registration timestamp
+        uint256 lastUpdatedAt;   // Last update timestamp (for tracking drift)
+        bool exists;             // Existence flag
+    }
+
     // Mapping from fingerprint hash to agent data
     mapping(string => AgentData) private fingerprints;
-    
+
     // Separate mapping for revocation information
     mapping(string => RevocationData) private revocations;
+
+    // Mapping from fingerprint hash to behavioral trait data
+    mapping(string => BehavioralTraitData) private behavioralTraits;
     
     // Event emitted when a new fingerprint is registered
     event FingerprintRegistered(
@@ -80,6 +92,25 @@ contract AIFingerprint is Ownable, Pausable {
         address previousOwner,
         address newOwner,
         uint256 transferredAt
+    );
+
+    // Event emitted when a behavioral trait is registered
+    event BehavioralTraitRegistered(
+        string fingerprintHash,
+        string traitHash,
+        string traitVersion,
+        address registeredBy,
+        uint256 registeredAt
+    );
+
+    // Event emitted when a behavioral trait is updated
+    event BehavioralTraitUpdated(
+        string fingerprintHash,
+        string oldTraitHash,
+        string newTraitHash,
+        string traitVersion,
+        address updatedBy,
+        uint256 updatedAt
     );
 
     /**
@@ -324,5 +355,136 @@ contract AIFingerprint is Ownable, Pausable {
             revData.revoked,
             revData.revokedAt
         );
+    }
+
+    /**
+     * @dev Register a behavioral trait for an AI agent fingerprint
+     * @param fingerprintHash The fingerprint hash to associate the behavioral trait with
+     * @param traitHash The hash of the behavioral response patterns
+     * @param traitVersion The version of the test suite used (e.g., "reasoning-v1.0")
+     */
+    function registerBehavioralTrait(
+        string calldata fingerprintHash,
+        string calldata traitHash,
+        string calldata traitVersion
+    ) external whenNotPaused {
+        // Ensure the fingerprint exists
+        require(fingerprints[fingerprintHash].exists, "Fingerprint must be registered first");
+
+        // Ensure behavioral trait doesn't already exist (use update instead)
+        require(!behavioralTraits[fingerprintHash].exists, "Behavioral trait already registered - use update instead");
+
+        // Only the fingerprint owner can register behavioral trait
+        require(
+            fingerprints[fingerprintHash].registeredBy == msg.sender,
+            "Only fingerprint owner can register behavioral trait"
+        );
+
+        // Store the behavioral trait data
+        behavioralTraits[fingerprintHash] = BehavioralTraitData({
+            traitHash: traitHash,
+            traitVersion: traitVersion,
+            registeredAt: block.timestamp,
+            lastUpdatedAt: block.timestamp,
+            exists: true
+        });
+
+        // Emit the registration event
+        emit BehavioralTraitRegistered(
+            fingerprintHash,
+            traitHash,
+            traitVersion,
+            msg.sender,
+            block.timestamp
+        );
+    }
+
+    /**
+     * @dev Update a behavioral trait for an AI agent fingerprint
+     * @param fingerprintHash The fingerprint hash to update the behavioral trait for
+     * @param newTraitHash The new hash of the behavioral response patterns
+     * @param traitVersion The version of the test suite used
+     */
+    function updateBehavioralTrait(
+        string calldata fingerprintHash,
+        string calldata newTraitHash,
+        string calldata traitVersion
+    ) external whenNotPaused {
+        // Ensure behavioral trait exists
+        require(behavioralTraits[fingerprintHash].exists, "Behavioral trait not registered yet");
+
+        // Only the fingerprint owner can update behavioral trait
+        require(
+            fingerprints[fingerprintHash].registeredBy == msg.sender,
+            "Only fingerprint owner can update behavioral trait"
+        );
+
+        // Store old hash for event
+        string memory oldTraitHash = behavioralTraits[fingerprintHash].traitHash;
+
+        // Update the behavioral trait data
+        behavioralTraits[fingerprintHash].traitHash = newTraitHash;
+        behavioralTraits[fingerprintHash].traitVersion = traitVersion;
+        behavioralTraits[fingerprintHash].lastUpdatedAt = block.timestamp;
+
+        // Emit the update event
+        emit BehavioralTraitUpdated(
+            fingerprintHash,
+            oldTraitHash,
+            newTraitHash,
+            traitVersion,
+            msg.sender,
+            block.timestamp
+        );
+    }
+
+    /**
+     * @dev Get behavioral trait data for a fingerprint
+     * @param fingerprintHash The fingerprint hash to look up
+     * @return exists Whether a behavioral trait exists for this fingerprint
+     * @return traitHash The hash of the behavioral response patterns
+     * @return traitVersion The version of the test suite used
+     * @return registeredAt When the behavioral trait was first registered
+     * @return lastUpdatedAt When the behavioral trait was last updated
+     */
+    function getBehavioralTraitData(string calldata fingerprintHash)
+        external
+        view
+        returns (
+            bool exists,
+            string memory traitHash,
+            string memory traitVersion,
+            uint256 registeredAt,
+            uint256 lastUpdatedAt
+        )
+    {
+        BehavioralTraitData storage data = behavioralTraits[fingerprintHash];
+
+        return (
+            data.exists,
+            data.traitHash,
+            data.traitVersion,
+            data.registeredAt,
+            data.lastUpdatedAt
+        );
+    }
+
+    /**
+     * @dev Verify if a current behavioral trait hash matches the registered one
+     * @param fingerprintHash The fingerprint hash to verify against
+     * @param currentTraitHash The current behavioral trait hash to compare
+     * @return matches Whether the current hash matches the registered hash
+     */
+    function verifyBehavioralMatch(
+        string calldata fingerprintHash,
+        string calldata currentTraitHash
+    ) external view returns (bool matches) {
+        // Check if behavioral trait is registered
+        require(behavioralTraits[fingerprintHash].exists, "No behavioral trait registered for this fingerprint");
+
+        // Compare stored hash with current hash
+        string memory storedHash = behavioralTraits[fingerprintHash].traitHash;
+
+        return keccak256(bytes(storedHash)) == keccak256(bytes(currentTraitHash));
     }
 }

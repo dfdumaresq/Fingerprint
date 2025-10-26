@@ -22,9 +22,9 @@ const BlockchainContext = createContext<BlockchainContextType | undefined>(undef
 // Define available networks
 const NETWORKS: Record<NetworkType, BlockchainConfig> = {
     sepolia: {
-        networkUrl: 'https://eth-sepolia.g.alchemy.com/v2/IvAVoFEopb0S6TxdGeSxv7pfWEn6rmee',
-        chainId: 11155111,
-        contractAddress: '0x92eF65Ba802b38F3A87a3Ae292a4624FA3040930',
+        networkUrl: process.env.REACT_APP_SEPOLIA_RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/your-api-key',
+        chainId: Number(process.env.REACT_APP_SEPOLIA_CHAIN_ID) || 11155111,
+        contractAddress: process.env.REACT_APP_SEPOLIA_CONTRACT_ADDRESS || '',
         name: 'Sepolia Testnet'
     },
     goerli: {

@@ -34,7 +34,10 @@ export interface CanonicalizationOptions {
   /** Standardize quotes and dashes (default: true) */
   standardizeCharacters?: boolean;
   /** Trim leading/trailing whitespace (default: true) */
+  /** Trim leading/trailing whitespace (default: true) */
   trim?: boolean;
+  /** Standardize homograph/lookalike characters (default: true) */
+  standardizeHomographs?: boolean;
 }
 
 const DEFAULT_OPTIONS: Required<CanonicalizationOptions> = {
@@ -43,12 +46,40 @@ const DEFAULT_OPTIONS: Required<CanonicalizationOptions> = {
   collapseWhitespace: true,
   normalizePunctuation: true,
   standardizeCharacters: true,
-  trim: true
+  trim: true,
+  standardizeHomographs: true,
+};
+
+/**
+ * Common homograph character mappings (Cyrillic, Greek, etc. that look like Latin)
+ */
+const HOMOGRAPH_MAPPINGS: Record<string, string> = {
+  "\u0430": "a", // Cyrillic а
+  "\u0435": "e", // Cyrillic е
+  "\u043E": "o", // Cyrillic о
+  "\u0440": "p", // Cyrillic р
+  "\u0441": "c", // Cyrillic с
+  "\u0443": "y", // Cyrillic у
+  "\u0445": "x", // Cyrillic х
+  "\u0391": "A", // Greek Α
+  "\u0392": "B", // Greek Β
+  "\u0395": "E", // Greek Ε
+  "\u0397": "H", // Greek Η
+  "\u0399": "I", // Greek Ι
+  "\u039A": "K", // Greek Κ
+  "\u039C": "M", // Greek Μ
+  "\u039D": "N", // Greek Ν
+  "\u039F": "O", // Greek Ο
+  "\u03A1": "P", // Greek Ρ
+  "\u03A4": "T", // Greek Τ
+  "\u03A7": "X", // Greek Χ
+  "\u03A5": "Y", // Greek Υ
+  "\u0417": "Z", // Cyrillic З
 };
 
 /**
  * Calculate Levenshtein edit distance between two strings
- * 
+ *
  * @param a - First string
  * @param b - Second string
  * @returns Edit distance (number of insertions, deletions, substitutions)
@@ -77,8 +108,8 @@ export function levenshteinDistance(a: string, b: string): number {
       } else {
         matrix[i][j] = Math.min(
           matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
+          matrix[i][j - 1] + 1, // insertion
+          matrix[i - 1][j] + 1 // deletion
         );
       }
     }
@@ -91,23 +122,36 @@ export function levenshteinDistance(a: string, b: string): number {
  * Normalize Unicode to NFC form
  */
 function normalizeUnicode(text: string): string {
-  return text.normalize('NFC');
+  return text.normalize("NFC");
 }
 
 /**
  * Standardize various quote and dash characters to ASCII equivalents
  */
 function standardizeCharacters(text: string): string {
-  return text
-    // Quotes
-    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")  // Single quotes
-    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')  // Double quotes
-    .replace(/[\u00AB\u00BB]/g, '"')              // Guillemets
-    // Dashes
-    .replace(/[\u2012\u2013\u2014\u2015]/g, '-')  // Various dashes
-    .replace(/\u2026/g, '...')                     // Ellipsis
-    // Spaces
-    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' '); // Non-breaking and special spaces
+  return (
+    text
+      // Quotes
+      .replace(/[\u2018\u2019\u201A\u201B]/g, "'") // Single quotes
+      .replace(/[\u201C\u201D\u201E\u201F]/g, '"') // Double quotes
+      .replace(/[\u00AB\u00BB]/g, '"') // Guillemets
+      // Dashes
+      .replace(/[\u2012\u2013\u2014\u2015]/g, "-") // Various dashes
+      .replace(/\u2026/g, "...") // Ellipsis
+      // Spaces
+      .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ")
+  ); // Non-breaking and special spaces
+}
+
+/**
+ * Standardize homograph characters to Latin equivalents
+ */
+function standardizeHomographs(text: string): string {
+  let result = "";
+  for (const char of text) {
+    result += HOMOGRAPH_MAPPINGS[char] || char;
+  }
+  return result;
 }
 
 /**
@@ -144,7 +188,7 @@ export function canonicalize(
 ): CanonicalizationResult {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const transformations: string[] = [];
-  
+
   let result = input;
 
   // Step 1: Unicode normalization
@@ -152,7 +196,7 @@ export function canonicalize(
     const before = result;
     result = normalizeUnicode(result);
     if (result !== before) {
-      transformations.push('unicode_nfc');
+      transformations.push("unicode_nfc");
     }
   }
 
@@ -161,7 +205,16 @@ export function canonicalize(
     const before = result;
     result = standardizeCharacters(result);
     if (result !== before) {
-      transformations.push('standardize_chars');
+      transformations.push("standardize_chars");
+    }
+  }
+
+  // Step 2b: Standardize homographs
+  if (opts.standardizeHomographs) {
+    const before = result;
+    result = standardizeHomographs(result);
+    if (result !== before) {
+      transformations.push("standardize_homographs");
     }
   }
 
@@ -170,7 +223,7 @@ export function canonicalize(
     const before = result;
     result = normalizePunctuation(result);
     if (result !== before) {
-      transformations.push('normalize_punctuation');
+      transformations.push("normalize_punctuation");
     }
   }
 
@@ -179,7 +232,7 @@ export function canonicalize(
     const before = result;
     result = collapseWhitespace(result);
     if (result !== before) {
-      transformations.push('collapse_whitespace');
+      transformations.push("collapse_whitespace");
     }
   }
 
@@ -188,7 +241,7 @@ export function canonicalize(
     const before = result;
     result = result.toLowerCase();
     if (result !== before) {
-      transformations.push('lowercase');
+      transformations.push("lowercase");
     }
   }
 
@@ -197,7 +250,7 @@ export function canonicalize(
     const before = result;
     result = result.trim();
     if (result !== before) {
-      transformations.push('trim');
+      transformations.push("trim");
     }
   }
 
@@ -208,7 +261,7 @@ export function canonicalize(
     original: input,
     canonical: result,
     transformations,
-    editDistance
+    editDistance,
   };
 }
 

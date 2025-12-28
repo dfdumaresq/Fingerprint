@@ -61,7 +61,7 @@ export interface PerturbationThresholds {
 
 const DEFAULT_THRESHOLDS: PerturbationThresholds = {
   maxEditDistance: 0.3,
-  suspiciousThreshold: 0.5
+  suspiciousThreshold: 0.2,
 };
 
 // Common homograph character mappings (Cyrillic, Greek, etc. that look like Latin)

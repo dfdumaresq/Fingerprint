@@ -27,6 +27,7 @@ const AppContent: React.FC = () => {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredAgent, setRegisteredAgent] = useState<Omit<Agent, 'createdAt'> | null>(null);
   const [fingerprintHashForBehavior, setFingerprintHashForBehavior] = useState<string>('');
+    const [inputHash, setInputHash] = useState<string>('');
 
   const handleRegistrationSuccess = (agent: Omit<Agent, 'createdAt'>) => {
     setRegistrationSuccess(true);
@@ -149,8 +150,8 @@ const AppContent: React.FC = () => {
                       <input
                         type="text"
                         placeholder="0x..."
-                        value={fingerprintHashForBehavior}
-                        onChange={(e) => setFingerprintHashForBehavior(e.target.value)}
+                                                  value={inputHash}
+                                                  onChange={(e) => setInputHash(e.target.value)}
                         style={{
                           width: '100%',
                           padding: '10px',
@@ -162,11 +163,11 @@ const AppContent: React.FC = () => {
                       />
                       <button
                         onClick={() => {
-                          if (fingerprintHashForBehavior.trim()) {
-                            // Keep the hash and show the registration component
+                                                      if (inputHash.trim()) {
+                                                          setFingerprintHashForBehavior(inputHash.trim());
                           }
                         }}
-                        disabled={!fingerprintHashForBehavior.trim()}
+                                                  disabled={!inputHash.trim()}
                         style={{ padding: '10px 20px' }}
                       >
                         Continue to Registration
@@ -175,7 +176,10 @@ const AppContent: React.FC = () => {
                   ) : (
                     <>
                       <button
-                        onClick={() => setFingerprintHashForBehavior('')}
+                                                      onClick={() => {
+                                                          setFingerprintHashForBehavior('');
+                                                          setInputHash('');
+                                                      }}
                         style={{ marginBottom: '15px', padding: '8px 16px' }}
                       >
                         ← Change Fingerprint Hash
@@ -195,8 +199,8 @@ const AppContent: React.FC = () => {
                       <input
                         type="text"
                         placeholder="0x..."
-                        value={fingerprintHashForBehavior}
-                        onChange={(e) => setFingerprintHashForBehavior(e.target.value)}
+                                                  value={inputHash}
+                                                  onChange={(e) => setInputHash(e.target.value)}
                         style={{
                           width: '100%',
                           padding: '10px',
@@ -208,11 +212,11 @@ const AppContent: React.FC = () => {
                       />
                       <button
                         onClick={() => {
-                          if (fingerprintHashForBehavior.trim()) {
-                            // Keep the hash and show the verification component
+                                                      if (inputHash.trim()) {
+                                                          setFingerprintHashForBehavior(inputHash.trim());
                           }
                         }}
-                        disabled={!fingerprintHashForBehavior.trim()}
+                                                  disabled={!inputHash.trim()}
                         style={{ padding: '10px 20px' }}
                       >
                         Continue to Verification
@@ -221,7 +225,10 @@ const AppContent: React.FC = () => {
                   ) : (
                     <>
                       <button
-                        onClick={() => setFingerprintHashForBehavior('')}
+                                                      onClick={() => {
+                                                          setFingerprintHashForBehavior('');
+                                                          setInputHash('');
+                                                      }}
                         style={{ marginBottom: '15px', padding: '8px 16px' }}
                       >
                         ← Change Fingerprint Hash

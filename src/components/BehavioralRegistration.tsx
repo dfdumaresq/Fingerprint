@@ -4,8 +4,13 @@ import { REASONING_TEST_SUITE_V1, TestPrompt } from '../tests/behavioralTestSuit
 import {
   createManualResponseSet,
   generateBehavioralTraitHash,
-  BehavioralHashResult
+    BehavioralHashResult
 } from '../utils/behavioral.utils';
+import { Agent } from '../types';
+import { C2PAService } from '../services/c2pa.service';
+import { downloadC2PAManifest, getIdentityFilename } from '../utils/c2paExport.utils';
+
+const c2paService = new C2PAService();
 
 interface BehavioralRegistrationProps {
   fingerprintHash: string;
@@ -21,6 +26,7 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
   const [isRegistering, setIsRegistering] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const currentPrompt = REASONING_TEST_SUITE_V1.prompts[currentStep];
   const isLastPrompt = currentStep === REASONING_TEST_SUITE_V1.prompts.length - 1;
@@ -62,6 +68,10 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
     setError(null);
 
     try {
+        // 1. Initialize identity key if not exists
+        await c2paService.initializeIdentity(fingerprintHash);
+
+        // 2. Register on blockchain
       const result = await service.registerBehavioralTrait(
         fingerprintHash,
         hashResult.hash,
@@ -79,6 +89,30 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
     }
   };
 
+    const handleDownloadIdentity = async () => {
+        try {
+            // Create a dummy agent object for the manifest
+            const agent: Omit<Agent, 'createdAt'> = {
+                id: fingerprintHash,
+                name: "Verified Agent",
+                provider: "OpenAI", // Default for demo
+                version: hashResult?.traitVersion || "v1.0",
+                fingerprintHash: fingerprintHash
+            };
+
+            const manifest = await c2paService.generateIdentityManifest(agent as any);
+            downloadC2PAManifest(manifest, getIdentityFilename(fingerprintHash));
+        } catch (err: any) {
+            setError(`Failed to export identity: ${err.message}`);
+        }
+    };
+
+    const copyToClipboard = (text: string, field: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(field);
+        setTimeout(() => setCopiedField(null), 2000);
+    };
+
   if (!isConnected) {
     return (
       <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '5px' }}>
@@ -90,19 +124,59 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
 
   if (registrationSuccess) {
     return (
-      <div style={{ padding: '20px', border: '1px solid #4caf50', borderRadius: '5px' }}>
-        <h3>✅ Behavioral Trait Registered Successfully!</h3>
-        <p><strong>Fingerprint Hash:</strong> {fingerprintHash}</p>
-        <p><strong>Trait Hash:</strong> {hashResult?.hash}</p>
-        <p><strong>Version:</strong> {hashResult?.traitVersion}</p>
-        <button onClick={() => {
-          setRegistrationSuccess(false);
-          setHashResult(null);
-          setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
-          setCurrentStep(0);
-        }}>
-          Register Another
-        </button>
+        <div style={{ padding: '24px', border: '1px solid #4caf50', borderRadius: '12px', background: '#e8f5e9' }}>
+            <h3 style={{ color: '#2e7d32' }}>✅ Behavioral Trait Registered Successfully!</h3>
+            <div style={{ marginBottom: '20px', padding: '15px', background: '#fff', borderRadius: '8px' }}>
+                <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span><strong>Fingerprint Hash:</strong> {fingerprintHash}</span>
+                    <button
+                        onClick={() => copyToClipboard(fingerprintHash, 'fingerprint')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+                        title="Copy Fingerprint Hash"
+                    >
+                        {copiedField === 'fingerprint' ? '✅' : '📋'}
+                    </button>
+                </p>
+                <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+                    <span><strong>Trait Hash:</strong> {hashResult?.hash}</span>
+                    <button
+                        onClick={() => copyToClipboard(hashResult?.hash || '', 'trait')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+                        title="Copy Trait Hash"
+                    >
+                        {copiedField === 'trait' ? '✅' : '📋'}
+                    </button>
+                </p>
+                <p style={{ marginTop: '8px' }}><strong>Version:</strong> {hashResult?.traitVersion}</p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                    onClick={handleDownloadIdentity}
+                    style={{
+                        padding: '10px 20px',
+                        background: '#1976d2',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                    }}
+                >
+                    📥 Download C2PA Identity (Nutrition Label)
+                </button>
+                <button
+                    style={{ padding: '10px 20px', border: '1px solid #ccc', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}
+                    onClick={() => {
+                        setRegistrationSuccess(false);
+                        setHashResult(null);
+                        setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
+                        setCurrentStep(0);
+                    }}
+                >
+                    Register Another
+                </button>
+            </div>
       </div>
     );
   }
@@ -188,7 +262,7 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
 
           <div style={{ marginBottom: '20px' }}>
             <h4>Response Summary</h4>
-            {hashResult.responseSet.responses.map((response, idx) => (
+                          {hashResult.responseSet.responses.map((response: any, idx: number) => (
               <details key={idx} style={{ marginBottom: '10px' }}>
                 <summary style={{ cursor: 'pointer', padding: '5px', background: '#f5f5f5' }}>
                   Prompt {idx + 1}: {REASONING_TEST_SUITE_V1.prompts[idx].category}

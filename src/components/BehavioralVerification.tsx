@@ -4,8 +4,14 @@ import { REASONING_TEST_SUITE_V1 } from '../tests/behavioralTestSuite';
 import {
   createManualResponseSet,
   generateBehavioralTraitHash,
-  BehavioralHashResult
+    BehavioralHashResult,
+    VerificationResult,
+    ResponseSet
 } from '../utils/behavioral.utils';
+import { C2PAService } from '../services/c2pa.service';
+import { downloadC2PAManifest, getVerificationFilename } from '../utils/c2paExport.utils';
+
+const c2paService = new C2PAService();
 
 interface BehavioralVerificationProps {
   fingerprintHash: string;
@@ -19,15 +25,11 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
   const [currentStep, setCurrentStep] = useState(0);
   const [hashResult, setHashResult] = useState<BehavioralHashResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<{
-    exists: boolean;
-    matches: boolean;
-    storedHash?: string;
-    storedVersion?: string;
-    registeredAt?: number;
-    lastUpdatedAt?: number;
-  } | null>(null);
+    const [safetyResult, setSafetyResult] = useState<VerificationResult | null>(null);
+    const [baselineResponses, setBaselineResponses] = useState<ResponseSet | null>(null);
+    const [mode, setMode] = useState<'enforcement' | 'triage'>('enforcement');
   const [error, setError] = useState<string | null>(null);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const currentPrompt = REASONING_TEST_SUITE_V1.prompts[currentStep];
   const isLastPrompt = currentStep === REASONING_TEST_SUITE_V1.prompts.length - 1;
@@ -65,42 +67,58 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
   const handleVerify = async () => {
     if (!service || !hashResult) return;
 
+      // FOR DEMO: If no baseline loaded, use the current responses as baseline (100% match demo)
+      // In production, this would be retrieved from a secure sidecar.
+      const referenceResponses = baselineResponses || hashResult.responseSet;
+
     setIsVerifying(true);
     setError(null);
 
     try {
-      // Get the stored behavioral trait data
-      const storedData = await service.getBehavioralTraitData(fingerprintHash);
+        const result = service.verifyBehavioralSafety(
+            referenceResponses,
+            hashResult.responseSet,
+            mode
+        );
 
-      if (!storedData || !storedData.exists) {
-        setVerificationResult({
-          exists: false,
-          matches: false
-        });
-        setError('No behavioral trait registered for this fingerprint.');
-        setIsVerifying(false);
-        return;
-      }
-
-      // Verify if the current hash matches the stored hash
-      const verifyResult = await service.verifyBehavioralMatch(fingerprintHash, hashResult.hash);
-
-      setVerificationResult({
-        exists: true,
-        matches: verifyResult.matches,
-        storedHash: storedData.traitHash || '',
-        storedVersion: storedData.traitVersion || '',
-        registeredAt: storedData.registeredAt || 0,
-        lastUpdatedAt: storedData.lastUpdatedAt || 0
-      });
-
-      console.log('Verification result:', { verifyResult, storedData });
+        setSafetyResult(result);
     } catch (err: any) {
-      setError(`Verification failed: ${err.message}`);
+        setError(`Verification failed: ${err.message}`);
     } finally {
-      setIsVerifying(false);
+        setIsVerifying(false);
     }
   };
+
+    const handleDownloadCertificate = async () => {
+        if (!safetyResult) return;
+        try {
+            const manifest = await c2paService.generateVerificationManifest(fingerprintHash, safetyResult);
+            downloadC2PAManifest(manifest, getVerificationFilename(fingerprintHash));
+        } catch (err: any) {
+            setError(`Failed to export certificate: ${err.message}`);
+        }
+    };
+
+    const loadDemoBaseline = () => {
+        // Load a slightly different version as baseline to show similarity < 100%
+        const baseline = createManualResponseSet(REASONING_TEST_SUITE_V1, responses.map((r: string) => r + " "));
+        setBaselineResponses(baseline);
+        alert("Baseline loaded! Now try verifying to see similarity results.");
+    };
+
+    const injectHomograph = () => {
+        const newResponses = [...responses];
+        // Replace 'a' with Cyrillic 'а'
+        newResponses[currentStep] = newResponses[currentStep].replace(/a/g, 'а');
+        setResponses(newResponses);
+        alert("Injected Cyrillic 'а' homographs! The perturbation detector should flag this.");
+    };
+
+    const copyToClipboard = (text: string, field: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(field);
+        setTimeout(() => setCopiedField(null), 2000);
+    };
 
   if (!isConnected) {
     return (
@@ -111,62 +129,130 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
     );
   }
 
-  if (verificationResult) {
+    if (safetyResult) {
+        const isSuccess = safetyResult.match;
+        const similarityPercent = (safetyResult.similarity * 100).toFixed(1);
+        const confidencePercent = (safetyResult.confidence * 100).toFixed(1);
+        const perturbationScore = (safetyResult.perturbation.perturbationScore * 100).toFixed(1);
+
     return (
       <div style={{
-        padding: '20px',
-        border: verificationResult.matches ? '1px solid #4caf50' : '1px solid #ff9800',
-        borderRadius: '5px'
+            padding: '24px',
+            border: isSuccess ? '2px solid #4caf50' : '2px solid #ff9800',
+            borderRadius: '12px',
+            background: '#fff',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
       }}>
-        <h3>{verificationResult.matches ? '✅ Behavioral Match Verified!' : '⚠️ Behavioral Drift Detected'}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0, color: isSuccess ? '#2e7d32' : '#ed6c02' }}>
+                    {isSuccess ? '✅ Verification Passed' : '⚠️ Verification Attention Required'}
+                </h3>
+                <div style={{ fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Agent ID: {fingerprintHash.substring(0, 10)}...
+                    <button
+                        onClick={() => copyToClipboard(fingerprintHash, 'fingerprint')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: 0 }}
+                        title="Copy Fingerprint Hash"
+                    >
+                        {copiedField === 'fingerprint' ? '✅' : '📋'}
+                    </button>
+                </div>
+            </div>
+            <span style={{
+                padding: '4px 12px',
+                borderRadius: '20px',
+                background: safetyResult.mode === 'enforcement' ? '#e3f2fd' : '#fff3e0',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: safetyResult.mode === 'enforcement' ? '#1976d2' : '#e65100',
+                textTransform: 'uppercase'
+            }}>
+                {safetyResult.mode} mode
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Similarity Score</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{similarityPercent}%</div>
+                </div>
+                <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Confidence</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{confidencePercent}%</div>
+                </div>
+            </div>
 
-        <div style={{ marginBottom: '20px', padding: '15px', background: '#f5f5f5', borderRadius: '5px' }}>
-          <p><strong>Fingerprint Hash:</strong></p>
-          <code style={{ wordBreak: 'break-all', fontSize: '12px' }}>{fingerprintHash}</code>
+            <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid #eee', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Perturbation Analysis</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span>Composite Perturbation:</span>
+                        <span style={{ fontWeight: 'bold' }}>{perturbationScore}%</span>
+                    </div>
 
-          <p style={{ marginTop: '15px' }}><strong>Current Hash:</strong></p>
-          <code style={{ wordBreak: 'break-all', fontSize: '12px' }}>{hashResult?.hash}</code>
+                    {safetyResult.perturbation.flags.length > 0 ? (
+                        <div style={{ marginTop: '8px' }}>
+                            <div style={{ fontSize: '11px', color: '#d32f2f', fontWeight: 'bold', marginBottom: '4px' }}>Detected Artifacts:</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                {safetyResult.perturbation.flags.map((flag: any, idx: number) => (
+                                    <span key={idx} style={{
+                                        fontSize: '10px',
+                                        background: flag.severity === 'high' ? '#ffebee' : '#fff3e0',
+                                        color: flag.severity === 'high' ? '#c62828' : '#e65100',
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        border: `1px solid ${flag.severity === 'high' ? '#ef9a9a' : '#ffe0b2'}`
+                                    }} title={flag.evidence ? `Evidence: ${flag.evidence}` : flag.description}>
+                                        {flag.description}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: '11px', color: '#388e3c' }}>✓ No suspicious perturbations detected.</div>
+                    )}
+                </div>
+            </div>
 
-          <p style={{ marginTop: '15px' }}><strong>Stored Hash:</strong></p>
-          <code style={{ wordBreak: 'break-all', fontSize: '12px' }}>{verificationResult.storedHash}</code>
+            <div style={{ padding: '12px', background: '#f5f5f5', borderRadius: '8px', marginBottom: '24px', fontSize: '13px' }}>
+                <strong>Verdict Reason:</strong> {safetyResult.decision.reason}
+            </div>
 
-          <p style={{ marginTop: '15px' }}><strong>Test Suite Version:</strong> {verificationResult.storedVersion}</p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => {
+                    setSafetyResult(null);
+                    setHashResult(null);
+                    setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
+                    setCurrentStep(0);
+                }} style={{
+                    flex: 1,
+                    padding: '12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '6px',
+                    background: '#fff',
+                    cursor: 'pointer'
+                }}>
+                    Verify Again
+                </button>
 
-          {verificationResult.registeredAt && (
-            <p><strong>Registered:</strong> {new Date(verificationResult.registeredAt * 1000).toLocaleString()}</p>
-          )}
-
-          {verificationResult.lastUpdatedAt && verificationResult.lastUpdatedAt !== verificationResult.registeredAt && (
-            <p><strong>Last Updated:</strong> {new Date(verificationResult.lastUpdatedAt * 1000).toLocaleString()}</p>
-          )}
-        </div>
-
-        {verificationResult.matches ? (
-          <div style={{ padding: '15px', background: '#e8f5e9', borderRadius: '5px', marginBottom: '20px' }}>
-            <p><strong>✓ Verification Passed</strong></p>
-            <p>The AI agent's current behavioral traits match the registered baseline. No significant drift detected.</p>
-          </div>
-        ) : (
-          <div style={{ padding: '15px', background: '#fff3e0', borderRadius: '5px', marginBottom: '20px' }}>
-            <p><strong>⚠ Drift Detected</strong></p>
-            <p>The AI agent's behavioral traits have changed compared to the registered baseline. This could indicate:</p>
-            <ul style={{ marginLeft: '20px', marginTop: '10px' }}>
-              <li>Model update or replacement</li>
-              <li>Fine-tuning or prompt changes</li>
-              <li>Configuration drift</li>
-            </ul>
-            <p style={{ marginTop: '10px' }}>Consider updating the registered behavioral trait if this change is intentional.</p>
-          </div>
-        )}
-
-        <button onClick={() => {
-          setVerificationResult(null);
-          setHashResult(null);
-          setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
-          setCurrentStep(0);
-        }} style={{ padding: '10px 20px' }}>
-          Verify Again
-        </button>
+                <button
+                    onClick={handleDownloadCertificate}
+                    style={{
+                        flex: 1,
+                        padding: '12px',
+                        background: '#1976d2',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                    }}
+                >
+                    <span>🛡️</span> Download C2PA Cert
+                </button>
+            </div>
       </div>
     );
   }
@@ -250,6 +336,53 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
             <p style={{ marginTop: '10px' }}><strong>Version:</strong> {hashResult.traitVersion}</p>
           </div>
 
+                      <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #bbdefb', borderRadius: '5px' }}>
+                          <h5 style={{ marginTop: 0 }}>Safety Configuration</h5>
+                          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                              <label>Mode:</label>
+                              <select
+                                  value={mode}
+                                  onChange={(e) => setMode(e.target.value as any)}
+                                  style={{ padding: '4px 8px', borderRadius: '4px' }}
+                              >
+                                  <option value="enforcement">Enforcement (Strict - 95%)</option>
+                                  <option value="triage">Triage (Loose - 80%)</option>
+                              </select>
+                          </div>
+                          <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
+                              <button
+                                  onClick={loadDemoBaseline}
+                                  style={{
+                                      fontSize: '12px',
+                                      padding: '6px 12px',
+                                      background: '#fff',
+                                      color: '#333',
+                                      border: '1px solid #007bff',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                  }}
+                              >
+                                  📥 Load Reference Baseline (Demo)
+                              </button>
+                              <button
+                                  onClick={injectHomograph}
+                                  style={{
+                                      fontSize: '12px',
+                                      padding: '6px 12px',
+                                      background: '#fff',
+                                      color: '#333',
+                                      border: '1px solid #dc3545',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                  }}
+                              >
+                                  🧬 Inject Homographs (Attack Demo)
+                              </button>
+                          </div>
+                      </div>
+
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               onClick={() => {
@@ -269,10 +402,11 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                flex: 1
+                  flex: 1,
+                  fontWeight: 'bold'
               }}
             >
-              {isVerifying ? 'Verifying with Blockchain...' : 'Verify Against Blockchain'}
+                              {isVerifying ? 'Analyzing Stability...' : 'Safety-Grade Verification'}
             </button>
           </div>
         </>

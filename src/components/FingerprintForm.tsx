@@ -20,6 +20,7 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
     const [error, setError] = useState<string | null>(null);
     const [generatedHash, setGeneratedHash] = useState(false);
     const [useEIP712, setUseEIP712] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -36,6 +37,13 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
                 setGeneratedHash(false);
             }
         }
+    };
+
+    const handleCopy = () => {
+        if (!formData.fingerprintHash) return;
+        navigator.clipboard.writeText(formData.fingerprintHash);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     const generateFingerprint = () => {
@@ -182,6 +190,16 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
                         >
                             Generate
                         </button>
+                        {formData.fingerprintHash && (
+                            <button
+                                type="button"
+                                className={`copy-button ${copied ? 'success' : ''}`}
+                                onClick={handleCopy}
+                                title="Copy to clipboard"
+                            >
+                                {copied ? '✓' : '📋'}
+                            </button>
+                        )}
                     </div>
                     <div className="input-help">
                         Format: 0x followed by 64 hexadecimal characters, or click "Generate" to create automatically

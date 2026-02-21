@@ -197,6 +197,17 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
           <p><strong>Version:</strong> {result.agent.version}</p>
           <p><strong>Created At:</strong> {formatTimestamp(result.agent.createdAt)}</p>
 
+                  {/* Show behavioral trait if available */}
+                  {result.agent.behavioralTraitHash && (
+                      <div className="behavioral-trait-info">
+                          <h4>Behavioral Trait</h4>
+                          <p><strong>Trait Hash:</strong> <span className="hash-text">{result.agent.behavioralTraitHash}</span></p>
+                          {result.agent.behavioralTraitVersion && (
+                              <p><strong>Test Suite Version:</strong> {result.agent.behavioralTraitVersion}</p>
+                          )}
+                      </div>
+                  )}
+
           {/* Show revocation status if available */}
           {result.agent.revoked !== undefined ? (
             <div className={result.agent.revoked ? "revocation-info revoked" : "revocation-info valid"}>

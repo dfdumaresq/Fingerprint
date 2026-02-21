@@ -180,6 +180,31 @@ header h1 {
   background-color: var(--primary-color);
 }
 
+.copy-button {
+  background-color: #f8f9fa;
+  color: #666;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-button:hover {
+  background-color: #e9ecef;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.copy-button.success {
+  color: var(--success-color);
+  border-color: var(--success-color);
+  background-color: #f0fff0;
+}
+
 label {
   display: block;
   margin-bottom: 0.5rem;

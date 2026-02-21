@@ -8,9 +8,11 @@ export interface Agent {
   createdAt: number;
   signature?: string;
   signerAddress?: string;
-  revoked?: boolean;         // Indicates if the fingerprint has been revoked
-  revokedAt?: number;        // Timestamp when the fingerprint was revoked
-  revokedBy?: string;        // Address of account that revoked the fingerprint
+  revoked?: boolean; // Indicates if the fingerprint has been revoked
+  revokedAt?: number; // Timestamp when the fingerprint was revoked
+  revokedBy?: string; // Address of account that revoked the fingerprint
+  behavioralTraitHash?: string;
+  behavioralTraitVersion?: string;
 }
 
 // Network type

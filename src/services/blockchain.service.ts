@@ -339,7 +339,7 @@ export class BlockchainService {
         await this.supportsExtendedVerification();
 
       console.log(
-        `Contract capabilities: revocation=${supportsRevocation}, extendedVerification=${supportsExtendedVerification}`
+        `Contract capabilities: revocation=${supportsRevocation}, extendedVerification=${supportsExtendedVerification}`,
       );
 
       // For read operations, we can use our existing provider
@@ -356,7 +356,7 @@ export class BlockchainService {
           isExtendedVerificationUsed = true;
         } catch (err) {
           console.log(
-            "Extended verification failed, falling back to basic verification"
+            "Extended verification failed, falling back to basic verification",
           );
           isExtendedVerificationUsed = false;
         }
@@ -433,9 +433,25 @@ export class BlockchainService {
           }
         } else {
           console.log(
-            "Skipping revocation check - not supported by this contract"
+            "Skipping revocation check - not supported by this contract",
           );
         }
+      }
+
+      // Fetch behavioral traits if available
+      try {
+        const [exists, traitHash, traitVersion] =
+          await contract.getBehavioralTraitData(fingerprintHash);
+        if (exists) {
+          agentData.behavioralTraitHash = traitHash;
+          agentData.behavioralTraitVersion = traitVersion;
+          console.log("Fetched behavioral trait for agent:", traitHash);
+        }
+      } catch (traitError) {
+        console.log(
+          "Optional behavioral trait check failed or not supported by contract:",
+          traitError,
+        );
       }
 
       console.log("Verification successful, returning agent data:", agentData);

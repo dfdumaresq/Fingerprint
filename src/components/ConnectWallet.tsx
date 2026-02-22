@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useBlockchain } from '../contexts/BlockchainContext';
 
 const ConnectWallet: React.FC = () => {
-    const { connectWallet, isLoading, error: contextError } = useBlockchain();
+    const { connectWallet, enableSandboxMode, isLoading, error: contextError } = useBlockchain();
     const [error, setError] = useState<string | null>(null);
 
     const handleConnect = async () => {
@@ -40,6 +40,15 @@ const ConnectWallet: React.FC = () => {
             >
                 {isLoading ? 'Connecting...' : 'Connect Wallet'}
             </button>
+
+            <div style={{ marginTop: '15px' }}>
+                <button
+                    onClick={enableSandboxMode}
+                    className="sandbox-button"
+                >
+                    Try Sandbox Mode (No Wallet Required)
+                </button>
+            </div>
 
             {(error || contextError) && <p className="error-message">{error || contextError}</p>}
         </div>

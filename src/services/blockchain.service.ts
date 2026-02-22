@@ -58,9 +58,24 @@ export class BlockchainService {
   public contract!: ethers.Contract; // Changed to public to allow checking method existence
   private isConnected: boolean = false;
   private config: BlockchainConfig;
+  private isSandbox: boolean = false;
+  private mockAgents: Map<string, Agent> = new Map();
+  private mockTraits: Map<string, { hash: string; version: string }> =
+    new Map();
+
+  /**
+   * Enable or disable sandbox mode for wallet-less testing
+   */
+  public setSandboxMode(enabled: boolean): void {
+    this.isSandbox = enabled;
+    if (enabled) {
+      this.isConnected = true;
+      console.log("Sandbox mode enabled - using in-memory mock storage");
+    }
+  }
 
   public generateFingerprintHash(
-    agent: Pick<Agent, "id" | "name" | "provider" | "version">
+    agent: Pick<Agent, "id" | "name" | "provider" | "version">,
   ): string {
     // Combine agent data into a single string
     const dataString = `${agent.id}-${agent.name}-${agent.provider}-${
@@ -81,7 +96,7 @@ export class BlockchainService {
       this.contract = new ethers.Contract(
         config.contractAddress,
         ABI,
-        this.provider
+        this.provider,
       );
       this.isConnected = true;
       console.log("Connected to blockchain network");
@@ -92,12 +107,16 @@ export class BlockchainService {
   }
 
   public async connectWallet(): Promise<string | null> {
+    if (this.isSandbox) {
+      this.isConnected = true;
+      return "0x1234567890123456789012345678901234567890"; // Mock sandbox address
+    }
     try {
       console.log("Connecting wallet...");
       // This is a simplified example. In a real application, you would use Web3Modal or similar
       if (!window.ethereum) {
         throw new WalletNotConnectedError(
-          "No ethereum provider found. Please install MetaMask."
+          "No ethereum provider found. Please install MetaMask.",
         );
       }
 
@@ -122,7 +141,7 @@ export class BlockchainService {
           // Convert to decimal and check
           if (parseInt(chainId, 16) !== this.config.chainId) {
             throw new Error(
-              `Please connect to ${this.config.name} (Chain ID: ${this.config.chainId})`
+              `Please connect to ${this.config.name} (Chain ID: ${this.config.chainId})`,
             );
           }
 
@@ -134,7 +153,7 @@ export class BlockchainService {
           this.contract = new ethers.Contract(
             this.contract.target,
             ABI,
-            signer
+            signer,
           );
 
           const address = await signer.getAddress();
@@ -164,10 +183,10 @@ export class BlockchainService {
         // Handle the case where the request is already in progress
         if (err && err.code === -32002) {
           console.log(
-            "MetaMask is already processing a request. Please check the MetaMask extension and approve the connection."
+            "MetaMask is already processing a request. Please check the MetaMask extension and approve the connection.",
           );
           throw new Error(
-            "MetaMask connection already in progress. Please check the MetaMask extension."
+            "MetaMask connection already in progress. Please check the MetaMask extension.",
           );
         }
         throw err;
@@ -180,7 +199,7 @@ export class BlockchainService {
       // Convert to decimal and check
       if (parseInt(chainId, 16) !== this.config.chainId) {
         throw new Error(
-          `Please connect to ${this.config.name} (Chain ID: ${this.config.chainId})`
+          `Please connect to ${this.config.name} (Chain ID: ${this.config.chainId})`,
         );
       }
 
@@ -217,8 +236,18 @@ export class BlockchainService {
    */
   public async registerFingerprint(
     agent: Omit<Agent, "createdAt">,
-    useEIP712: boolean = false
+    useEIP712: boolean = false,
   ): Promise<boolean> {
+    if (this.isSandbox) {
+      const fullAgent: Agent = {
+        ...agent,
+        createdAt: Math.floor(Date.now() / 1000),
+      };
+      this.mockAgents.set(agent.fingerprintHash, fullAgent);
+      console.log("Sandbox: Registered agent", agent.fingerprintHash);
+      return true;
+    }
+
     if (!this.isConnected) {
       throw new WalletNotConnectedError("Not connected to blockchain");
     }
@@ -227,7 +256,7 @@ export class BlockchainService {
       // Ensure we have a connected wallet
       if (!window.ethereum) {
         throw new WalletNotConnectedError(
-          "No ethereum provider found. Please install MetaMask."
+          "No ethereum provider found. Please install MetaMask.",
         );
       }
 
@@ -237,7 +266,7 @@ export class BlockchainService {
       const contractWithSigner = new ethers.Contract(
         this.contract.target,
         ABI,
-        signer
+        signer,
       );
 
       // Generate EIP-712 signature if requested
@@ -268,7 +297,7 @@ export class BlockchainService {
         agent.name,
         agent.provider,
         agent.version,
-        agent.fingerprintHash
+        agent.fingerprintHash,
       );
       console.log("Transaction sent:", tx.hash);
 
@@ -300,7 +329,7 @@ export class BlockchainService {
     try {
       // Try to call verifyFingerprintExtended with a dummy hash to see if it exists
       await this.contract.verifyFingerprintExtended(
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
       );
       return true;
     } catch (error: any) {
@@ -322,8 +351,22 @@ export class BlockchainService {
   }
 
   public async verifyFingerprint(
-    fingerprintHash: string
+    fingerprintHash: string,
   ): Promise<Agent | null> {
+    if (this.isSandbox) {
+      const agent = this.mockAgents.get(fingerprintHash);
+      if (agent) {
+        // Attach trait if it exists in mock trait store
+        const trait = this.mockTraits.get(fingerprintHash);
+        if (trait) {
+          agent.behavioralTraitHash = trait.hash;
+          agent.behavioralTraitVersion = trait.version;
+        }
+        return { ...agent };
+      }
+      return null;
+    }
+
     if (!this.isConnected) {
       throw new WalletNotConnectedError("Not connected to blockchain");
     }
@@ -463,6 +506,72 @@ export class BlockchainService {
   }
 
   /**
+   * Get the history of behavioral trait changes for a given fingerprint
+   */
+  public async getBehavioralTraitHistory(fingerprintHash: string) {
+    if (this.isSandbox) {
+      const trait = this.mockTraits.get(fingerprintHash);
+      if (trait) {
+        return [
+          {
+            type: "registered" as const,
+            traitHash: trait.hash,
+            traitVersion: trait.version,
+            timestamp: Math.floor(Date.now() / 1000) - 3600, // fake it as 1 hour ago
+          },
+        ];
+      }
+      return [];
+    }
+
+    if (!this.isConnected) {
+      throw new WalletNotConnectedError("Not connected to blockchain");
+    }
+
+    try {
+      const registeredFilter =
+        this.contract.filters.BehavioralTraitRegistered();
+      const updatedFilter = this.contract.filters.BehavioralTraitUpdated();
+
+      const [registeredEvents, updatedEvents] = await Promise.all([
+        this.contract.queryFilter(registeredFilter),
+        this.contract.queryFilter(updatedFilter),
+      ]);
+
+      const history = [];
+
+      for (const event of registeredEvents) {
+        if ("args" in event && event.args[0] === fingerprintHash) {
+          history.push({
+            type: "registered" as const,
+            traitHash: event.args[1],
+            traitVersion: event.args[2],
+            timestamp: Number(event.args[4]),
+          });
+        }
+      }
+
+      for (const event of updatedEvents) {
+        if ("args" in event && event.args[0] === fingerprintHash) {
+          history.push({
+            type: "updated" as const,
+            oldTraitHash: event.args[1],
+            traitHash: event.args[2],
+            traitVersion: event.args[3],
+            timestamp: Number(event.args[5]),
+          });
+        }
+      }
+
+      // Sort by timestamp, newest first
+      return history.sort((a, b) => b.timestamp - a.timestamp);
+    } catch (error) {
+      console.error("Failed to fetch trait history:", error);
+      return [];
+    }
+  }
+
+  /**
    * Revoke a fingerprint - can only be done by the original registrant
    * @param fingerprintHash The hash of the fingerprint to revoke
    * @returns Boolean indicating success or failure
@@ -479,14 +588,14 @@ export class BlockchainService {
       if (!supportsRevocation) {
         console.error("The deployed contract does not support revocation");
         throw new Error(
-          "The current contract deployment does not support revocation. This feature requires a contract upgrade."
+          "The current contract deployment does not support revocation. This feature requires a contract upgrade.",
         );
       }
 
       // Ensure we have a connected wallet
       if (!window.ethereum) {
         throw new WalletNotConnectedError(
-          "No ethereum provider found. Please install MetaMask."
+          "No ethereum provider found. Please install MetaMask.",
         );
       }
 
@@ -496,7 +605,7 @@ export class BlockchainService {
       const contractWithSigner = new ethers.Contract(
         this.contract.target,
         ABI,
-        signer
+        signer,
       );
 
       // Use the contract with signer to make the transaction
@@ -507,7 +616,7 @@ export class BlockchainService {
       const receipt = await tx.wait();
       console.log(
         "Revocation transaction confirmed in block:",
-        receipt.blockNumber
+        receipt.blockNumber,
       );
 
       return true;
@@ -536,7 +645,7 @@ export class BlockchainService {
       // We're catching the error here but not acting on it
       // We only care if the method exists and can be called
       await this.contract.isRevoked(
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
       );
       return true;
     } catch (error: any) {
@@ -565,7 +674,7 @@ export class BlockchainService {
    * @returns RevocationData if revoked, null if not supported or not revoked
    */
   public async isRevoked(
-    fingerprintHash: string
+    fingerprintHash: string,
   ): Promise<RevocationData | null> {
     if (!this.isConnected) {
       throw new WalletNotConnectedError("Not connected to blockchain");
@@ -600,7 +709,7 @@ export class BlockchainService {
     } catch (error) {
       console.error(
         "Failed to check revocation status or not supported:",
-        error
+        error,
       );
       return null;
     }
@@ -613,13 +722,13 @@ export class BlockchainService {
    * @throws EIP712Error if any part of the process fails
    */
   public async generateEIP712Signature(
-    agent: Pick<Agent, "id" | "name" | "provider" | "version">
+    agent: Pick<Agent, "id" | "name" | "provider" | "version">,
   ): Promise<SignatureData> {
     try {
       // Ensure we have a connected wallet
       if (!window.ethereum) {
         throw new WalletNotConnectedError(
-          "No ethereum provider found. Please install MetaMask."
+          "No ethereum provider found. Please install MetaMask.",
         );
       }
 
@@ -635,14 +744,14 @@ export class BlockchainService {
       // Create the EIP-712 domain and message
       const domain = createEIP712Domain(
         chainIdNumber,
-        this.contract.target as string
+        this.contract.target as string,
       );
 
       // Validate the domain
       if (!isEIP712Domain(domain)) {
         throw new EIP712DomainError(
           "Invalid EIP-712 domain parameters",
-          domain
+          domain,
         );
       }
 
@@ -654,7 +763,7 @@ export class BlockchainService {
         throw new EIP712MessageError(
           `Invalid EIP-712 message: ${messageErrors.join(", ")}`,
           message,
-          messageErrors
+          messageErrors,
         );
       }
 
@@ -665,7 +774,7 @@ export class BlockchainService {
         // Validate the returned signature
         if (!isValidEIP712Signature(signature)) {
           throw new EIP712SigningError(
-            `Invalid signature format: ${signature}`
+            `Invalid signature format: ${signature}`,
           );
         }
 
@@ -683,7 +792,7 @@ export class BlockchainService {
         // Otherwise, wrap in a signing error
         throw new EIP712SigningError(
           "Failed to sign EIP-712 message",
-          createProperError(error)
+          createProperError(error),
         );
       }
     } catch (error) {
@@ -695,7 +804,7 @@ export class BlockchainService {
       console.error("Failed to generate EIP-712 signature:", error);
       throw new EIP712SigningError(
         "Failed to generate EIP-712 signature",
-        createProperError(error)
+        createProperError(error),
       );
     }
   }
@@ -711,14 +820,14 @@ export class BlockchainService {
   public verifyEIP712Signature(
     signature: string,
     agent: Pick<Agent, "id" | "name" | "provider" | "version">,
-    timestamp: number
+    timestamp: number,
   ): string | null {
     try {
       // Validate signature format
       if (!isValidEIP712Signature(signature)) {
         throw new EIP712VerificationError(
           "Invalid EIP-712 signature format",
-          signature
+          signature,
         );
       }
 
@@ -729,14 +838,14 @@ export class BlockchainService {
       // Create the domain and message objects
       const domain = createEIP712Domain(
         chainId,
-        this.contract.target as string
+        this.contract.target as string,
       );
 
       // Validate domain
       if (!isEIP712Domain(domain)) {
         throw new EIP712DomainError(
           "Invalid EIP-712 domain parameters",
-          domain
+          domain,
         );
       }
 
@@ -777,12 +886,25 @@ export class BlockchainService {
   public async registerBehavioralTrait(
     fingerprintHash: string,
     traitHash: string,
-    traitVersion: string
+    traitVersion: string,
   ): Promise<{
     success: boolean;
     transactionHash?: string;
     blockNumber?: number;
   }> {
+    if (this.isSandbox) {
+      this.mockTraits.set(fingerprintHash, {
+        hash: traitHash,
+        version: traitVersion,
+      });
+      console.log("Sandbox: Registered behavioral trait for", fingerprintHash);
+      return {
+        success: true,
+        transactionHash: "0x" + "a".repeat(64),
+        blockNumber: 123456,
+      };
+    }
+
     if (!this.isConnected) {
       throw new WalletNotConnectedError("Not connected to blockchain");
     }
@@ -790,7 +912,7 @@ export class BlockchainService {
     try {
       if (!window.ethereum) {
         throw new WalletNotConnectedError(
-          "No ethereum provider found. Please install MetaMask."
+          "No ethereum provider found. Please install MetaMask.",
         );
       }
 
@@ -799,20 +921,37 @@ export class BlockchainService {
       const contractWithSigner = new ethers.Contract(
         this.contract.target,
         ABI,
-        signer
+        signer,
       );
 
-      const tx = await contractWithSigner.registerBehavioralTrait(
+      // Check if feature exists already
+      const existingData = await this.contract.getBehavioralTraitData(
         fingerprintHash,
-        traitHash,
-        traitVersion
       );
-      console.log("Behavioral trait registration transaction sent:", tx.hash);
+      const traitExists = existingData && existingData[0];
+
+      let tx;
+      if (traitExists) {
+        console.log("Trait exists, calling updateBehavioralTrait...");
+        tx = await contractWithSigner.updateBehavioralTrait(
+          fingerprintHash,
+          traitHash,
+          traitVersion,
+        );
+      } else {
+        console.log("New trait, calling registerBehavioralTrait...");
+        tx = await contractWithSigner.registerBehavioralTrait(
+          fingerprintHash,
+          traitHash,
+          traitVersion,
+        );
+      }
+      console.log("Behavioral trait transaction sent:", tx.hash);
 
       const receipt = await tx.wait();
       console.log(
         "Behavioral trait registration confirmed in block:",
-        receipt.blockNumber
+        receipt.blockNumber,
       );
 
       return {
@@ -839,7 +978,7 @@ export class BlockchainService {
   public async updateBehavioralTrait(
     fingerprintHash: string,
     newTraitHash: string,
-    traitVersion: string
+    traitVersion: string,
   ): Promise<{
     success: boolean;
     transactionHash?: string;
@@ -852,7 +991,7 @@ export class BlockchainService {
     try {
       if (!window.ethereum) {
         throw new WalletNotConnectedError(
-          "No ethereum provider found. Please install MetaMask."
+          "No ethereum provider found. Please install MetaMask.",
         );
       }
 
@@ -861,20 +1000,20 @@ export class BlockchainService {
       const contractWithSigner = new ethers.Contract(
         this.contract.target,
         ABI,
-        signer
+        signer,
       );
 
       const tx = await contractWithSigner.updateBehavioralTrait(
         fingerprintHash,
         newTraitHash,
-        traitVersion
+        traitVersion,
       );
       console.log("Behavioral trait update transaction sent:", tx.hash);
 
       const receipt = await tx.wait();
       console.log(
         "Behavioral trait update confirmed in block:",
-        receipt.blockNumber
+        receipt.blockNumber,
       );
 
       return {
@@ -909,7 +1048,7 @@ export class BlockchainService {
 
     try {
       const result = await this.contract.getBehavioralTraitData(
-        fingerprintHash
+        fingerprintHash,
       );
       const [exists, traitHash, traitVersion, registeredAt, lastUpdatedAt] =
         result;
@@ -939,7 +1078,7 @@ export class BlockchainService {
    */
   public async verifyBehavioralMatch(
     fingerprintHash: string,
-    currentTraitHash: string
+    currentTraitHash: string,
   ): Promise<{
     matches: boolean;
     registeredHash?: string;
@@ -960,7 +1099,7 @@ export class BlockchainService {
 
       const matches = await this.contract.verifyBehavioralMatch(
         fingerprintHash,
-        currentTraitHash
+        currentTraitHash,
       );
 
       return {
@@ -990,12 +1129,12 @@ export class BlockchainService {
   public verifyBehavioralSafety(
     registeredResponses: ResponseSet,
     currentResponses: ResponseSet,
-    mode: "enforcement" | "triage" = "enforcement"
+    mode: "enforcement" | "triage" = "enforcement",
   ): VerificationResult {
     return verifyBehavioralSignature(
       registeredResponses,
       currentResponses,
-      mode
+      mode,
     );
   }
 

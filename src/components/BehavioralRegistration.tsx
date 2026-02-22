@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBlockchain } from '../contexts/BlockchainContext';
 import { REASONING_TEST_SUITE_V1, TestPrompt } from '../tests/behavioralTestSuite';
 import {
@@ -27,6 +27,35 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
     const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    const [existingTrait, setExistingTrait] = useState<{ hash: string; version: string } | null>(null);
+    const [isLoadingTrait, setIsLoadingTrait] = useState(false);
+
+    useEffect(() => {
+        if (!service || !isConnected || !fingerprintHash) return;
+
+        const checkExistingTrait = async () => {
+            setIsLoadingTrait(true);
+            try {
+                const existingData = await service.contract.getBehavioralTraitData(fingerprintHash);
+                const exists = existingData && existingData[0];
+                if (exists) {
+                    setExistingTrait({
+                        hash: existingData[1],
+                        version: existingData[2]
+                    });
+                } else {
+                    setExistingTrait(null);
+                }
+            } catch (err) {
+                console.error("Failed to check existing traits:", err);
+            } finally {
+                setIsLoadingTrait(false);
+            }
+        };
+
+        checkExistingTrait();
+    }, [service, isConnected, fingerprintHash]);
 
   const currentPrompt = REASONING_TEST_SUITE_V1.prompts[currentStep];
   const isLastPrompt = currentStep === REASONING_TEST_SUITE_V1.prompts.length - 1;
@@ -80,6 +109,7 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
 
       if (result.success) {
         setRegistrationSuccess(true);
+          localStorage.setItem(`sidecar_${fingerprintHash}`, JSON.stringify(hashResult.responseSet));
         console.log('Behavioral trait registered:', result);
       }
     } catch (err: any) {
@@ -166,7 +196,18 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
                     📥 Download C2PA Identity (Nutrition Label)
                 </button>
                 <button
-                    style={{ padding: '10px 20px', border: '1px solid #ccc', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}
+                    style={{
+                        padding: '10px 20px',
+                        border: '1px solid #ccc',
+                        borderRadius: '6px',
+                        background: '#fff',
+                        color: '#333',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
                     onClick={() => {
                         setRegistrationSuccess(false);
                         setHashResult(null);
@@ -193,6 +234,29 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
             <p>Complete all {REASONING_TEST_SUITE_V1.prompts.length} prompts to generate your behavioral trait hash.</p>
           </div>
 
+                  {isLoadingTrait && (
+                      <p style={{ color: '#666', fontStyle: 'italic' }}>Checking blockchain for existing traits...</p>
+                  )}
+
+                  {!isLoadingTrait && existingTrait && (
+                      <div style={{
+                          padding: '15px',
+                          backgroundColor: '#fff3cd',
+                          color: '#856404',
+                          border: '1px solid #ffeeba',
+                          borderRadius: '4px',
+                          marginBottom: '20px'
+                      }}>
+                          <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>ℹ️ Active Behavioral Trait Found</p>
+                          <p style={{ margin: '0 0 5px 0', fontSize: '14px' }}>
+                              This agent already has a registered behavioral trait (Hash: <code>{existingTrait.hash.substring(0, 10)}...</code>).
+                          </p>
+                          <p style={{ margin: 0, fontSize: '14px' }}>
+                              Completing this form again will <strong>update</strong> the current trait on the blockchain.
+                          </p>
+                      </div>
+                  )}
+
           <div style={{ marginBottom: '20px', padding: '15px', background: '#f5f5f5', borderRadius: '5px' }}>
             <div style={{ marginBottom: '10px' }}>
               <strong>Prompt {currentStep + 1} of {REASONING_TEST_SUITE_V1.prompts.length}</strong>
@@ -201,7 +265,25 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
               </span>
             </div>
             <p><strong>Question:</strong></p>
-            <p style={{ fontStyle: 'italic', marginBottom: '15px' }}>{currentPrompt.prompt}</p>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
+                          <p style={{ fontStyle: 'italic', margin: 0, flex: 1 }}>{currentPrompt.prompt}</p>
+                          <button
+                              onClick={() => copyToClipboard(currentPrompt.prompt, 'prompt')}
+                              style={{
+                                  border: '1px solid #ddd',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  padding: '4px 8px',
+                                  fontSize: '12px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  background: copiedField === 'prompt' ? '#e8f5e9' : '#fff'
+                              }}
+                              title="Copy prompt"
+                          >
+                              {copiedField === 'prompt' ? '✓ Copied' : '📋 Copy'}
+                          </button>
+                      </div>
 
             <textarea
               value={responses[currentStep]}
@@ -221,8 +303,7 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
             <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'space-between' }}>
               <button
                 onClick={handlePrevious}
-                disabled={currentStep === 0}
-                style={{ padding: '8px 16px' }}
+                              disabled={currentStep === 0}
               >
                 ← Previous
               </button>

@@ -21,9 +21,31 @@ const AppWrapper: React.FC = () => {
 // Actual App content that uses the BlockchainContext
 const AppContent: React.FC = () => {
   // Get blockchain context
-  const { walletAddress, isConnected, service } = useBlockchain();
+    const { walletAddress, isConnected, isSandbox, service } = useBlockchain();
   
-  const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke' | 'behavior-register' | 'behavior-verify'>('register');
+    const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke' | 'behavior-register' | 'behavior-verify'>(() => {
+        const hash = window.location.hash.replace('#', '');
+        if (['register', 'verify', 'revoke', 'behavior-register', 'behavior-verify'].includes(hash)) {
+            return hash as any;
+        }
+        return 'register';
+    });
+
+    React.useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash.replace('#', '');
+            if (['register', 'verify', 'revoke', 'behavior-register', 'behavior-verify'].includes(hash)) {
+                setActiveTab(hash as any);
+            }
+        };
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    const handleTabChange = (tab: 'register' | 'verify' | 'revoke' | 'behavior-register' | 'behavior-verify') => {
+        setActiveTab(tab);
+        window.location.hash = tab;
+    };
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredAgent, setRegisteredAgent] = useState<Omit<Agent, 'createdAt'> | null>(null);
   const [fingerprintHashForBehavior, setFingerprintHashForBehavior] = useState<string>('');
@@ -32,6 +54,9 @@ const AppContent: React.FC = () => {
   const handleRegistrationSuccess = (agent: Omit<Agent, 'createdAt'>) => {
     setRegistrationSuccess(true);
     setRegisteredAgent(agent);
+      // Pre-fill hashes for subsequent tabs to ensure flow continuity
+      setInputHash(agent.fingerprintHash);
+      setFingerprintHashForBehavior(agent.fingerprintHash);
   };
 
   const handleRevocationSuccess = () => {
@@ -57,6 +82,7 @@ const AppContent: React.FC = () => {
                 <li>MetaMask wallet extension installed</li>
                 <li>Wallet connected to <strong>Sepolia testnet</strong> (Chain ID: 11155111)</li>
               </ol>
+                          <p><small>Or use <strong>Sandbox Mode</strong> for a quick preview without a wallet.</small></p>
               <p><small>Need Sepolia ETH? Get it from <a href="https://sepoliafaucet.com/" target="_blank" rel="noopener noreferrer">Sepolia Faucet</a></small></p>
             </div>
             <ConnectWallet/>
@@ -65,40 +91,41 @@ const AppContent: React.FC = () => {
           <>
             <div className="wallet-info">
               <p>Connected Wallet: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}</p>
+                              {isSandbox && <span className="sandbox-badge">Sandbox Mode Active</span>}
             </div>
 
             <div className="tabs">
               <button
                 className={`tab ${activeTab === 'register' ? 'active' : ''}`}
-                onClick={() => setActiveTab('register')}
+                                  onClick={() => handleTabChange('register')}
                 title="Register a new AI agent fingerprint on the blockchain"
               >
                 Register Fingerprint
               </button>
               <button
                 className={`tab ${activeTab === 'verify' ? 'active' : ''}`}
-                onClick={() => setActiveTab('verify')}
+                                  onClick={() => handleTabChange('verify')}
                 title="Verify an existing fingerprint against blockchain records"
               >
                 Verify Fingerprint
               </button>
               <button
                 className={`tab ${activeTab === 'revoke' ? 'active' : ''}`}
-                onClick={() => setActiveTab('revoke')}
+                                  onClick={() => handleTabChange('revoke')}
                 title="Revoke a fingerprint you previously registered"
               >
                 Revoke Fingerprint
               </button>
               <button
                 className={`tab ${activeTab === 'behavior-register' ? 'active' : ''}`}
-                onClick={() => setActiveTab('behavior-register')}
+                                  onClick={() => handleTabChange('behavior-register')}
                 title="Register behavioral traits for an AI agent to detect future model changes"
               >
                 Register Behavioral Trait
               </button>
               <button
                 className={`tab ${activeTab === 'behavior-verify' ? 'active' : ''}`}
-                onClick={() => setActiveTab('behavior-verify')}
+                                  onClick={() => handleTabChange('behavior-verify')}
                 title="Verify behavioral traits to detect model drift or substitution"
               >
                 Verify Behavioral Trait
@@ -106,8 +133,7 @@ const AppContent: React.FC = () => {
             </div>
 
             <div className="tab-content">
-              {activeTab === 'register' && (
-                <>
+                              <div style={{ display: activeTab === 'register' ? 'block' : 'none' }}>
                   {registrationSuccess ? (
                     <div className="success-card">
                       <h2>Registration Successful!</h2>
@@ -127,22 +153,20 @@ const AppContent: React.FC = () => {
                   ) : (
                     <FingerprintForm onSuccess={handleRegistrationSuccess} />
                   )}
-                </>
-              )}
+                              </div>
 
-              {activeTab === 'verify' && (
+                              <div style={{ display: activeTab === 'verify' ? 'block' : 'none' }}>
                 <VerifyFingerprint blockchainService={service!} />
-              )}
+                              </div>
 
-              {activeTab === 'revoke' && (
+                              <div style={{ display: activeTab === 'revoke' ? 'block' : 'none' }}>
                 <RevokeFingerprint
                   blockchainService={service!}
                   onSuccess={handleRevocationSuccess}
                 />
-              )}
+                              </div>
 
-              {activeTab === 'behavior-register' && (
-                <>
+                              <div style={{ display: activeTab === 'behavior-register' ? 'block' : 'none' }}>
                   {!fingerprintHashForBehavior ? (
                     <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '5px' }}>
                       <h3>Register Behavioral Trait</h3>
@@ -150,8 +174,8 @@ const AppContent: React.FC = () => {
                       <input
                         type="text"
                         placeholder="0x..."
-                                                  value={inputHash}
-                                                  onChange={(e) => setInputHash(e.target.value)}
+                                              value={inputHash}
+                                              onChange={(e) => setInputHash(e.target.value)}
                         style={{
                           width: '100%',
                           padding: '10px',
@@ -163,11 +187,11 @@ const AppContent: React.FC = () => {
                       />
                       <button
                         onClick={() => {
-                                                      if (inputHash.trim()) {
-                                                          setFingerprintHashForBehavior(inputHash.trim());
+                                                  if (inputHash.trim()) {
+                                                      setFingerprintHashForBehavior(inputHash.trim());
                           }
                         }}
-                                                  disabled={!inputHash.trim()}
+                                              disabled={!inputHash.trim()}
                         style={{ padding: '10px 20px' }}
                       >
                         Continue to Registration
@@ -176,10 +200,10 @@ const AppContent: React.FC = () => {
                   ) : (
                     <>
                       <button
-                                                      onClick={() => {
-                                                          setFingerprintHashForBehavior('');
-                                                          setInputHash('');
-                                                      }}
+                                                  onClick={() => {
+                                                      setFingerprintHashForBehavior('');
+                                                      setInputHash('');
+                                                  }}
                         style={{ marginBottom: '15px', padding: '8px 16px' }}
                       >
                         ← Change Fingerprint Hash
@@ -187,11 +211,9 @@ const AppContent: React.FC = () => {
                       <BehavioralRegistration fingerprintHash={fingerprintHashForBehavior} />
                     </>
                   )}
-                </>
-              )}
+                              </div>
 
-              {activeTab === 'behavior-verify' && (
-                <>
+                              <div style={{ display: activeTab === 'behavior-verify' ? 'block' : 'none' }}>
                   {!fingerprintHashForBehavior ? (
                     <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '5px' }}>
                       <h3>Verify Behavioral Trait</h3>
@@ -199,8 +221,8 @@ const AppContent: React.FC = () => {
                       <input
                         type="text"
                         placeholder="0x..."
-                                                  value={inputHash}
-                                                  onChange={(e) => setInputHash(e.target.value)}
+                                              value={inputHash}
+                                              onChange={(e) => setInputHash(e.target.value)}
                         style={{
                           width: '100%',
                           padding: '10px',
@@ -212,11 +234,11 @@ const AppContent: React.FC = () => {
                       />
                       <button
                         onClick={() => {
-                                                      if (inputHash.trim()) {
-                                                          setFingerprintHashForBehavior(inputHash.trim());
+                                                  if (inputHash.trim()) {
+                                                      setFingerprintHashForBehavior(inputHash.trim());
                           }
                         }}
-                                                  disabled={!inputHash.trim()}
+                                              disabled={!inputHash.trim()}
                         style={{ padding: '10px 20px' }}
                       >
                         Continue to Verification
@@ -225,10 +247,10 @@ const AppContent: React.FC = () => {
                   ) : (
                     <>
                       <button
-                                                      onClick={() => {
-                                                          setFingerprintHashForBehavior('');
-                                                          setInputHash('');
-                                                      }}
+                                                  onClick={() => {
+                                                      setFingerprintHashForBehavior('');
+                                                      setInputHash('');
+                                                  }}
                         style={{ marginBottom: '15px', padding: '8px 16px' }}
                       >
                         ← Change Fingerprint Hash
@@ -236,8 +258,7 @@ const AppContent: React.FC = () => {
                       <BehavioralVerification fingerprintHash={fingerprintHashForBehavior} />
                     </>
                   )}
-                </>
-              )}
+                              </div>
             </div>
           </>
         )}

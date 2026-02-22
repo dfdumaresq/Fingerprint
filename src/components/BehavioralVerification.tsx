@@ -67,9 +67,23 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
   const handleVerify = async () => {
     if (!service || !hashResult) return;
 
-      // FOR DEMO: If no baseline loaded, use the current responses as baseline (100% match demo)
-      // In production, this would be retrieved from a secure sidecar.
-      const referenceResponses = baselineResponses || hashResult.responseSet;
+      let referenceResponses = baselineResponses;
+
+      if (!referenceResponses) {
+          const storedStr = localStorage.getItem(`sidecar_${fingerprintHash}`);
+          if (storedStr) {
+              try {
+                  referenceResponses = JSON.parse(storedStr);
+              } catch (e) {
+                  console.error("Failed to parse sidecar baseline", e);
+              }
+          }
+      }
+
+      if (!referenceResponses) {
+          setError("No baseline found in sidecar database for this fingerprint. Please register a baseline first or use the 'Load Reference Baseline (Demo)' button.");
+          return;
+      }
 
     setIsVerifying(true);
     setError(null);
@@ -100,18 +114,29 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
     };
 
     const loadDemoBaseline = () => {
-        // Load a slightly different version as baseline to show similarity < 100%
-        const baseline = createManualResponseSet(REASONING_TEST_SUITE_V1, responses.map((r: string) => r + " "));
+        // Load a significantly different version as baseline to show a realistic similarity score (e.g. 80-90%)
+        // We append a generic AI phrase to simulate an agent that has drifted slightly in personality
+        const baseline = createManualResponseSet(REASONING_TEST_SUITE_V1, responses.map((r: string) => r + " As an AI, I believe this is the optimal approach."));
         setBaselineResponses(baseline);
         alert("Baseline loaded! Now try verifying to see similarity results.");
     };
 
     const injectHomograph = () => {
         const newResponses = [...responses];
-        // Replace 'a' with Cyrillic 'а'
-        newResponses[currentStep] = newResponses[currentStep].replace(/a/g, 'а');
-        setResponses(newResponses);
-        alert("Injected Cyrillic 'а' homographs! The perturbation detector should flag this.");
+        // Replace 'a' with Cyrillic 'а', 'e' with Cyrillic 'е', 'o' with Cyrillic 'о' in the first response
+        if (newResponses[0]) {
+            newResponses[0] = newResponses[0].replace(/a/gi, 'а').replace(/e/gi, 'е').replace(/o/gi, 'о');
+            setResponses(newResponses);
+
+            // Re-generate the hash result so the verification engine receives the polluted text
+            const responseSet = createManualResponseSet(REASONING_TEST_SUITE_V1, newResponses);
+            const result = generateBehavioralTraitHash(responseSet);
+            setHashResult(result);
+
+            alert("Injected Cyrillic homographs into Prompt 1! The perturbation detector should flag this.");
+        } else {
+            alert("Please enter a response in Prompt 1 first before injecting homographs.");
+        }
     };
 
     const copyToClipboard = (text: string, field: string) => {
@@ -221,6 +246,7 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                     setSafetyResult(null);
                     setHashResult(null);
                     setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
+                    setBaselineResponses(null); // Clear the baseline as well to prevent state bleed
                     setCurrentStep(0);
                 }} style={{
                     flex: 1,
@@ -228,7 +254,12 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                     border: '1px solid #ccc',
                     borderRadius: '6px',
                     background: '#fff',
-                    cursor: 'pointer'
+                    color: '#333',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}>
                     Verify Again
                 </button>
@@ -277,7 +308,26 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
               </span>
             </div>
             <p><strong>Question:</strong></p>
-            <p style={{ fontStyle: 'italic', marginBottom: '15px' }}>{currentPrompt.prompt}</p>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
+                          <p style={{ fontStyle: 'italic', margin: 0, flex: 1 }}>{currentPrompt.prompt}</p>
+                          <button
+                              onClick={() => copyToClipboard(currentPrompt.prompt, 'prompt')}
+                              style={{
+                                  background: 'none',
+                                  border: '1px solid #ddd',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  padding: '4px 8px',
+                                  fontSize: '12px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  backgroundColor: copiedField === 'prompt' ? '#e8f5e9' : '#fff'
+                              }}
+                              title="Copy prompt"
+                          >
+                              {copiedField === 'prompt' ? '✓ Copied' : '📋 Copy'}
+                          </button>
+                      </div>
 
             <textarea
               value={responses[currentStep]}

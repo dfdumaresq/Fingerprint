@@ -26,9 +26,12 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
     agent: null
   });
   const [error, setError] = useState<string | null>(null);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [isInputValid, setIsInputValid] = useState<boolean>(false);
+    const [traitHistory, setTraitHistory] = useState<any[] | null>(null);
+    const [loadingHistory, setLoadingHistory] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -36,6 +39,7 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
 
     // Reset verification attempted state when input changes
     setVerificationAttempted(false);
+      setTraitHistory(null);
 
     // Only show validation after user has typed something meaningful
     if (value.length > 3) {
@@ -99,6 +103,7 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
     setVerifying(true);
     setError(null);
     setResult({ verified: false, agent: null });
+      setTraitHistory(null);
 
     try {
       if (!service) {
@@ -135,6 +140,22 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
           signatureValid,
           signerAddress
         });
+
+          // Fetch behavioral trait history if available
+          if (agent.behavioralTraitHash) {
+              setLoadingHistory(true);
+              try {
+                  // In service we have public async getBehavioralTraitHistory(fingerprintHash: string)
+                  if ('getBehavioralTraitHistory' in service && typeof service.getBehavioralTraitHistory === 'function') {
+                      const history = await service.getBehavioralTraitHistory(fingerprintHash);
+                      setTraitHistory(history);
+                  }
+              } catch (historyErr) {
+                  console.error("Failed to fetch trait history:", historyErr);
+              } finally {
+                  setLoadingHistory(false);
+              }
+          }
       } else {
         setResult({
           verified: false,
@@ -150,6 +171,12 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
       setVerifying(false);
     }
   };
+
+    const handleCopy = (text: string, field: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(field);
+        setTimeout(() => setCopiedField(null), 2000);
+    };
 
   return (
     <div className="verify-fingerprint">
@@ -192,6 +219,19 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
         <div className="result-card">
           <h3>Verification Successful</h3>
           <p><strong>Agent ID:</strong> {result.agent.id}</p>
+                  <p>
+                      <strong>Fingerprint Hash:</strong>{' '}
+                      <span className="hash-text">{result.agent.fingerprintHash}</span>
+                      <button
+                          type="button"
+                          className={`copy-button ${copiedField === 'fingerprint' ? 'success' : ''}`}
+                          onClick={() => handleCopy(result.agent!.fingerprintHash, 'fingerprint')}
+                          title="Copy to clipboard"
+                          style={{ marginLeft: '10px', display: 'inline-flex', verticalAlign: 'middle', padding: '2px 5px', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                          {copiedField === 'fingerprint' ? '✓' : '📋'}
+                      </button>
+                  </p>
           <p><strong>Name:</strong> {result.agent.name}</p>
           <p><strong>Provider:</strong> {result.agent.provider}</p>
           <p><strong>Version:</strong> {result.agent.version}</p>
@@ -201,9 +241,47 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
                   {result.agent.behavioralTraitHash && (
                       <div className="behavioral-trait-info">
                           <h4>Behavioral Trait</h4>
-                          <p><strong>Trait Hash:</strong> <span className="hash-text">{result.agent.behavioralTraitHash}</span></p>
+                          <p>
+                              <strong>Trait Hash:</strong>{' '}
+                              <span className="hash-text">{result.agent.behavioralTraitHash}</span>
+                              <button
+                                  type="button"
+                                  className={`copy-button ${copiedField === 'trait' ? 'success' : ''}`}
+                                  onClick={() => handleCopy(result.agent!.behavioralTraitHash || '', 'trait')}
+                                  title="Copy to clipboard"
+                                  style={{ marginLeft: '10px', display: 'inline-flex', verticalAlign: 'middle', padding: '2px 5px', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
+                              >
+                                  {copiedField === 'trait' ? '✓' : '📋'}
+                              </button>
+                          </p>
                           {result.agent.behavioralTraitVersion && (
                               <p><strong>Test Suite Version:</strong> {result.agent.behavioralTraitVersion}</p>
+                          )}
+                      </div>
+                  )}
+
+                  {/* Show behavioral trait history if we have it */}
+                  {result.agent.behavioralTraitHash && (
+                      <div className="trait-history-section">
+                          <h4>Trait History</h4>
+                          {loadingHistory ? (
+                              <p>Loading history...</p>
+                          ) : traitHistory && traitHistory.length > 0 ? (
+                              <ul className="history-list">
+                                  {traitHistory.map((event, idx) => (
+                                      <li key={idx} className="history-item">
+                                          <span className="history-date">{formatTimestamp(event.timestamp)}</span> -{' '}
+                                          <span className="history-type">
+                                              {event.type === 'registered' ? 'Registered' : 'Updated'}
+                                          </span>
+                                          <div className="history-hash">
+                                              <small>Hash: {event.traitHash.substring(0, 10)}...{event.traitHash.substring(60)}</small>
+                                          </div>
+                                      </li>
+                                  ))}
+                              </ul>
+                          ) : (
+                              <p>No history found.</p>
                           )}
                       </div>
                   )}

@@ -11,7 +11,9 @@ interface BlockchainContextType {
     isLoading: boolean;
     error: string | null;
     network: NetworkType;
+    isSandbox: boolean;
     connectWallet: () => Promise<boolean>;
+    enableSandboxMode: () => void;
     switchNetwork: (network: NetworkType) => Promise<boolean>;
     // Add more functions as needed
 }
@@ -62,6 +64,7 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [network, setNetwork] = useState<NetworkType>('sepolia');
+    const [isSandbox, setIsSandbox] = useState<boolean>(false);
 
     // Initialize the blockchain service when the component mounts
     // or when the network changes
@@ -90,6 +93,17 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Implement wallet connection
     const connectWallet = async (): Promise<boolean> => {
         if (!service) return false;
+
+        if (isSandbox) {
+            console.log('Using sandbox mode, skipping real wallet connection');
+            const address = await service.connectWallet();
+            if (address) {
+                setWalletAddress(address);
+                setIsConnected(true);
+                return true;
+            }
+            return false;
+        }
 
         setIsLoading(true);
         setError(null);
@@ -151,6 +165,17 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     };
 
+    // Enable sandbox mode
+    const enableSandboxMode = () => {
+        if (service) {
+            service.setSandboxMode(true);
+            setIsSandbox(true);
+            setWalletAddress("0x1234567890123456789012345678901234567890");
+            setIsConnected(true);
+            console.log('Sandbox mode enabled in context');
+        }
+    };
+
     // Create the context value
     const contextValue: BlockchainContextType = {
         service,
@@ -159,7 +184,9 @@ export const BlockchainProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isLoading,
         error,
         network,
+        isSandbox,
         connectWallet,
+        enableSandboxMode,
         switchNetwork
     };
 

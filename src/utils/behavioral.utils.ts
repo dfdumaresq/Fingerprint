@@ -217,6 +217,26 @@ export const VERIFICATION_THRESHOLDS = {
 };
 
 /**
+ * Calculate Jaccard Similarity (Bag of Words) for text
+ *
+ * @param a - First string
+ * @param b - Second string
+ * @returns Similarity score between 0 and 1
+ */
+function calculateJaccardSimilarity(a: string, b: string): number {
+  const setA = new Set(a.split(/\s+/).filter((w) => w.length > 0));
+  const setB = new Set(b.split(/\s+/).filter((w) => w.length > 0));
+
+  if (setA.size === 0 && setB.size === 0) return 1;
+  if (setA.size === 0 || setB.size === 0) return 0;
+
+  const intersection = new Set(Array.from(setA).filter((x) => setB.has(x)));
+  const union = new Set([...Array.from(setA), ...Array.from(setB)]);
+
+  return intersection.size / union.size;
+}
+
+/**
  * Verify if two behavioral signatures match using similarity thresholds
  *
  * This is the "safety-grade" verification function.
@@ -236,23 +256,24 @@ export function verifyBehavioralSignature(
   // 1. Canonicalize both sets of responses
   const regCanon = registeredResponses.responses
     .map((r) => canonicalize(r.response).canonical)
-    .join("|");
+    .join(" ");
   const curCanon = currentResponses.responses
     .map((r) => canonicalize(r.response).canonical)
-    .join("|");
+    .join(" ");
 
-  // 2. Calculate similarity (inverse of normalized edit distance)
-  const distance = normalizedEditDistance(regCanon, curCanon);
-  const similarity = 1 - distance;
+  // 2. Calculate Token-based Jaccard Similarity
+  const similarity = calculateJaccardSimilarity(regCanon, curCanon);
 
   // 3. Analyze perturbations in current response set (concatenated)
+  // We use the raw text for perturbation analysis to catch hidden characters/homographs
   const curRaw = currentResponses.responses.map((r) => r.response).join("|");
   const perturbation = analyzePerturbation(curRaw, curCanon);
 
   // 4. Decision logic
   const similarityPass = similarity >= thresholds.minSimilarity;
   const perturbationPass =
-    perturbation.perturbationScore <= thresholds.maxPerturbation;
+    perturbation.perturbationScore <= thresholds.maxPerturbation &&
+    !perturbation.suspicious;
 
   const match = similarityPass && perturbationPass;
   let reason = "Verification successful";
@@ -266,7 +287,7 @@ export function verifyBehavioralSignature(
     }
   } else if (!perturbationPass) {
     reason = `Perturbation score ${perturbation.perturbationScore.toFixed(
-      2
+      2,
     )} above threshold ${thresholds.maxPerturbation}`;
   } else if (perturbation.suspicious) {
     reason = "Verification passed but suspicious patterns detected";
@@ -275,7 +296,7 @@ export function verifyBehavioralSignature(
   // Confidence calculation (heuristic)
   let confidence =
     similarity * 0.7 + (1 - perturbation.perturbationScore) * 0.3;
-  if (perturbation.suspicious) confidence *= 0.8; // Lower confidence if patterns detected
+  if (perturbation.suspicious) confidence = 0; // Absolute zero confidence if spoofing detected
 
   return {
     match,

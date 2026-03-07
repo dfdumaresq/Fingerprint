@@ -59,7 +59,13 @@ describe('Adversarial Test Farm', () => {
     const currentSet = createManualResponseSet(REASONING_TEST_SUITE_V1, paraphrasedResponses);
     
     const triageResult = verifyBehavioralSignature(legitimateSet, currentSet, "triage");
-    console.log(`Synonym Substitution Similarity: ${(triageResult.similarity * 100).toFixed(2)}%`);
+    console.log(
+      `Synonym Substitution Similarity: ${(
+        triageResult.similarity * 100
+      ).toFixed(2)}%, Perturbation: ${(
+        triageResult.perturbation.perturbationScore * 100
+      ).toFixed(2)}%, Reason: ${triageResult.decision.reason}`,
+    );
     expect(triageResult.match).toBe(true);
     
     const strictResult = verifyBehavioralSignature(legitimateSet, currentSet, "enforcement");

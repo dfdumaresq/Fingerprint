@@ -15,6 +15,8 @@ export interface Agent {
   behavioralTraitVersion?: string;
 }
 
+
+
 export interface BehavioralTraitEvent {
   type: "registered" | "updated";
   traitHash: string;
@@ -22,6 +24,8 @@ export interface BehavioralTraitEvent {
   traitVersion: string;
   timestamp: number;
 }
+
+
 
 // Network type
 export type NetworkType = 'sepolia' | 'goerli' | 'mainnet' | 'arbitrum' | 'polygon';

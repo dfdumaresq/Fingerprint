@@ -11,7 +11,11 @@
     "test:all": "npm run test && npm run test:jest",
     "compile": "hardhat compile",
     "deploy:local": "hardhat run scripts/deploy.js --network hardhat",
-    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia"
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "dev:indexer": "ts-node scripts/indexer.ts",
+    "dev:api": "ts-node src/api/server.ts",
+    "register:agent": "hardhat run scripts/register-agent.js --network sepolia",
+    "prune:agent": "ts-node scripts/prune-agent.ts"
   },
   "keywords": [
     "blockchain",
@@ -28,18 +32,28 @@
     "@types/node": "^22.15.2",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "dotenv": "^16.5.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
     "ethers": "^6.13.7",
+    "express": "^5.2.1",
+    "ioredis": "^5.10.0",
+    "pg": "^8.20.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "swagger-ui-express": "^5.0.1",
     "typescript": "^5.8.3",
     "web3": "^4.16.0",
-    "web3modal": "^1.9.12"
+    "web3modal": "^1.9.12",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
     "@types/jest": "^29.5.12",
+    "@types/pg": "^8.18.0",
+    "@types/swagger-ui-express": "^4.1.8",
     "css-loader": "^7.1.2",
     "hardhat": "^2.23.0",
     "html-webpack-plugin": "^5.6.3",

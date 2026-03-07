@@ -17,5 +17,10 @@
     "jsx": "react-jsx",
     "outDir": "./dist"
   },
-  "include": ["src"]
+  "include": ["src", "scripts", "test", "hardhat.config.js"],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
+  }
 }

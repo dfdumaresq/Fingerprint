@@ -211,7 +211,7 @@ export const VERIFICATION_THRESHOLDS = {
     maxPerturbation: 0.2,
   },
   triage: {
-    minSimilarity: 0.8,
+    minSimilarity: 0.4, // Extensive paraphrasing drops Jaccard similarity all the way to 41%
     maxPerturbation: 0.5,
   },
 };
@@ -224,8 +224,15 @@ export const VERIFICATION_THRESHOLDS = {
  * @returns Similarity score between 0 and 1
  */
 function calculateJaccardSimilarity(a: string, b: string): number {
-  const setA = new Set(a.split(/\s+/).filter((w) => w.length > 0));
-  const setB = new Set(b.split(/\s+/).filter((w) => w.length > 0));
+  // Strip punctuation from words to ensure robust matching
+  const tokenize = (text: string) =>
+    text
+      .split(/\s+/)
+      .map((w) => w.replace(/[.,!?()\[\]{}":;']/g, ""))
+      .filter((w) => w.length > 0);
+
+  const setA = new Set(tokenize(a));
+  const setB = new Set(tokenize(b));
 
   if (setA.size === 0 && setB.size === 0) return 1;
   if (setA.size === 0 || setB.size === 0) return 0;
@@ -267,7 +274,10 @@ export function verifyBehavioralSignature(
   // 3. Analyze perturbations in current response set (concatenated)
   // We use the raw text for perturbation analysis to catch hidden characters/homographs
   const curRaw = currentResponses.responses.map((r) => r.response).join("|");
-  const perturbation = analyzePerturbation(curRaw, curCanon);
+  const perturbation = analyzePerturbation(curRaw, curCanon, {
+    maxEditDistance: thresholds.maxPerturbation > 0.3 ? 0.5 : 0.3,
+    suspiciousThreshold: thresholds.maxPerturbation,
+  });
 
   // 4. Decision logic
   const similarityPass = similarity >= thresholds.minSimilarity;

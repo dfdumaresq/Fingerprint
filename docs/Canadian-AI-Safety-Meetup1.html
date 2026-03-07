@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent Fingerprinting</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .slide {
+            background: white;
+            width: 100%;
+            max-width: 1200px;
+            aspect-ratio: 16/9;
+            padding: 60px 80px;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .header {
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 3.5em;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 1.8em;
+            color: #555;
+            font-weight: 400;
+            margin-bottom: 40px;
+        }
+        
+        .divider {
+            height: 4px;
+            background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
+            margin: 40px auto;
+            width: 60%;
+        }
+        
+        .content {
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .tagline {
+            font-size: 2em;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 60px;
+            font-style: italic;
+        }
+        
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .author {
+            font-size: 1.8em;
+            color: #1e3c72;
+            font-weight: 600;
+        }
+        
+        .github {
+            text-align: right;
+        }
+        
+        .github-label {
+            font-size: 1em;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .github-link {
+            font-size: 1.6em;
+            color: #2a5298;
+            font-weight: 600;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .github-link:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 900px) {
+            .slide {
+                padding: 40px;
+            }
+            h1 {
+                font-size: 2.5em;
+            }
+            .subtitle {
+                font-size: 1.4em;
+            }
+            .tagline {
+                font-size: 1.5em;
+            }
+            .author {
+                font-size: 1.4em;
+            }
+            .github-link {
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide">
+        <div class="header">
+            <h1>AI Agent Fingerprinting</h1>
+            <div class="subtitle">Blockchain-Based Identity Verification</div>
+        </div>
+        
+        <div class="content">
+            <div class="tagline">
+                Tamper-proof identity verification for AI agents<br>in positions of trust
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="author">
+                David F. Dumaresq
+            </div>
+            <div class="github">
+                <div class="github-label">GitHub</div>
+                <a href="https://github.com/dfdumaresq/Fingerprint" class="github-link">
+                    github.com/dfdumaresq/Fingerprint
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

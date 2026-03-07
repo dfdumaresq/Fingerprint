@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fingerprint Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            margin: 0;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #eee;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Fingerprint System Architecture</h1>
+    
+    <div class="mermaid">
+flowchart TB
+    subgraph UI["React Frontend"]
+        App[App.tsx]
+        Register[FingerprintForm]
+        Verify[VerifyFingerprint]
+        Revoke[RevokeFingerprint]
+        BehaviorReg[BehavioralRegistration]
+        BehaviorVerify[BehavioralVerification]
+    end
+    
+    subgraph Services["Service Layer"]
+        BC[BlockchainService]
+        SecBC[SecureBlockchainService]
+        BU[behavioral.utils.ts]
+        FU[fingerprint.utils.ts]
+        EIP[eip712.utils.ts]
+    end
+    
+    subgraph Security["Key Management"]
+        KM[KeyManager]
+        KP{{KeyProvider Interface}}
+        Env[EnvKeyProvider]
+        Vault[VaultKeyProvider]
+        Encrypted[EncryptedFileKeyProvider]
+    end
+    
+    subgraph Blockchain["Solidity Contract"]
+        Contract[AIFingerprint.sol]
+        AgentData[(AgentData)]
+        BehavioralData[(BehavioralTrait)]
+        Revocations[(RevocationData)]
+    end
+    
+    App --> Register & Verify & Revoke & BehaviorReg & BehaviorVerify
+    Register & Verify --> BC
+    BehaviorReg & BehaviorVerify --> BU
+    BC --> Contract
+    SecBC --> KM --> KP
+    KP --> Env & Vault & Encrypted
+    BU --> BC
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>

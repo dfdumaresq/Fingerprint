@@ -356,7 +356,6 @@ contract AIFingerprint is Ownable, Pausable {
             revData.revokedAt
         );
     }
-
     /**
      * @dev Register a behavioral trait for an AI agent fingerprint
      * @param fingerprintHash The fingerprint hash to associate the behavioral trait with
@@ -469,12 +468,6 @@ contract AIFingerprint is Ownable, Pausable {
         );
     }
 
-    /**
-     * @dev Verify if a current behavioral trait hash matches the registered one
-     * @param fingerprintHash The fingerprint hash to verify against
-     * @param currentTraitHash The current behavioral trait hash to compare
-     * @return matches Whether the current hash matches the registered hash
-     */
     function verifyBehavioralMatch(
         string calldata fingerprintHash,
         string calldata currentTraitHash

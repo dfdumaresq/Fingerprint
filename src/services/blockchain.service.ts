@@ -43,7 +43,7 @@ const ABI = [
   "function registerBehavioralTrait(string fingerprintHash, string traitHash, string traitVersion) external",
   "function updateBehavioralTrait(string fingerprintHash, string newTraitHash, string traitVersion) external",
   "function getBehavioralTraitData(string fingerprintHash) external view returns (bool exists, string traitHash, string traitVersion, uint256 registeredAt, uint256 lastUpdatedAt)",
-  "function verifyBehavioralMatch(string fingerprintHash, string currentTraitHash) external view returns (bool matches)"
+  "function verifyBehavioralMatch(string fingerprintHash, string currentTraitHash) external view returns (bool matches)",
 ];
 
 // Add Ethereum window type
@@ -344,8 +344,8 @@ export class BlockchainService {
         console.log("Contract does not support extended verification");
         return false;
       }
-
-      // For other errors, we assume the method exists but failed for other reasons
+      // If we reach here, it means the method exists but failed for some other reason.
+      // So, we assume it supports extended verification.
       return true;
     }
   }

@@ -24,7 +24,7 @@ interface RegisteredAgent {
 }
 
 const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
-const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || 'dd3d02cb017e4ea2ab904ec98e211eeb';
+const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
 
 export const MedicalAuditDashboard: React.FC = () => {
   const [events, setEvents] = useState<ClinicalEvent[]>([]);

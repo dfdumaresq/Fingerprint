@@ -1,0 +1,4 @@
+id,name,provider,version,fingerprintHash,behavioralTraitHash,traitVersion
+batch_gpt_001,GPT-4 Batch Test,OpenAI,4.0.0,0x1111111111111111111111111111111111111111111111111111111111111111,0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,reasoning-v1.0
+batch_claude_001,Claude-3 Batch Test,Anthropic,3.0.0,0x2222222222222222222222222222222222222222222222222222222222222222,none,reasoning-v1.0
+batch_llama_001,Llama-3 Batch Test,Meta,3.0.0,0x3333333333333333333333333333333333333333333333333333333333333333,0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,reasoning-v1.0

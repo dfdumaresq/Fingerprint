@@ -12,6 +12,14 @@ import * as yaml from 'yaml';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Import our Phase 1 NLP pipeline and hash generators
+import {
+  verifyBehavioralSignature,
+  generateBehavioralTraitHash,
+  ResponseSet,
+  VerificationResult
+} from '../utils/behavioral.utils';
+
 dotenv.config();
 
 // Initialize DB and Redis (acting as the synchronized Datastore from the Indexer)
@@ -138,28 +146,76 @@ app.get('/v1/agents/:fingerprintHash', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /v1/internal/traits/seed
+ * INTERNAL ENDPOINT: Seed a behavioral ResponseSet into Redis, mimicking IPFS sidecar delivery.
+ * Used during agent registration to store the baseline off-chain.
+ */
+app.post('/v1/internal/traits/seed', async (req: Request, res: Response) => {
+  try {
+    const { fingerprintHash, responseSet } = req.body;
+    
+    if (!fingerprintHash || !responseSet) {
+      res.status(400).json({ error: { code: 'bad_request', message: 'Missing fingerprintHash or responseSet' } });
+      return;
+    }
+
+    // 1. Verify that this ResponseSet produces the EXACT traitHash expected by the smart contract
+    // We use useCanonical = true to mimic the strict hashing done on registration
+    const hashResult = generateBehavioralTraitHash(responseSet, true);
+    
+    // 2. Store the raw JSON responses in Redis
+    await redis.set(`agent:responses:${fingerprintHash}`, JSON.stringify(responseSet));
+    
+    res.json({
+      success: true,
+      fingerprintHash,
+      generatedTraitHash: hashResult.hash,
+      traitVersion: hashResult.traitVersion,
+      message: 'Traits successfully seeded in off-chain cache.'
+    });
+  } catch (error) {
+    console.error('Error seeding traits:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: 'Failed to seed baseline traits' } });
+  }
+});
+
+/**
  * POST /v1/agents/verify
  * The core endpoint for relying parties (e.g. merchants) to verify an AI agent's trustworthiness
  */
 app.post('/v1/agents/verify', async (req: Request, res: Response) => {
   try {
-    const { fingerprintHash, currentTraitPayload, context } = req.body;
+    // Phase 1.5 Update: We now expect a full ResponseSet instead of a single string hash
+    const { fingerprintHash, currentResponseSet, context } = req.body;
 
     if (!fingerprintHash) {
-      res.status(400).json({ error: { code: 'bad_request', message: 'Missing fingerprintHash in request body' } });
+      res.status(400).json({
+        error: {
+          code: "bad_request",
+          message: "Missing fingerprintHash in request body",
+        },
+      });
       return;
     }
 
     // 1. Lookup Agent (prefer Redis)
     let agentProfile: any = null;
     const cached = await redis.get(`agent:${fingerprintHash}`);
-    
+
     if (cached) {
       agentProfile = JSON.parse(cached);
     } else {
-      const { rows } = await db.query('SELECT * FROM agents WHERE fingerprint_hash = $1', [fingerprintHash]);
+      const { rows } = await db.query(
+        "SELECT * FROM agents WHERE fingerprint_hash = $1",
+        [fingerprintHash],
+      );
       if (rows.length === 0) {
-        res.status(404).json({ error: { code: 'agent_not_found', message: 'No agent found for the provided fingerprintHash.' } });
+        res.status(404).json({
+          error: {
+            code: "agent_not_found",
+            message: "No agent found for the provided fingerprintHash.",
+          },
+        });
         return;
       }
       agentProfile = {
@@ -167,60 +223,127 @@ app.post('/v1/agents/verify', async (req: Request, res: Response) => {
         name: rows[0].name,
         provider: rows[0].provider,
         isRevoked: rows[0].is_revoked,
-        behavioralTrait: rows[0].latest_trait_hash ? {
-          hasTrait: true,
-          latestTraitHash: rows[0].latest_trait_hash
-        } : undefined
+        behavioralTrait: rows[0].latest_trait_hash
+          ? {
+              hasTrait: true,
+              latestTraitHash: rows[0].latest_trait_hash,
+            }
+          : undefined,
       };
     }
 
     // 2. Base Rules Engine
     let trust_score = 100;
-    let decision = 'accept';
+    let decision = "accept";
     const signals: string[] = [];
+    let recommendations: string[] = [];
+    let verification_details: { similarity_score?: number } | undefined =
+      undefined;
 
     // Rule 1: Revocation
     if (agentProfile.isRevoked) {
       res.json({
-        decision: 'deny',
+        decision: "deny",
         trust_score: 0,
         agent: {
           fingerprintHash: agentProfile.fingerprintHash,
           name: agentProfile.name,
           provider: agentProfile.provider,
-          isRevoked: true
+          isRevoked: true,
         },
-        signals: ['agent_revoked'],
+        signals: ["agent_revoked"],
         indexer: { isStale: false, lagBlocks: 0 },
-        recommendations: ['Agent has been revoked on-chain and must be blocked.']
+        recommendations: [
+          "Agent has been revoked on-chain and must be blocked.",
+        ],
+        verification_details,
       });
       return;
     }
 
-    signals.push('contract_status_active');
+    signals.push("contract_status_active");
 
-    // Rule 2: Off-chain Behavioral Match Simulation
-    // We hash the raw payload exactly as the solidity contract would and compare it to the registered hash.
-    if (agentProfile.behavioralTrait?.hasTrait && currentTraitPayload) {
-      const payloadHash = ethers.keccak256(ethers.toUtf8Bytes(currentTraitPayload));
-      if (payloadHash === agentProfile.behavioralTrait.latestTraitHash) {
-        signals.push('behavioral_match_success');
-      } else {
-        trust_score -= 50; 
-        decision = 'challenge';
-        signals.push('behavioral_mismatch');
+    // Rule 2: Off-chain Semantic Behavioral Match
+    // Pull the baseline ResponseSet from Redis that was seeded during registration
+    if (agentProfile.behavioralTrait?.hasTrait && currentResponseSet) {
+      const baselineJson = await redis.get(
+        `agent:responses:${fingerprintHash}`,
+      );
+
+      if (!baselineJson) {
+        // We know they have a trait on-chain, but the IPFS/Redis sync failed!
+        res.status(503).json({
+          error: {
+            code: "unavailable",
+            message: "Baseline responses not synced to off-chain cache yet",
+          },
+        });
+        return;
       }
+
+      const baselineResponses: ResponseSet = JSON.parse(baselineJson);
+
+      // Execute the Phase 1 Jaccard Similarity and Perturbation Pipeline
+      const verification: VerificationResult = verifyBehavioralSignature(
+        baselineResponses,
+        currentResponseSet,
+        "triage", // Use loose matching for standard web verification
+      );
+
+      verification_details = { similarity_score: verification.similarity };
+
+      // Map NLP metrics to our Gateway Trust Score
+      if (verification.match) {
+        if (verification.perturbation.suspicious) {
+          signals.push("suspicious_perturbations_detected");
+          trust_score = 0;
+          decision = "deny";
+          recommendations.push(
+            "Hard reject: Probable homograph injection or evasion assault.",
+          );
+        } else {
+          signals.push("behavioral_match_success");
+          // Confidence scaling based on perturbation absence and similarity strength
+          trust_score = Math.floor(verification.confidence * 100);
+        }
+      } else {
+        signals.push("behavioral_mismatch");
+        if (verification.perturbation.suspicious) {
+          signals.push("suspicious_perturbations_detected");
+          trust_score = 0;
+          decision = "deny";
+          recommendations.push(
+            "Hard reject: Probable homograph injection or evasion assault.",
+          );
+        } else {
+          // Similarity failure (e.g. Model swap)
+          trust_score = Math.floor(verification.similarity * 100);
+          decision = "challenge";
+          recommendations.push(
+            "Similarity score too low. Possible model substitution.",
+          );
+        }
+      }
+    } else if (agentProfile.behavioralTrait?.hasTrait && !currentResponseSet) {
+      // Merchant failed to send the response payload when one is required
+      trust_score -= 25;
+      signals.push("missing_behavioral_assertion");
     }
 
     // Rule 3: Contextual Checks (Naive MVP logic)
     if (context && context.ip_address) {
-      // In production, integrate with IP reputation databases or WAFs here
-      signals.push('ip_reputation_clean');
+      signals.push("ip_reputation_clean");
     }
 
-    // Final Decision Boundary
-    if (trust_score < 60) {
-      decision = 'challenge';
+    // Final Decision Boundary Execution
+    // If it hasn't already been blocked by a perturbation fault
+    if (decision !== "deny") {
+      if (trust_score < 60) {
+        decision = "challenge";
+        recommendations.push("Present step-up challenge or CAPTCHA.");
+      } else {
+        decision = "accept";
+      }
     }
 
     res.json({
@@ -230,13 +353,13 @@ app.post('/v1/agents/verify', async (req: Request, res: Response) => {
         fingerprintHash: agentProfile.fingerprintHash,
         name: agentProfile.name,
         provider: agentProfile.provider,
-        isRevoked: false
+        isRevoked: false,
       },
       signals,
       indexer: { isStale: false, lagBlocks: 0 },
-      recommendations: decision === 'challenge' ? ['Present step-up challenge or CAPTCHA.'] : []
+      recommendations,
+      verification_details,
     });
-
   } catch (error) {
     console.error('Error verifying agent:', error);
     res.status(500).json({ error: { code: 'internal_error', message: 'An internal error occurred during verification' } });

@@ -25,7 +25,7 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
   const [currentStep, setCurrentStep] = useState(0);
   const [hashResult, setHashResult] = useState<BehavioralHashResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-    const [safetyResult, setSafetyResult] = useState<VerificationResult | null>(null);
+    const [gatewayResult, setGatewayResult] = useState<any | null>(null);
     const [baselineResponses, setBaselineResponses] = useState<ResponseSet | null>(null);
     const [mode, setMode] = useState<'enforcement' | 'triage'>('enforcement');
   const [error, setError] = useState<string | null>(null);
@@ -89,13 +89,30 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
     setError(null);
 
     try {
-        const result = service.verifyBehavioralSafety(
-            referenceResponses,
-            hashResult.responseSet,
-            mode
-        );
+        const gatewayUrl = process.env.REACT_APP_API_GATEWAY_URL;
 
-        setSafetyResult(result);
+        if (!gatewayUrl) {
+            throw new Error("REACT_APP_API_GATEWAY_URL is not defined in the environment.");
+        }
+
+        const res = await fetch(`${gatewayUrl}/v1/agents/verify`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fingerprintHash,
+                currentResponseSet: hashResult.responseSet
+            })
+        });
+
+        if (!res.ok) {
+            throw new Error(`Gateway returned an error: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        setGatewayResult(data);
+
     } catch (err: any) {
         setError(`Verification failed: ${err.message}`);
     } finally {
@@ -104,10 +121,12 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
   };
 
     const handleDownloadCertificate = async () => {
-        if (!safetyResult) return;
+        if (!gatewayResult) return;
         try {
-            const manifest = await c2paService.generateVerificationManifest(fingerprintHash, safetyResult);
+            // Update C2PA manifest generation to support the new Gateway response format
+            const manifest = await c2paService.generateVerificationManifest(fingerprintHash, gatewayResult);
             downloadC2PAManifest(manifest, getVerificationFilename(fingerprintHash));
+            alert("C2PA export needs updating for new Gateway format.");
         } catch (err: any) {
             setError(`Failed to export certificate: ${err.message}`);
         }
@@ -154,11 +173,13 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
     );
   }
 
-    if (safetyResult) {
-        const isSuccess = safetyResult.match;
-        const similarityPercent = (safetyResult.similarity * 100).toFixed(1);
-        const confidencePercent = (safetyResult.confidence * 100).toFixed(1);
-        const perturbationScore = (safetyResult.perturbation.perturbationScore * 100).toFixed(1);
+    if (gatewayResult) {
+        // Map the API response metrics to variables for the UI
+        // The Gateway returns: { decision, trust_score, signals, recommendations, verification_details }
+        const isSuccess = gatewayResult.decision === 'accept';
+        const similarityPercent = gatewayResult.verification_details?.similarity_score ? (gatewayResult.verification_details.similarity_score * 100).toFixed(1) : "N/A";
+        const integrityScore = gatewayResult.trust_score || 0;
+        const signals = gatewayResult.signals || [];
 
     return (
       <div style={{
@@ -186,64 +207,65 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
             <span style={{
                 padding: '4px 12px',
                 borderRadius: '20px',
-                background: safetyResult.mode === 'enforcement' ? '#e3f2fd' : '#fff3e0',
+                background: mode === 'enforcement' ? '#e3f2fd' : '#fff3e0',
                 fontSize: '12px',
                 fontWeight: 'bold',
-                color: safetyResult.mode === 'enforcement' ? '#1976d2' : '#e65100',
+                color: mode === 'enforcement' ? '#1976d2' : '#e65100',
                 textTransform: 'uppercase'
             }}>
-                {safetyResult.mode} mode
+                {mode} mode
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                 <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
                     <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Similarity Score</div>
                     <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{similarityPercent}%</div>
                 </div>
-                <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Confidence</div>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{confidencePercent}%</div>
+                <div style={{ padding: '16px', background: '#e3f2fd', borderRadius: '8px', textAlign: 'center', border: '2px solid #2196f3' }}>
+                    <div style={{ fontSize: '12px', color: '#1976d2', marginBottom: '4px', fontWeight: 'bold' }}>Fingerprint Integrity Score</div>
+                    <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1565c0' }}>{integrityScore} / 100</div>
                 </div>
             </div>
 
             <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid #eee', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Perturbation Analysis</h4>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Behavioral Signals</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span>Composite Perturbation:</span>
-                        <span style={{ fontWeight: 'bold' }}>{perturbationScore}%</span>
-                    </div>
-
-                    {safetyResult.perturbation.flags.length > 0 ? (
+                    {signals.length > 0 ? (
                         <div style={{ marginTop: '8px' }}>
-                            <div style={{ fontSize: '11px', color: '#d32f2f', fontWeight: 'bold', marginBottom: '4px' }}>Detected Artifacts:</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                {safetyResult.perturbation.flags.map((flag: any, idx: number) => (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {signals.map((signal: string, idx: number) => (
                                     <span key={idx} style={{
-                                        fontSize: '10px',
-                                        background: flag.severity === 'high' ? '#ffebee' : '#fff3e0',
-                                        color: flag.severity === 'high' ? '#c62828' : '#e65100',
-                                        padding: '2px 8px',
+                                        fontSize: '11px',
+                                        background: '#e8f5e9',
+                                        color: '#2e7d32',
+                                        padding: '4px 8px',
                                         borderRadius: '4px',
-                                        border: `1px solid ${flag.severity === 'high' ? '#ef9a9a' : '#ffe0b2'}`
-                                    }} title={flag.evidence ? `Evidence: ${flag.evidence}` : flag.description}>
-                                        {flag.description}
+                                        border: '1px solid #a5d6a7'
+                                    }}>
+                                        🛡️ {signal.replace(/_/g, ' ')}
                                     </span>
                                 ))}
                             </div>
                         </div>
                     ) : (
-                        <div style={{ fontSize: '11px', color: '#388e3c' }}>✓ No suspicious perturbations detected.</div>
+                            <div style={{ fontSize: '11px', color: '#666' }}>No signals returned.</div>
                     )}
                 </div>
             </div>
 
-            <div style={{ padding: '12px', background: '#f5f5f5', borderRadius: '8px', marginBottom: '24px', fontSize: '13px' }}>
-                <strong>Verdict Reason:</strong> {safetyResult.decision.reason}
-            </div>
+            {gatewayResult.recommendations && gatewayResult.recommendations.length > 0 && (
+                <div style={{ padding: '12px', background: '#fff3e0', borderRadius: '8px', marginBottom: '24px', fontSize: '13px', border: '1px solid #ffe0b2' }}>
+                    <strong style={{ color: '#e65100' }}>Gateway Recommendation:</strong>
+                    <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: '#d84315' }}>
+                        {gatewayResult.recommendations.map((rec: string, i: number) => (
+                            <li key={i}>{rec}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={() => {
-                    setSafetyResult(null);
+                    setGatewayResult(null);
                     setHashResult(null);
                     setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
                     setBaselineResponses(null); // Clear the baseline as well to prevent state bleed

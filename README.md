@@ -78,8 +78,7 @@ Start the development server:
 ```bash
 npm start
 ```
-
-The application will be available at http://localhost:3000.
+The application will automatically open and be available at http://localhost:3000.
 
 ## Usage
 

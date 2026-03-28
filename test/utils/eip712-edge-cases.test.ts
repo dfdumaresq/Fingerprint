@@ -131,14 +131,10 @@ describe('EIP-712 Edge Cases', () => {
   });
 
   describe('Non-string and invalid values', () => {
-    it('should reject non-string agent fields', () => {
-      // @ts-expect-error - Testing runtime behavior with invalid types
+    it("should reject non-string agent fields", () => {
       const nonStringIdMessage = { ...validAgentMessage, id: 123 };
-      // @ts-expect-error - Testing runtime behavior with invalid types
       const nonStringNameMessage = { ...validAgentMessage, name: true };
-      // @ts-expect-error - Testing runtime behavior with invalid types
       const nonStringProviderMessage = { ...validAgentMessage, provider: {} };
-      // @ts-expect-error - Testing runtime behavior with invalid types
       const nonStringVersionMessage = { ...validAgentMessage, version: [] };
 
       expect(isAgentFingerprintMessage(nonStringIdMessage)).toBe(false);
@@ -153,9 +149,11 @@ describe('EIP-712 Edge Cases', () => {
       }).toThrow(EIP712MessageError);
     });
 
-    it('should reject non-number timestamp', () => {
-      // @ts-expect-error - Testing runtime behavior with invalid types
-      const nonNumberTimestampMessage = { ...validAgentMessage, timestamp: 'now' };
+    it("should reject non-number timestamp", () => {
+      const nonNumberTimestampMessage = {
+        ...validAgentMessage,
+        timestamp: "now",
+      };
       expect(isAgentFingerprintMessage(nonNumberTimestampMessage)).toBe(false);
     });
 
@@ -172,21 +170,19 @@ describe('EIP-712 Edge Cases', () => {
       expect(isAgentFingerprintMessage(decimalTimestampMessage)).toBe(false);
     });
 
-    it('should reject missing fields', () => {
-      // @ts-expect-error - Missing id
+    it("should reject missing fields", () => {
       const missingIdMessage = {
         name: validAgentMessage.name,
         provider: validAgentMessage.provider,
         version: validAgentMessage.version,
-        timestamp: validAgentMessage.timestamp
+        timestamp: validAgentMessage.timestamp,
       };
 
-      // @ts-expect-error - Missing timestamp
       const missingTimestampMessage = {
         id: validAgentMessage.id,
         name: validAgentMessage.name,
         provider: validAgentMessage.provider,
-        version: validAgentMessage.version
+        version: validAgentMessage.version,
       };
 
       expect(isAgentFingerprintMessage(missingIdMessage)).toBe(false);
@@ -205,12 +201,9 @@ describe('EIP-712 Edge Cases', () => {
       expect(isEIP712Domain(invalidCharsDomain)).toBe(false);
     });
 
-    it('should reject invalid chainId values', () => {
-      // @ts-expect-error - Testing runtime behavior with string instead of number
-      const stringChainIdDomain = { ...validDomain, chainId: '123' };
-      // @ts-expect-error - Testing runtime behavior with decimal instead of integer
+    it("should reject invalid chainId values", () => {
+      const stringChainIdDomain = { ...validDomain, chainId: "123" };
       const decimalChainIdDomain = { ...validDomain, chainId: 123.45 };
-      // @ts-expect-error - Testing runtime behavior with object instead of number
       const objectChainIdDomain = { ...validDomain, chainId: {} };
 
       expect(isEIP712Domain(stringChainIdDomain)).toBe(false);
@@ -304,18 +297,18 @@ describe('EIP-712 Edge Cases', () => {
       })).toBe(false);
 
       // Invalid field types
-      expect(isTypedDataTypes({
-        Test: [
-          // @ts-expect-error
-          { wrongKey: 'value' }
-        ]
-      })).toBe(false);
+      expect(
+        isTypedDataTypes({
+          Test: [{ wrongKey: "value" }],
+        }),
+      ).toBe(false);
 
       // Non-array type definition
-      expect(isTypedDataTypes({
-        // @ts-expect-error
-        Test: 'not-an-array'
-      })).toBe(false);
+      expect(
+        isTypedDataTypes({
+          Test: "not-an-array",
+        }),
+      ).toBe(false);
     });
 
     it('should reject invalid TypedData structures', () => {

@@ -10,32 +10,50 @@ jest.mock('ethers', () => {
   const originalModule = jest.requireActual('ethers');
   
   return {
-    ...originalModule,
+    ...(originalModule as object),
     JsonRpcProvider: jest.fn().mockImplementation(() => ({
-      _network: { chainId: 11155111 }
+      _network: { chainId: 11155111 },
     })),
     Contract: jest.fn().mockImplementation(() => ({
-      target: '0x1234567890123456789012345678901234567890',
+      target: "0x1234567890123456789012345678901234567890",
       verifyFingerprint: jest.fn(),
       verifyFingerprintExtended: jest.fn(),
       isRevoked: jest.fn(),
       registerFingerprint: jest.fn(),
-      revokeFingerprint: jest.fn()
+      revokeFingerprint: jest.fn(),
     })),
-    BrowserProvider: jest.fn().mockImplementation(() => ({
-      getSigner: jest.fn().mockResolvedValue({
-        getAddress: jest.fn().mockResolvedValue('0x1234567890123456789012345678901234567890'),
-        signTypedData: jest.fn().mockResolvedValue('0xsignature')
-      })
-    })),
-    Wallet: jest.fn().mockImplementation(() => ({
-      connect: jest.fn().mockReturnThis(),
-      getAddress: jest.fn().mockResolvedValue('0x1234567890123456789012345678901234567890'),
-      signTypedData: jest.fn().mockResolvedValue('0xsignature')
-    })),
+    BrowserProvider: jest.fn().mockImplementation(
+      () =>
+        ({
+          getSigner: jest.fn<any>().mockResolvedValue({
+            getAddress: jest
+              .fn<any>()
+              .mockResolvedValue(
+                "0x1234567890123456789012345678901234567890",
+              ) as any,
+            signTypedData: jest
+              .fn<any>()
+              .mockResolvedValue("0xsignature") as any,
+          }) as any,
+        } as any),
+    ),
+    Wallet: jest.fn().mockImplementation(
+      () =>
+        ({
+          connect: jest.fn().mockReturnThis(),
+          getAddress: jest
+            .fn<any>()
+            .mockResolvedValue(
+              "0x1234567890123456789012345678901234567890",
+            ) as any,
+          signTypedData: jest.fn<any>().mockResolvedValue("0xsignature") as any,
+        } as any),
+    ),
     toUtf8Bytes: jest.fn().mockReturnValue(new Uint8Array()),
-    keccak256: jest.fn().mockReturnValue('0xhash'),
-    verifyTypedData: jest.fn().mockReturnValue('0x1234567890123456789012345678901234567890')
+    keccak256: jest.fn().mockReturnValue("0xhash"),
+    verifyTypedData: jest
+      .fn()
+      .mockReturnValue("0x1234567890123456789012345678901234567890"),
   };
 });
 
@@ -61,9 +79,10 @@ describe('SecureBlockchainService', () => {
     
     // Create mock configuration
     mockConfig = {
-      networkUrl: 'https://example.com',
+      networkUrl: "https://example.com",
       chainId: 11155111,
-      contractAddress: '0x1234567890123456789012345678901234567890'
+      contractAddress: "0x1234567890123456789012345678901234567890",
+      name: "Sepolia Testnet",
     };
     
     // Set up mocked KeyManager
@@ -141,13 +160,16 @@ describe('SecureBlockchainService', () => {
       
       // Set up window.ethereum
       (global.window as any).ethereum = {
-        request: jest.fn().mockImplementation((obj) => {
-          if (obj.method === 'eth_chainId') return '0xaa36a7'; // Sepolia testnet in hex
-          if (obj.method === 'eth_accounts' || obj.method === 'eth_requestAccounts') {
-            return ['0x1234567890123456789012345678901234567890'];
+        request: jest.fn().mockImplementation((obj: any) => {
+          if (obj.method === "eth_chainId") return "0xaa36a7"; // Sepolia testnet in hex
+          if (
+            obj.method === "eth_accounts" ||
+            obj.method === "eth_requestAccounts"
+          ) {
+            return ["0x1234567890123456789012345678901234567890"];
           }
           return null;
-        })
+        }),
       };
       
       // Connect wallet
@@ -177,26 +199,37 @@ describe('SecureBlockchainService', () => {
     beforeEach(() => {
       // Set up as Node.js environment
       (service as any).isRunningInBrowser = false;
-      
+
       // Mock wallet connection
-      (service as any).connectedWalletAddress = '0x1234567890123456789012345678901234567890';
-      
-      // Mock contract methods
+      (service as any).connectedWalletAddress =
+        "0x1234567890123456789012345678901234567890";
+
       (service as any).contract.registerFingerprint.mockResolvedValue({
-        hash: '0xtxhash',
-        wait: jest.fn().mockResolvedValue({ blockNumber: 123456 })
-      });
-      
+        hash: "0xtxhash",
+        wait: jest.fn<any>().mockResolvedValue({ blockNumber: 123456 }),
+      } as any);
+
       (service as any).contract.verifyFingerprintExtended.mockResolvedValue([
-        true, 'test-agent', 'Test Agent', 'Test Provider', '1.0.0', 123456789, false, 0
+        true,
+        "test-agent",
+        "Test Agent",
+        "Test Provider",
+        "1.0.0",
+        123456789,
+        false,
+        0,
       ]);
-      
-      (service as any).contract.isRevoked.mockResolvedValue([false, 0, '0x0000000000000000000000000000000000000000']);
-      
+
+      (service as any).contract.isRevoked.mockResolvedValue([
+        false,
+        0,
+        "0x0000000000000000000000000000000000000000",
+      ]);
+
       (service as any).contract.revokeFingerprint.mockResolvedValue({
-        hash: '0xrevoketxhash',
-        wait: jest.fn().mockResolvedValue({ blockNumber: 123457 })
-      });
+        hash: "0xrevoketxhash",
+        wait: jest.fn<any>().mockResolvedValue({ blockNumber: 123457 }),
+      } as any);
     });
     
     it('should register fingerprint with secure key', async () => {

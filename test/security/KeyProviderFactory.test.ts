@@ -71,15 +71,17 @@ describe('KeyProviderFactory', () => {
     it('should update configuration and pass to providers', () => {
       // Update configuration
       factory.updateConfig({
-        masterKeyPassword: 'test-password',
+        masterKeyPassword: "test-password",
         encryptedFileOptions: {
-          keyDirectory: '/tmp/keys'
+          keyDirectory: "/tmp/keys",
+          masterKey: "test-master-key",
+          algorithm: "aes-256-gcm",
         },
         vaultOptions: {
-          vaultUrl: 'https://vault.example.com',
-          authToken: 'test-token',
-          keyPrefix: 'test/'
-        }
+          vaultUrl: "https://vault.example.com",
+          authToken: "test-token",
+          keyPrefix: "test/",
+        },
       });
       
       // Create providers
@@ -88,8 +90,10 @@ describe('KeyProviderFactory', () => {
       
       // Check that providers were created with correct options
       expect(EncryptedFileKeyProvider).toHaveBeenCalledWith({
-        keyDirectory: '/tmp/keys',
-        masterPassword: 'test-password'
+        keyDirectory: "/tmp/keys",
+        masterPassword: "test-password",
+        masterKey: "test-master-key",
+        algorithm: "aes-256-gcm",
       });
       
       expect(VaultKeyProvider).toHaveBeenCalledWith({

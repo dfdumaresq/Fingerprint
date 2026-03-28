@@ -13,13 +13,13 @@ jest.mock('../../src/security/KeyProviderFactory', () => {
   
   return {
     __esModule: true,
-    ...originalModule,
+    ...(originalModule as object),
     KeyProviderFactory: {
       getInstance: jest.fn().mockReturnValue({
         getProvider: jest.fn().mockReturnValue(mockProvider),
-        updateConfig: jest.fn()
-      })
-    }
+        updateConfig: jest.fn(),
+      }),
+    },
   };
 });
 

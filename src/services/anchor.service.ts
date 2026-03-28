@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
+import { generateEventHash } from '../utils/crypto.utils';
 
 export class AnchorService {
   private db: Pool;
@@ -98,26 +99,51 @@ export class AnchorService {
   /**
    * Health/Audit endpoint: Verify local database integrity
    */
-  async verifyDatabaseIntegrity() {
+  async verifyDatabaseIntegrity(): Promise<{ ok: boolean, firstBadId?: number, reason?: 'hash_mismatch' | 'broken_chain' | 'temporal_violation', total_events: number }> {
     const res = await this.db.query('SELECT * FROM agent_events ORDER BY agent_fingerprint_id, timestamp ASC');
     const events = res.rows;
     
-    let faults = 0;
-    
-    // Simplistic verification: ensure previous_event_hash matches the actual previous event in the chain
     const chains: Record<string, string> = {}; // track latest hash per agent
+    const lastDates: Record<string, Date> = {}; // track latest temporal clock
     
     for (const event of events) {
       const agentId = event.agent_fingerprint_id;
       const expectedPrev = chains[agentId] || null;
       
-      if (event.previous_event_hash !== expectedPrev) {
-        console.error(`Integrity Fault on Event ${event.id}: expected prev ${expectedPrev}, got ${event.previous_event_hash}`);
-        faults++;
+      // Check 1: Temporal monotonicity
+      const eventTime = new Date(event.timestamp);
+      if (lastDates[agentId] && eventTime < lastDates[agentId]) {
+        return { ok: false, firstBadId: event.id, reason: 'temporal_violation', total_events: events.length };
       }
+      lastDates[agentId] = eventTime;
+
+      // Check 2: Broken Chain Check
+      if (event.previous_event_hash !== expectedPrev) {
+        return { ok: false, firstBadId: event.id, reason: 'broken_chain', total_events: events.length };
+      }
+      
+      // Check 3: Recompute Content Hash (Hash Mismatch)
+      const reconstructedPayload: any = {
+        agent_fingerprint_id: event.agent_fingerprint_id,
+        model_version: event.model_version,
+        workflow_type: event.workflow_type,
+        input_ref: event.input_ref,
+        output_ref: event.output_ref
+      };
+      
+      // Map postgres null fields back to undefined so stringify drops them exactly like the original JSON payload did
+      if (event.policy_id !== null) reconstructedPayload.policy_id = event.policy_id;
+      if (event.session_id !== null) reconstructedPayload.session_id = event.session_id;
+      if (event.clinician_action !== null) reconstructedPayload.clinician_action = event.clinician_action;
+      
+      const trueHash = generateEventHash(reconstructedPayload, expectedPrev, eventTime.toISOString());
+      if (trueHash !== event.event_hash) {
+         return { ok: false, firstBadId: event.id, reason: 'hash_mismatch', total_events: events.length };
+      }
+
       chains[agentId] = event.event_hash;
     }
 
-    return { total_events_checked: events.length, faults_detected: faults, is_healthy: faults === 0 };
+    return { ok: true, total_events: events.length };
   }
 }

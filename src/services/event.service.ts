@@ -1,7 +1,8 @@
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import stringify from 'fast-json-stable-stringify';
+import { generateEventHash } from '../utils/crypto.utils';
 
 export interface ClinicalEventPayload {
   agent_fingerprint_id: string;
@@ -19,24 +20,6 @@ export class EventService {
 
   constructor(dbPool: Pool) {
     this.db = dbPool;
-  }
-
-  /**
-   * Deterministically hash an event payload following our canonicalization spec
-   * Uses fast-json-stable-stringify to ensure alphabetical key ordering
-   */
-  private generateEventHash(payload: any, previousHash: string | null, timestamp: Date): string {
-    const canonicalObject = {
-      ...payload,
-      timestamp: timestamp.toISOString(),
-      previous_event_hash: previousHash
-    };
-    
-    // Deterministic JSON stringify avoids key ordering/whitespace bugs
-    const jsonString = stringify(canonicalObject);
-    
-    // Keccak256 hash (same as Solidity)
-    return ethers.id(jsonString);
   }
 
   /**
@@ -62,7 +45,7 @@ export class EventService {
       const timestamp = new Date();
       
       // 3. Compute immutable Event Hash (server-authoritative)
-      const eventHash = this.generateEventHash(payload, previousHash, timestamp);
+      const eventHash = generateEventHash(payload, previousHash, timestamp.toISOString());
 
       // 4. Insert into append-only log
       const insertQuery = `
@@ -81,7 +64,7 @@ export class EventService {
         ) RETURNING event_id, event_hash, timestamp, previous_event_hash
       `;
       
-      const eventId = uuidv4();
+      const eventId = randomUUID();
       
       const result = await client.query(insertQuery, [
         eventId, payload.session_id, timestamp,

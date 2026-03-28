@@ -1,0 +1,20 @@
+import { ethers } from 'ethers';
+import stringify from 'fast-json-stable-stringify';
+
+/**
+ * Deterministically hash an event payload following our canonicalization spec
+ * Uses fast-json-stable-stringify to ensure alphabetical key ordering
+ */
+export function generateEventHash(payload: any, previousHash: string | null, timestampStr: string): string {
+  const canonicalObject = {
+    ...payload,
+    timestamp: timestampStr,
+    previous_event_hash: previousHash
+  };
+  
+  // Deterministic JSON stringify avoids key ordering/whitespace bugs
+  const jsonString = stringify(canonicalObject);
+  
+  // Keccak256 hash (same as Solidity)
+  return ethers.id(jsonString);
+}

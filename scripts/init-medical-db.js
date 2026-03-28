@@ -1,4 +1,9 @@
-require('dotenv').config();
+const args = process.argv.slice(2);
+if (args[0] === 'test') {
+  require('dotenv').config({ path: '.env.test' });
+} else {
+  require('dotenv').config();
+}
 const { Pool } = require('pg');
 const fs = require('fs');
 

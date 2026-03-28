@@ -2,7 +2,11 @@ import { describe, expect, it, beforeEach, jest, afterEach } from '@jest/globals
 import { AnchorService } from '../../src/services/anchor.service';
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
+import { generateEventHash } from '../../src/utils/crypto.utils';
 
+jest.mock('../../src/utils/crypto.utils', () => ({
+  generateEventHash: jest.fn()
+}));
 jest.mock('pg', () => {
   const mClient = {
     query: jest.fn(),
@@ -71,33 +75,37 @@ describe('AnchorService', () => {
       // Mock db returns correctly chained events
       dbPool.query.mockResolvedValueOnce({
         rows: [
-          { id: 1, agent_fingerprint_id: 'agentA', previous_event_hash: null, event_hash: 'hash1' },
-          { id: 2, agent_fingerprint_id: 'agentA', previous_event_hash: 'hash1', event_hash: 'hash2' },
-          { id: 3, agent_fingerprint_id: 'agentB', previous_event_hash: null, event_hash: 'hashB1' },
+          { id: 1, agent_fingerprint_id: 'agentA', timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: null, event_hash: 'hash1' },
+          { id: 2, agent_fingerprint_id: 'agentA', timestamp: new Date('2025-01-01T10:01:00Z'), previous_event_hash: 'hash1', event_hash: 'hash2' },
+          { id: 3, agent_fingerprint_id: 'agentB', timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: null, event_hash: 'hashB1' },
         ]
       } as never);
 
+      (generateEventHash as jest.Mock)
+        .mockReturnValueOnce('hash1')
+        .mockReturnValueOnce('hash2')
+        .mockReturnValueOnce('hashB1');
+
       const health = await anchorService.verifyDatabaseIntegrity();
       
-      expect(health.total_events_checked).toBe(3);
-      expect(health.faults_detected).toBe(0);
-      expect(health.is_healthy).toBe(true);
+      expect(health.total_events).toBe(3);
+      expect(health.ok).toBe(true);
     });
 
     it('should catch manipulation and report unhealthy if a link in the chain is broken', async () => {
       // Mock db returns a broken chain (DB manipulation occurred!)
       dbPool.query.mockResolvedValueOnce({
         rows: [
-          { id: 1, agent_fingerprint_id: 'agentX', previous_event_hash: null, event_hash: 'hash1' },
+          { id: 1, agent_fingerprint_id: 'agentX', timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: null, event_hash: 'hash1' },
           // The database expected prev: 'hash1', but hacker altered the next row to point to 'TAMPERED_HASH'
-          { id: 2, agent_fingerprint_id: 'agentX', previous_event_hash: 'TAMPERED_HASH', event_hash: 'hash2' }, 
+          { id: 2, agent_fingerprint_id: 'agentX', timestamp: new Date('2025-01-01T10:01:00Z'), previous_event_hash: 'TAMPERED_HASH', event_hash: 'hash2' }, 
         ]
       } as never);
 
       const health = await anchorService.verifyDatabaseIntegrity();
       
-      expect(health.faults_detected).toBe(1);
-      expect(health.is_healthy).toBe(false);
+      expect(health.reason).toBe('broken_chain');
+      expect(health.ok).toBe(false);
     });
   });
 });

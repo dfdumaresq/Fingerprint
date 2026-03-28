@@ -90,6 +90,9 @@ async function runSimulation() {
     await new Promise(r => setTimeout(r, sleepMs));
   }
   
+  /* 
+  * COMMENTED OUT FOR WALKTHROUGH 
+  * This is where the script used to automatically trigger the anchoring API.
   console.log('\n[Simulator] Triggering background Merkle Tree anchor pull...');
   try {
     const anchorRes = await fetch(`${API_URL}/anchor/trigger`, { 
@@ -99,6 +102,7 @@ async function runSimulation() {
     const anchorData = await anchorRes.json();
     console.log(`[Simulator] Anchor Status: ${anchorData.count} events anchored inside Merkle Root ${anchorData.merkleRoot?.substring(0, 10)}...`);
   } catch(e) { console.error(e); }
+  */
 
   console.log('\n[Simulator] Performing final cryptographic Health Audit...');
   try {

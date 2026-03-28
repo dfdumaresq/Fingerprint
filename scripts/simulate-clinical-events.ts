@@ -5,8 +5,12 @@
  */
 import { v4 as uuidv4 } from 'uuid';
 import { hashMessage } from 'ethers';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 const API_URL = 'http://localhost:3000/v1/events';
+const API_KEY = process.env.API_KEY || 'sk_test_123';
 
 // Example Sandbox Agents
 const AGENTS = [
@@ -43,7 +47,10 @@ async function simulateEvent() {
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
       body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -66,7 +73,10 @@ async function runSimulation() {
   
   console.log('\n[Simulator] Triggering background Merkle Tree anchor pull...');
   try {
-    const anchorRes = await fetch(`${API_URL}/anchor/trigger`, { method: 'POST' });
+    const anchorRes = await fetch(`${API_URL}/anchor/trigger`, { 
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${API_KEY}` }
+    });
     const anchorData = await anchorRes.json();
     console.log(`[Simulator] Anchor Status: ${anchorData.count} events anchored inside Merkle Root ${anchorData.merkleRoot?.substring(0, 10)}...`);
   } catch(e) { console.error(e); }

@@ -34,7 +34,11 @@ export const MedicalAuditDashboard: React.FC = () => {
       if (agentFilter) qs.append('agent_fingerprint_id', agentFilter);
       if (daysBack) qs.append('days_back', daysBack.toString());
       
-      const res = await fetch(`http://localhost:3000/v1/events?${qs.toString()}`);
+      const res = await fetch(`http://localhost:3000/v1/events?${qs.toString()}`, {
+        headers: {
+          'Authorization': 'Bearer dd3d02cb017e4ea2ab904ec98e211eeb'
+        }
+      });
       const data = await res.json();
       if (data.success) {
         setEvents(data.data);
@@ -47,7 +51,12 @@ export const MedicalAuditDashboard: React.FC = () => {
 
   const triggerAnchor = async () => {
     try {
-      const res = await fetch('http://localhost:3000/v1/events/anchor/trigger', { method: 'POST' });
+      const res = await fetch('http://localhost:3000/v1/events/anchor/trigger', { 
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer dd3d02cb017e4ea2ab904ec98e211eeb'
+        }
+      });
       await res.json();
       fetchEvents(); // Refresh
       alert('Background Anchoring Triggered');

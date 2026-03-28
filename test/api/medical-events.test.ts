@@ -9,7 +9,7 @@ import { Pool } from 'pg';
 jest.mock('pg', () => {
   const mPool = {
     connect: jest.fn(),
-    query: jest.fn().mockResolvedValue({ rows: [] }),
+    query: jest.fn(() => Promise.resolve({ rows: [] })),
   };
   return { Pool: jest.fn(() => mPool) };
 });

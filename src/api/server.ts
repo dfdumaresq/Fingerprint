@@ -19,6 +19,8 @@ import {
   ResponseSet,
   VerificationResult
 } from '../utils/behavioral.utils';
+import { EventService } from '../services/event.service';
+import { AnchorService } from '../services/anchor.service';
 
 dotenv.config();
 
@@ -28,6 +30,9 @@ const db = new Pool({
 });
 
 const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+
+const eventService = new EventService(db);
+const anchorService = new AnchorService(db);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -176,6 +181,75 @@ app.post('/v1/internal/traits/seed', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error seeding traits:', error);
     res.status(500).json({ error: { code: 'internal_error', message: 'Failed to seed baseline traits' } });
+  }
+});
+
+/**
+ * POST /v1/events
+ * Phase 1 Medical MVP: Append an immutable clinical interaction to the audit log.
+ */
+app.post('/v1/events', async (req: Request, res: Response) => {
+  try {
+    const payload = req.body;
+    
+    // Minimal PHI/Format Validation
+    if (!payload.agent_fingerprint_id || !payload.input_ref || !payload.output_ref) {
+      res.status(400).json({ error: { code: 'bad_request', message: 'Missing required logging fields' } });
+      return;
+    }
+    
+    // Guardrail against PHI: verify pointers look like hashes or pseudo-URIs, not raw text
+    if (!payload.input_ref.includes('://') && !payload.input_ref.startsWith('sha')) {
+      res.status(400).json({ error: { code: 'phi_violation_risk', message: 'input_ref must be a hash or compliant URI pointer' } });
+      return;
+    }
+
+    const eventRecord = await eventService.ingestEvent({
+      agent_fingerprint_id: payload.agent_fingerprint_id,
+      model_version: payload.model_version || 'unknown',
+      workflow_type: payload.workflow_type,
+      policy_id: payload.policy_id,
+      session_id: payload.session_id,
+      clinician_action: payload.clinician_action,
+      input_ref: payload.input_ref,
+      output_ref: payload.output_ref
+    });
+
+    res.status(201).json({
+      success: true,
+      data: eventRecord
+    });
+  } catch (error: any) {
+    console.error('Error creating event:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
+ * POST /v1/events/anchor/trigger
+ * DEV TRIGGER: Force the background anchoring job to run immediately.
+ */
+app.post('/v1/events/anchor/trigger', async (req: Request, res: Response) => {
+  try {
+    const result = await anchorService.anchorPendingEvents();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error triggering anchor:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
+ * GET /health/audit
+ * INTERNAL ENDPOINT: Verify the cryptographic consistency of the local Postgres DB.
+ */
+app.get('/health/audit', async (req: Request, res: Response) => {
+  try {
+    const result = await anchorService.verifyDatabaseIntegrity();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error auditing DB:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
   }
 });
 

@@ -40,7 +40,13 @@ module.exports = {
         process.env.REACT_APP_SEPOLIA_CHAIN_ID,
       ),
       "process.env.REACT_APP_API_GATEWAY_URL": JSON.stringify(
-        process.env.REACT_APP_API_GATEWAY_URL || "http://localhost:3001",
+        process.env.REACT_APP_API_GATEWAY_URL || "http://localhost:3000",
+      ),
+      "process.env.REACT_APP_API_KEY": JSON.stringify(
+        process.env.API_KEY || "",
+      ),
+      "process.env.REACT_APP_API_URL": JSON.stringify(
+        "http://localhost:3000",
       ),
     }),
   ],
@@ -48,7 +54,7 @@ module.exports = {
     static: {
       directory: path.join(__dirname, "public"),
     },
-    port: 3000,
+    port: 8080,
     hot: true,
   },
 };

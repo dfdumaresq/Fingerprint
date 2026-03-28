@@ -7,20 +7,28 @@ jest.mock('../../src/security/KeyManager');
 
 describe('AuditLogger', () => {
   let auditLogger: AuditLogger;
-  let consoleDebugSpy: jest.SpyInstance;
-  let consoleInfoSpy: jest.SpyInstance;
-  let consoleWarnSpy: jest.SpyInstance;
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleDebugSpy: jest.Mock;
+  let consoleInfoSpy: jest.Mock;
+  let consoleWarnSpy: jest.Mock;
+  let consoleErrorSpy: jest.Mock;
   
   beforeEach(() => {
     // Reset the singleton
     (AuditLogger as any).instance = undefined;
     
     // Spy on console methods
-    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation();
-    consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleDebugSpy = jest
+      .spyOn(console, "debug")
+      .mockImplementation(() => {}) as unknown as jest.Mock;
+    consoleInfoSpy = jest
+      .spyOn(console, "info")
+      .mockImplementation(() => {}) as unknown as jest.Mock;
+    consoleWarnSpy = jest
+      .spyOn(console, "warn")
+      .mockImplementation(() => {}) as unknown as jest.Mock;
+    consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {}) as unknown as jest.Mock;
     
     // Create a new instance
     auditLogger = AuditLogger.getInstance();
@@ -83,7 +91,7 @@ describe('AuditLogger', () => {
     });
     
     it('should set KeyManager for encrypted logs', () => {
-      const mockKeyManager = new KeyManager();
+      const mockKeyManager = {} as unknown as KeyManager;
       
       // Set key manager
       auditLogger.setKeyManager(mockKeyManager);

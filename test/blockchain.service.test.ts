@@ -6,38 +6,45 @@ import { BlockchainConfig } from '../src/types';
 jest.mock('ethers', () => {
   return {
     JsonRpcProvider: jest.fn().mockImplementation(() => ({
-      _network: { chainId: 11155111 }
+      _network: { chainId: 11155111 },
     })),
     Contract: jest.fn().mockImplementation(() => ({
-      target: '0x1234567890123456789012345678901234567890',
+      target: "0x1234567890123456789012345678901234567890",
       verifyFingerprint: jest.fn(),
       verifyFingerprintExtended: jest.fn(),
-      isRevoked: jest.fn()
+      isRevoked: jest.fn(),
     })),
     BrowserProvider: jest.fn().mockImplementation(() => ({
-      getSigner: jest.fn().mockResolvedValue({
-        getAddress: jest.fn().mockResolvedValue('0x1234567890123456789012345678901234567890'),
-        signTypedData: jest.fn().mockResolvedValue('0xsignature')
-      })
+      getSigner: jest.fn<any>().mockResolvedValue({
+        getAddress: jest
+          .fn<any>()
+          .mockResolvedValue("0x1234567890123456789012345678901234567890"),
+        signTypedData: jest.fn<any>().mockResolvedValue("0xsignature"),
+      }),
     })),
     toUtf8Bytes: jest.fn().mockReturnValue(new Uint8Array()),
-    keccak256: jest.fn().mockReturnValue('0xhash'),
-    verifyTypedData: jest.fn().mockReturnValue('0x1234567890123456789012345678901234567890')
+    keccak256: jest.fn().mockReturnValue("0xhash"),
+    verifyTypedData: jest
+      .fn()
+      .mockReturnValue("0x1234567890123456789012345678901234567890"),
   };
 });
 
 // Mock window.ethereum
-Object.defineProperty(window, 'ethereum', {
+Object.defineProperty(window, "ethereum", {
   value: {
-    request: jest.fn().mockImplementation((obj) => {
-      if (obj.method === 'eth_chainId') return '0xaa36a7'; // Sepolia testnet in hex
-      if (obj.method === 'eth_accounts' || obj.method === 'eth_requestAccounts') {
-        return ['0x1234567890123456789012345678901234567890'];
+    request: jest.fn().mockImplementation((obj: any) => {
+      if (obj.method === "eth_chainId") return "0xaa36a7"; // Sepolia testnet in hex
+      if (
+        obj.method === "eth_accounts" ||
+        obj.method === "eth_requestAccounts"
+      ) {
+        return ["0x1234567890123456789012345678901234567890"];
       }
       return null;
-    })
+    }),
   },
-  writable: true
+  writable: true,
 });
 
 describe('BlockchainService', () => {
@@ -46,9 +53,10 @@ describe('BlockchainService', () => {
 
   beforeEach(() => {
     mockConfig = {
-      networkUrl: 'https://example.com',
+      networkUrl: "https://example.com",
       chainId: 11155111,
-      contractAddress: '0x1234567890123456789012345678901234567890'
+      contractAddress: "0x1234567890123456789012345678901234567890",
+      name: "Sepolia Testnet",
     };
     service = new BlockchainService(mockConfig);
   });
@@ -90,12 +98,12 @@ describe('BlockchainService', () => {
       (service as any).contract.target = '0x1111111111111111111111111111111111111111';
 
       // Mock contract with signer
-      const mockContract = {
-        target: '0x1111111111111111111111111111111111111111',
-        revokeFingerprint: jest.fn().mockResolvedValue({
-          hash: '0xtxhash',
-          wait: jest.fn().mockResolvedValue({ blockNumber: 123456 })
-        })
+      const mockContract: any = {
+        target: "0x1111111111111111111111111111111111111111",
+        revokeFingerprint: jest.fn<any>().mockResolvedValue({
+          hash: "0xtxhash",
+          wait: jest.fn<any>().mockResolvedValue({ blockNumber: 123456 }),
+        }),
       };
 
       // Mock ethers.Contract constructor to return our mock
@@ -127,8 +135,10 @@ describe('BlockchainService', () => {
 
     it('should handle revocation transaction failures', async () => {
       // Mock contract with signer that throws an error
-      const mockContract = {
-        revokeFingerprint: jest.fn().mockRejectedValue(new Error('Transaction failed'))
+      const mockContract: any = {
+        revokeFingerprint: jest
+          .fn<any>()
+          .mockRejectedValue(new Error("Transaction failed")),
       };
 
       // Mock ethers.Contract constructor to return our mock

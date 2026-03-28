@@ -284,6 +284,16 @@ export function analyzePerturbation(
   // Clamp score to 0-1
   perturbationScore = Math.min(1, perturbationScore);
 
+  console.log("Perturbation Analysis:", {
+    hasHomographs: homographs.found,
+    hasInvisibleChars: invisible.found,
+    score: perturbationScore,
+    isSuspicious:
+      perturbationScore >= thresholds.suspiciousThreshold ||
+      homographs.found ||
+      invisible.found,
+  });
+
   return {
     editDistance: editDist,
     hasEncodingArtifacts: encoding.found,
@@ -291,7 +301,10 @@ export function analyzePerturbation(
     hasInvisibleChars: invisible.found,
     perturbationScore,
     flags,
-    suspicious: perturbationScore >= thresholds.suspiciousThreshold
+    suspicious:
+      perturbationScore >= thresholds.suspiciousThreshold ||
+      homographs.found ||
+      invisible.found,
   };
 }
 

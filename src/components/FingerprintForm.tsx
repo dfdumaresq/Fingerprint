@@ -119,6 +119,9 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
     return (
         <div className="fingerprint-form">
             <h2>Register AI Agent Fingerprint</h2>
+            <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
+                Once registered, this agent's fingerprint can be continuously monitored in the <b>Clinical Audit Ledger</b> tab.
+            </p>
 
             <form onSubmit={handleSubmit}>
                 <div className="form-group">

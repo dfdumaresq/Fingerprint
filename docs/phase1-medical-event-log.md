@@ -1,3 +1,4 @@
+-- Active: 1772829260021@@127.0.0.1@5432@postgres
 # Phase 1: Medical Event Logging Spec & Data Model
 
 To achieve a true "audit-ready" layer for medical AI interventions, we must build an immutable, append-only event trail. Rather than storing sensitive Protected Health Information (PHI) directly on-chain or even in our logging server, our system stores cryptographic pointers and contexts off-chain, using Merkle Root checkpoints pushed to the blockchain to guarantee tamper-evidence.

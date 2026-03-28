@@ -18,6 +18,7 @@
     "prune:agent": "ts-node scripts/prune-agent.ts",
     "batch-register": "ts-node scripts/batch-register.ts",
     "compare-models": "ts-node scripts/compare-models.ts",
+    "seed:agents": "ts-node scripts/seed-demo-agents.ts",
     "dev:medical": "node scripts/init-medical-db.js && ts-node src/api/server.ts",
     "simulate:medical": "ts-node scripts/simulate-clinical-events.ts"
   },

@@ -15,8 +15,19 @@ interface ClinicalEvent {
   previous_event_hash: string;
 }
 
+interface RegisteredAgent {
+  fingerprintHash: string;
+  name: string;
+  provider: string;
+  isRevoked: boolean;
+  hasBehavioralTrait: boolean;
+}
+
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+
 export const MedicalAuditDashboard: React.FC = () => {
   const [events, setEvents] = useState<ClinicalEvent[]>([]);
+  const [registeredAgents, setRegisteredAgents] = useState<RegisteredAgent[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   
@@ -34,7 +45,7 @@ export const MedicalAuditDashboard: React.FC = () => {
       if (agentFilter) qs.append('agent_fingerprint_id', agentFilter);
       if (daysBack) qs.append('days_back', daysBack.toString());
       
-      const res = await fetch(`http://localhost:3000/v1/events?${qs.toString()}`, {
+      const res = await fetch(`${REACT_APP_API_URL}/v1/events?${qs.toString()}`, {
         headers: {
           'Authorization': 'Bearer dd3d02cb017e4ea2ab904ec98e211eeb'
         }
@@ -42,6 +53,14 @@ export const MedicalAuditDashboard: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setEvents(data.data);
+      }
+      
+      const agentsRes = await fetch(`${REACT_APP_API_URL}/v1/agents`, {
+        headers: { 'Authorization': 'Bearer dd3d02cb017e4ea2ab904ec98e211eeb' }
+      });
+      const agentsData = await agentsRes.json();
+      if (agentsData.data) {
+        setRegisteredAgents(agentsData.data);
       }
     } catch (err) {
       console.error('Failed to fetch events', err);
@@ -51,7 +70,7 @@ export const MedicalAuditDashboard: React.FC = () => {
 
   const triggerAnchor = async () => {
     try {
-      const res = await fetch('http://localhost:3000/v1/events/anchor/trigger', { 
+      const res = await fetch(`${REACT_APP_API_URL}/v1/events/anchor/trigger`, { 
         method: 'POST',
         headers: {
           'Authorization': 'Bearer dd3d02cb017e4ea2ab904ec98e211eeb'
@@ -67,7 +86,7 @@ export const MedicalAuditDashboard: React.FC = () => {
 
   const checkHealth = async () => {
     try {
-      const res = await fetch('http://localhost:3000/health/audit');
+      const res = await fetch(`${REACT_APP_API_URL}/health/audit`);
       const data = await res.json();
       setAuditResult(data);
     } catch (err) {
@@ -85,26 +104,46 @@ export const MedicalAuditDashboard: React.FC = () => {
       <p>Immutable, Merkle-anchored history of AI actions in clinical workflows.</p>
 
       {/* Global Controls */}
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', background: '#f5f5f5', padding: '15px', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', background: '#f5f5f5', padding: '15px', borderRadius: '8px', alignItems: 'flex-start' }}>
         <div>
-          <label><strong>Agent Hash: </strong></label>
-          <input 
-            type="text" 
-            placeholder="0x..." 
-            value={agentFilter} 
-            onChange={(e) => setAgentFilter(e.target.value)}
-            style={{ padding: '5px', width: '200px' }}
-          />
+          <label style={{ display: 'block', marginBottom: '5px' }}><strong>Registered Agent: </strong></label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <select 
+              value={agentFilter} 
+              onChange={(e) => setAgentFilter(e.target.value)}
+              style={{ padding: '8px', width: '320px', borderRadius: '4px', border: '1px solid #ccc' }}
+            >
+              <option value="">All Agents</option>
+              {registeredAgents.map(a => (
+                <option key={a.fingerprintHash} value={a.fingerprintHash}>
+                  {a.name} - {a.fingerprintHash.substring(0, 10)}...
+                </option>
+              ))}
+            </select>
+            {/* Behavioral Badge Drop-in */}
+            {agentFilter && registeredAgents.find(a => a.fingerprintHash === agentFilter)?.hasBehavioralTrait && (
+              <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '5px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
+                🛡️ Active Behavioral Profile
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '12px', color: '#666', marginTop: '6px' }}>
+            Choose a fingerprint registered in the 'Register AI Agent' tab.
+          </div>
         </div>
-        <div>
-          <label><strong>Timeframe: </strong></label>
-          <select value={daysBack} onChange={(e) => setDaysBack(e.target.value === '' ? '' : Number(e.target.value))} style={{ padding: '5px' }}>
-            <option value="">All Time</option>
-            <option value={1}>Last 24 Hours</option>
-            <option value={7}>Last 7 Days</option>
-          </select>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px' }}><strong>Timeframe: </strong></label>
+            <select value={daysBack} onChange={(e) => setDaysBack(e.target.value === '' ? '' : Number(e.target.value))} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
+              <option value="">All Time</option>
+              <option value={1}>Last 24 Hours</option>
+              <option value={7}>Last 7 Days</option>
+            </select>
+          </div>
+          <button onClick={fetchEvents} style={{ marginTop: '24px', padding: '8px 15px', background: '#4a6cf7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            Refresh Ledger
+          </button>
         </div>
-        <button onClick={fetchEvents} style={{ marginLeft: 'auto', padding: '5px 15px' }}>Refresh Ledger</button>
       </div>
 
       {/* Admin Actions */}

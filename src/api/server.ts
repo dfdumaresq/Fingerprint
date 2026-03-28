@@ -78,7 +78,7 @@ app.get('/v1/agents', async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
     // For MVP, simplistic ordering by creation date
     const { rows } = await db.query(
-      'SELECT fingerprint_hash, name, provider, is_revoked FROM agents ORDER BY created_at DESC LIMIT $1',
+      'SELECT fingerprint_hash, name, provider, is_revoked, latest_trait_hash IS NOT NULL as has_behavioral_trait FROM agents ORDER BY created_at DESC LIMIT $1',
       [limit]
     );
 
@@ -88,6 +88,7 @@ app.get('/v1/agents', async (req: Request, res: Response) => {
         name: r.name,
         provider: r.provider,
         isRevoked: r.is_revoked,
+        hasBehavioralTrait: r.has_behavioral_trait
       })),
       has_more: false,
       next_cursor: null,

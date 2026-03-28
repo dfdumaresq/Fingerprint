@@ -226,6 +226,25 @@ app.post('/v1/events', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/events
+ * Fetch the immutable clinical audit log with optional filters.
+ */
+app.get('/v1/events', async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      agent_fingerprint_id: req.query.agent_fingerprint_id as string,
+      days_back: req.query.days_back ? parseInt(req.query.days_back as string, 10) : undefined
+    };
+    
+    const events = await eventService.getEvents(filters);
+    res.json({ success: true, data: events });
+  } catch (error: any) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
  * POST /v1/events/anchor/trigger
  * DEV TRIGGER: Force the background anchoring job to run immediately.
  */

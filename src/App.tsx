@@ -6,6 +6,7 @@ import VerifyFingerprint from './components/VerifyFingerprint';
 import RevokeFingerprint from './components/RevokeFingerprint';
 import { BehavioralRegistration } from './components/BehavioralRegistration';
 import { BehavioralVerification } from './components/BehavioralVerification';
+import { MedicalAuditDashboard } from './components/MedicalAuditDashboard';
 import { Agent } from './types';
 import { BlockchainProvider, useBlockchain } from './contexts/BlockchainContext';
 
@@ -23,18 +24,18 @@ const AppContent: React.FC = () => {
   // Get blockchain context
     const { walletAddress, isConnected, isSandbox, service } = useBlockchain();
   
-    const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke' | 'behavior-register' | 'behavior-verify'>(() => {
+    const [activeTab, setActiveTab] = useState<'register' | 'verify' | 'revoke' | 'behavior-register' | 'behavior-verify' | 'medical-audit'>(() => {
         const hash = window.location.hash.replace('#', '');
-        if (['register', 'verify', 'revoke', 'behavior-register', 'behavior-verify'].includes(hash)) {
+        if (['register', 'verify', 'revoke', 'behavior-register', 'behavior-verify', 'medical-audit'].includes(hash)) {
             return hash as any;
         }
-        return 'register';
+        return 'medical-audit'; // Default to the new Medical view!
     });
 
     React.useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash.replace('#', '');
-            if (['register', 'verify', 'revoke', 'behavior-register', 'behavior-verify'].includes(hash)) {
+            if (['register', 'verify', 'revoke', 'behavior-register', 'behavior-verify', 'medical-audit'].includes(hash)) {
                 setActiveTab(hash as any);
             }
         };
@@ -42,7 +43,7 @@ const AppContent: React.FC = () => {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
-    const handleTabChange = (tab: 'register' | 'verify' | 'revoke' | 'behavior-register' | 'behavior-verify') => {
+    const handleTabChange = (tab: 'register' | 'verify' | 'revoke' | 'behavior-register' | 'behavior-verify' | 'medical-audit') => {
         setActiveTab(tab);
         window.location.hash = tab;
     };
@@ -96,6 +97,13 @@ const AppContent: React.FC = () => {
 
             <div className="tabs">
               <button
+                className={`tab ${activeTab === 'medical-audit' ? 'active' : ''}`}
+                onClick={() => handleTabChange('medical-audit')}
+                title="View the Immutable Clinical Agent Audit Ledger"
+              >
+                Clinical Audit Ledger
+              </button>
+              <button
                 className={`tab ${activeTab === 'register' ? 'active' : ''}`}
                                   onClick={() => handleTabChange('register')}
                 title="Register a new AI agent fingerprint on the blockchain"
@@ -133,6 +141,10 @@ const AppContent: React.FC = () => {
             </div>
 
             <div className="tab-content">
+                              <div style={{ display: activeTab === 'medical-audit' ? 'block' : 'none' }}>
+                                <MedicalAuditDashboard />
+                              </div>
+
                               <div style={{ display: activeTab === 'register' ? 'block' : 'none' }}>
                   {registrationSuccess ? (
                     <div className="success-card">

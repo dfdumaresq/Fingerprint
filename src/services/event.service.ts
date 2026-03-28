@@ -101,4 +101,28 @@ export class EventService {
       client.release();
     }
   }
+
+  /**
+   * Fetch recent medical events for the audit dashboard
+   */
+  async getEvents(filters: { agent_fingerprint_id?: string, days_back?: number }) {
+    let query = 'SELECT * FROM agent_events WHERE 1=1';
+    const params: any[] = [];
+    
+    if (filters.agent_fingerprint_id) {
+      params.push(filters.agent_fingerprint_id);
+      query += ` AND agent_fingerprint_id = $${params.length}`;
+    }
+    
+    if (filters.days_back) {
+      params.push(filters.days_back);
+      query += ` AND timestamp >= NOW() - INTERVAL '${filters.days_back} days'`;
+    }
+    
+    query += ' ORDER BY timestamp DESC LIMIT 100';
+    
+    const res = await this.db.query(query, params);
+    return res.rows;
+  }
 }
+

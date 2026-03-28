@@ -114,3 +114,13 @@ Returns canonical event JSON, `event_hash`, Merkle proof path, Merkle root, and 
 1. **Ingestion Hash-Chaining**: Uses a strict canonicalization procedure (alphabetical JSON key ordering, normalized nulls) for hashing.
 2. **Periodic Merkle Anchoring**: Cron grabs unanchored events. If an anchor `status='failed'`, the events are re-pooled for the next batch.
 3. **Verification**: A standalone CLI verifier will be provided to independently recalculate hash chains and Merkle sibling paths.
+
+---
+
+## 4. Developer Quickstart
+
+To boot the Phase 1 MVP simulator and verify the behavior locally:
+
+1. **Boot the Backend**: Run `npm run dev:medical` to initialize the clinical PostgreSQL schema and start the Express server on port 3000.
+2. **Run the Simulator**: In a separate terminal, run `npm run simulate:medical` to generate over a dozen realistic UBC-style patient interaction events.
+3. **View the Dashboard**: Open the React UI (`npm start`) and navigate to the **Clinical Audit** tab to interact with the immutable ledger.

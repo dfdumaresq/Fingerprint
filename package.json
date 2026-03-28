@@ -17,7 +17,9 @@
     "register:agent": "hardhat run scripts/register-agent.js --network sepolia",
     "prune:agent": "ts-node scripts/prune-agent.ts",
     "batch-register": "ts-node scripts/batch-register.ts",
-    "compare-models": "ts-node scripts/compare-models.ts"
+    "compare-models": "ts-node scripts/compare-models.ts",
+    "dev:medical": "node scripts/init-medical-db.js && ts-node src/api/server.ts",
+    "simulate:medical": "ts-node scripts/simulate-clinical-events.ts"
   },
   "keywords": [
     "blockchain",

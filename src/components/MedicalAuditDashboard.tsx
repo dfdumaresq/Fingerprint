@@ -24,6 +24,7 @@ interface RegisteredAgent {
 }
 
 const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || 'dd3d02cb017e4ea2ab904ec98e211eeb';
 
 export const MedicalAuditDashboard: React.FC = () => {
   const [events, setEvents] = useState<ClinicalEvent[]>([]);
@@ -47,7 +48,7 @@ export const MedicalAuditDashboard: React.FC = () => {
       
       const res = await fetch(`${REACT_APP_API_URL}/v1/events?${qs.toString()}`, {
         headers: {
-          'Authorization': 'Bearer dd3d02cb017e4ea2ab904ec98e211eeb'
+          'Authorization': `Bearer ${REACT_APP_API_KEY}`
         }
       });
       const data = await res.json();
@@ -56,7 +57,7 @@ export const MedicalAuditDashboard: React.FC = () => {
       }
       
       const agentsRes = await fetch(`${REACT_APP_API_URL}/v1/agents`, {
-        headers: { 'Authorization': 'Bearer dd3d02cb017e4ea2ab904ec98e211eeb' }
+        headers: { 'Authorization': `Bearer ${REACT_APP_API_KEY}` }
       });
       const agentsData = await agentsRes.json();
       if (agentsData.data) {
@@ -73,7 +74,7 @@ export const MedicalAuditDashboard: React.FC = () => {
       const res = await fetch(`${REACT_APP_API_URL}/v1/events/anchor/trigger`, { 
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer dd3d02cb017e4ea2ab904ec98e211eeb'
+          'Authorization': `Bearer ${REACT_APP_API_KEY}`
         }
       });
       await res.json();

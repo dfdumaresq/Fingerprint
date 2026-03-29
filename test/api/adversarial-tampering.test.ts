@@ -67,8 +67,8 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     // Override anchor service db temporarily inside the transaction
     (anchorService as any).db = client;
     const health = await anchorService.verifyDatabaseIntegrity();
-    expect(health.ok).toBe(true);
-    expect(health.total_events).toBeGreaterThanOrEqual(5);
+    expect(health.is_healthy).toBe(true);
+    expect(health.total_events_checked).toBeGreaterThanOrEqual(5);
   });
 
   it('Tamper Test 1: Content Update (clinician_action)', async () => {
@@ -81,8 +81,8 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     (anchorService as any).db = client;
     const health = await anchorService.verifyDatabaseIntegrity();
     
-    expect(health.ok).toBe(false);
-    expect(health.firstBadId).toBe(tamperedId);
+    expect(health.is_healthy).toBe(false);
+    expect(health.first_bad_id).toBe(tamperedId);
     expect(health.reason).toBe('hash_mismatch');
   });
 
@@ -99,8 +99,8 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     (anchorService as any).db = client;
     const health = await anchorService.verifyDatabaseIntegrity();
     
-    expect(health.ok).toBe(false);
-    expect(health.firstBadId).toBe(nextId);
+    expect(health.is_healthy).toBe(false);
+    expect(health.first_bad_id).toBe(nextId);
     expect(health.reason).toBe('broken_chain');
   });
 
@@ -125,7 +125,7 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     (anchorService as any).db = client;
     const health = await anchorService.verifyDatabaseIntegrity();
     
-    expect(health.ok).toBe(false);
+    expect(health.is_healthy).toBe(false);
     expect(['temporal_violation', 'broken_chain']).toContain(health.reason);
   });
 });

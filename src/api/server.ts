@@ -21,6 +21,7 @@ import {
 } from '../utils/behavioral.utils';
 import { EventService } from '../services/event.service';
 import { AnchorService } from '../services/anchor.service';
+import { TriageService } from '../services/triage.service';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 
 const eventService = new EventService(db);
 const anchorService = new AnchorService(db);
+const triageService = new TriageService(db);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -241,6 +243,26 @@ app.get('/v1/events', async (req: Request, res: Response) => {
     res.json({ success: true, data: events });
   } catch (error: any) {
     console.error('Error fetching events:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
+ * GET /v1/triage/encounters
+ * Secure read-model serving native Clinician UI triage queue arrays.
+ * Employs deterministic PHI hydration with strict cryptographic integrity embedded on each row!
+ */
+app.get('/v1/triage/encounters', async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      state: req.query.state as string,
+      acuity: req.query.acuity ? parseInt(req.query.acuity as string, 10) : undefined
+    };
+    
+    const encounters = await triageService.getTriageEncounters(filters);
+    res.json({ success: true, data: encounters });
+  } catch (error: any) {
+    console.error('Error fetching triage encounters:', error);
     res.status(500).json({ error: { code: 'internal_error', message: error.message } });
   }
 });

@@ -88,8 +88,8 @@ describe('AnchorService', () => {
 
       const health = await anchorService.verifyDatabaseIntegrity();
       
-      expect(health.total_events).toBe(3);
-      expect(health.ok).toBe(true);
+      expect(health.total_events_checked).toBe(3);
+      expect(health.is_healthy).toBe(true);
     });
 
     it('should catch manipulation and report unhealthy if a link in the chain is broken', async () => {
@@ -97,7 +97,6 @@ describe('AnchorService', () => {
       dbPool.query.mockResolvedValueOnce({
         rows: [
           { id: 1, agent_fingerprint_id: 'agentX', timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: null, event_hash: 'hash1' },
-          // The database expected prev: 'hash1', but hacker altered the next row to point to 'TAMPERED_HASH'
           { id: 2, agent_fingerprint_id: 'agentX', timestamp: new Date('2025-01-01T10:01:00Z'), previous_event_hash: 'TAMPERED_HASH', event_hash: 'hash2' }, 
         ]
       } as never);
@@ -105,7 +104,16 @@ describe('AnchorService', () => {
       const health = await anchorService.verifyDatabaseIntegrity();
       
       expect(health.reason).toBe('broken_chain');
-      expect(health.ok).toBe(false);
+      expect(health.is_healthy).toBe(false);
+    });
+
+    it('should detect a broken cryptographic chain (previous_hash mismatch)', async () => {
+      // Manual tamper via pg client (bypassing the service which ensures integrity)
+      await dbPool.query("UPDATE agent_events SET previous_event_hash = '0xBAD_HASH' WHERE id = (SELECT id FROM agent_events ORDER BY id DESC LIMIT 1)");
+      
+      const health = await anchorService.verifyDatabaseIntegrity();
+      expect(health.is_healthy).toBe(false);
+      expect(health.reason).toBe('broken_chain');
     });
   });
 });

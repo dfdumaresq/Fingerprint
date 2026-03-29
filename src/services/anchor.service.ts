@@ -58,33 +58,49 @@ export class AnchorService {
         return { message: 'No pending events to anchor.', count: 0 };
       }
 
-      // 2. Build Merkle Root
-      const leaves = events.map(e => e.event_hash);
+      // 2. Quarantine events with invalid hashes (tampered/corrupted records)
+      // A valid event_hash is a 0x-prefixed 32-byte hex string (66 chars)
+      const isValidHash = (h: string) => /^0x[0-9a-fA-F]{64}$/.test(h);
+      const validEvents   = events.filter(e => isValidHash(e.event_hash));
+      const quarantined   = events.filter(e => !isValidHash(e.event_hash));
+
+      if (quarantined.length > 0) {
+        console.warn(`[AnchorService] Quarantined ${quarantined.length} event(s) with invalid hashes: IDs [${quarantined.map(e => e.id).join(', ')}]`);
+      }
+
+      if (validEvents.length === 0) {
+        await client.query('ROLLBACK');
+        return { message: 'All pending events are quarantined (invalid hashes). Run a health check.', count: 0, quarantined: quarantined.length };
+      }
+
+      // 3. Build Merkle Root from valid events only
+      const leaves = validEvents.map(e => e.event_hash);
       const merkleRoot = this.buildMerkleRoot(leaves);
 
-      // 3. Mock Smart Contract Call (Phase 1)
+      // 4. Mock Smart Contract Call (Phase 1)
       console.log(`[AnchorService] Simulating Sepolia Smart Contract call: anchorEvents('${merkleRoot}')`);
       const mockTxHash = `0x${ethers.hexlify(ethers.randomBytes(32)).substring(2)}`;
       
-      // 4. Save to merkle_anchors
+      // 5. Save to merkle_anchors
       const anchorInsert = await client.query(
         `INSERT INTO merkle_anchors (merkle_root, event_count, tx_hash, status) 
          VALUES ($1, $2, $3, 'confirmed') RETURNING id`,
-        [merkleRoot, events.length, mockTxHash]
+        [merkleRoot, validEvents.length, mockTxHash]
       );
       const anchorId = anchorInsert.rows[0].id;
 
-      // 5. Update events to anchored
-      const eventIds = events.map(e => e.id);
+      // 6. Update only valid events to anchored
+      const validIds = validEvents.map(e => e.id);
       await client.query(
         'UPDATE agent_events SET anchored_to_chain = true, merkle_root_id = $1 WHERE id = ANY($2)',
-        [anchorId, eventIds]
+        [anchorId, validIds]
       );
 
       await client.query('COMMIT');
       return { 
         message: 'Anchored successfully.', 
-        count: events.length, 
+        count: validEvents.length,
+        quarantined: quarantined.length,
         merkleRoot, 
         txHash: mockTxHash 
       };
@@ -96,10 +112,17 @@ export class AnchorService {
     }
   }
 
+
   /**
    * Health/Audit endpoint: Verify local database integrity
    */
-  async verifyDatabaseIntegrity(): Promise<{ ok: boolean, firstBadId?: number, reason?: 'hash_mismatch' | 'broken_chain' | 'temporal_violation', total_events: number }> {
+  async verifyDatabaseIntegrity(): Promise<{ 
+    is_healthy: boolean, 
+    first_bad_id?: number, 
+    reason?: 'hash_mismatch' | 'broken_chain' | 'temporal_violation', 
+    total_events_checked: number,
+    faults_detected: number
+  }> {
     const res = await this.db.query('SELECT * FROM agent_events ORDER BY agent_fingerprint_id, timestamp ASC');
     const events = res.rows;
     
@@ -113,13 +136,25 @@ export class AnchorService {
       // Check 1: Temporal monotonicity
       const eventTime = new Date(event.timestamp);
       if (lastDates[agentId] && eventTime < lastDates[agentId]) {
-        return { ok: false, firstBadId: event.id, reason: 'temporal_violation', total_events: events.length };
+        return { 
+          is_healthy: false, 
+          first_bad_id: event.id, 
+          reason: 'temporal_violation', 
+          total_events_checked: events.length,
+          faults_detected: 1 
+        };
       }
       lastDates[agentId] = eventTime;
 
       // Check 2: Broken Chain Check
       if (event.previous_event_hash !== expectedPrev) {
-        return { ok: false, firstBadId: event.id, reason: 'broken_chain', total_events: events.length };
+        return { 
+          is_healthy: false, 
+          first_bad_id: event.id, 
+          reason: 'broken_chain', 
+          total_events_checked: events.length,
+          faults_detected: 1 
+        };
       }
       
       // Check 3: Recompute Content Hash (Hash Mismatch)
@@ -131,19 +166,24 @@ export class AnchorService {
         output_ref: event.output_ref
       };
       
-      // Map postgres null fields back to undefined so stringify drops them exactly like the original JSON payload did
       if (event.policy_id !== null) reconstructedPayload.policy_id = event.policy_id;
       if (event.session_id !== null) reconstructedPayload.session_id = event.session_id;
       if (event.clinician_action !== null) reconstructedPayload.clinician_action = event.clinician_action;
       
       const trueHash = generateEventHash(reconstructedPayload, expectedPrev, eventTime.toISOString());
       if (trueHash !== event.event_hash) {
-         return { ok: false, firstBadId: event.id, reason: 'hash_mismatch', total_events: events.length };
+         return { 
+           is_healthy: false, 
+           first_bad_id: event.id, 
+           reason: 'hash_mismatch', 
+           total_events_checked: events.length,
+           faults_detected: 1 
+         };
       }
 
       chains[agentId] = event.event_hash;
     }
 
-    return { ok: true, total_events: events.length };
+    return { is_healthy: true, total_events_checked: events.length, faults_detected: 0 };
   }
 }

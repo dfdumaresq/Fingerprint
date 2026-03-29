@@ -1,0 +1,300 @@
+/* Triage Dashboard Base Variables */
+:root {
+  --bg-dark: #0f111a;
+  --bg-card: rgba(255, 255, 255, 0.03);
+  --border-light: rgba(255, 255, 255, 0.08);
+  --text-primary: #f0f2f8;
+  --text-secondary: #8c9bb4;
+  
+  --acuity-1: #ff4757; /* Resuscitation */
+  --acuity-2: #ff7f50; /* Emergent */
+  --acuity-3: #ffb142; /* Urgent */
+  --acuity-4: #2ed573; /* Less Urgent */
+  --acuity-5: #1e90ff; /* Non Urgent */
+  
+  --status-anchored: #2ed573;
+  --status-pending: #ffa502;
+  --status-tampered: #ff4757;
+}
+
+.triage-container {
+  min-height: 100vh;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, sans-serif;
+  padding: 40px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.triage-header {
+  margin-bottom: 30px;
+}
+
+.triage-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0;
+  background: linear-gradient(90deg, #fff, #8c9bb4);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.triage-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 8px;
+}
+
+/* Glassmorphic Queue Table */
+.triage-queue {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+  margin-top: 20px;
+}
+
+.triage-queue th {
+  text-align: left;
+  padding: 12px 24px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.triage-row {
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.triage-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Tampered Row Highlight */
+.row-tampered td:first-child {
+  border-left: 3px solid var(--status-tampered) !important;
+}
+
+@keyframes tamper-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(255, 71, 87, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+}
+
+.triage-queue td {
+  padding: 18px 24px;
+  font-size: 0.95rem;
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.triage-row td:first-child {
+  border-left: 1px solid var(--border-light);
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.triage-row td:last-child {
+  border-right: 1px solid var(--border-light);
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+/* Acuity Badges */
+.acuity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.acuity-1 { background-color: var(--acuity-1); box-shadow: 0 0 12px var(--acuity-1); }
+.acuity-2 { background-color: var(--acuity-2); }
+.acuity-3 { background-color: var(--acuity-3); }
+.acuity-4 { background-color: var(--acuity-4); }
+.acuity-5 { background-color: var(--acuity-5); }
+
+/* Integrity Icons */
+.integrity-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.integrity-anchored { color: var(--status-anchored); }
+.integrity-pending { color: var(--status-pending); animation: pulse 2s infinite; }
+.integrity-tampered { color: var(--status-tampered); font-weight: 700; }
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+/* Slide-out Encounter Detail Drawer */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.encounter-drawer {
+  position: fixed;
+  top: 0;
+  right: -500px;
+  width: 450px;
+  height: 100vh;
+  background: #151824;
+  border-left: 1px solid var(--border-light);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.encounter-drawer.open {
+  right: 0;
+}
+
+.drawer-header {
+  padding: 30px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.drawer-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+.drawer-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.drawer-close:hover {
+  color: #fff;
+}
+
+.drawer-content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.vitals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.vital-card {
+  background: var(--bg-card);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+}
+
+.vital-label {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vital-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 5px;
+  color: #fff;
+}
+
+/* Security Audit Footer */
+.security-footer {
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid var(--border-light);
+  padding: 20px 30px;
+  color: var(--text-secondary);
+}
+
+.security-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.security-details {
+  margin-top: 15px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  background: #0b0d14;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  word-break: break-all;
+}
+
+.hash-row {
+  margin-bottom: 10px;
+}
+
+.hash-row:last-child {
+  margin-bottom: 0;
+}
+
+.hash-label {
+  color: #a4b1c6;
+  font-weight: bold;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.hash-value {
+  color: #2ed573;
+}

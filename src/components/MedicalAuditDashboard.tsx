@@ -158,10 +158,20 @@ export const MedicalAuditDashboard: React.FC = () => {
       </div>
 
       {auditResult && (
-        <div style={{ background: auditResult.is_healthy ? '#d4edda' : '#f8d7da', padding: '10px', marginBottom: '20px', borderRadius: '4px' }}>
-          <strong>Health Audit Result:</strong> {auditResult.is_healthy ? '✅ DB is Cryptographically Sound' : '❌ Tampering Detected!'}
-          <br/>
-          Checked {auditResult.total_events_checked} events. Faults: {auditResult.faults_detected}.
+        <div style={{ background: auditResult.is_healthy ? '#d4edda' : '#f8d7da', padding: '15px', marginBottom: '20px', borderRadius: '4px', border: auditResult.is_healthy ? '1px solid #c3e6cb' : '1px solid #f5c6cb' }}>
+          <div style={{ fontSize: '1.1rem', marginBottom: '5px' }}>
+            <strong>Health Audit Result:</strong> {auditResult.is_healthy ? '✅ DB is Cryptographically Sound' : '❌ Tampering Detected!'}
+          </div>
+          <div style={{ fontSize: '0.9rem', color: '#444' }}>
+            Checked <strong>{auditResult.total_events_checked}</strong> total records. Faults found: <strong>{auditResult.faults_detected}</strong>.
+          </div>
+          {!auditResult.is_healthy && (
+            <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(255,255,255,0.4)', borderRadius: '4px', fontSize: '0.85rem' }}>
+              <p style={{ margin: '0 0 5px 0' }}><strong>🔍 Investigation Lead:</strong></p>
+              <p style={{ margin: 0 }}><strong>Reason:</strong> <code style={{ color: '#721c24' }}>{auditResult.reason?.replace('_', ' ')}</code></p>
+              <p style={{ margin: 0 }}><strong>First Affected ID:</strong> <code>{auditResult.first_bad_id}</code></p>
+            </div>
+          )}
         </div>
       )}
 
@@ -178,13 +188,34 @@ export const MedicalAuditDashboard: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {events.map((ev) => (
+            {events.map((ev) => {
+              const isFlagged = auditResult && !auditResult.is_healthy && ev.id >= (auditResult.first_bad_id ?? Infinity);
+              return (
               <React.Fragment key={ev.id}>
                 <tr 
                   onClick={() => setExpandedRow(expandedRow === ev.id ? null : ev.id)}
-                  style={{ borderBottom: '1px solid #eee', cursor: 'pointer', background: expandedRow === ev.id ? '#f9f9f9' : 'transparent' }}
+                  style={{ 
+                    borderBottom: '1px solid #eee', 
+                    cursor: 'pointer', 
+                    background: expandedRow === ev.id ? '#f9f9f9' : 'transparent',
+                    borderLeft: isFlagged ? '3px solid #dc3545' : '3px solid transparent'
+                  }}
                 >
-                  <td style={{ padding: '10px' }}>{new Date(ev.timestamp).toLocaleString()}</td>
+                  <td style={{ padding: '10px', position: 'relative' }}>
+                    {isFlagged && (
+                      <span style={{
+                        display: 'inline-block',
+                        width: '9px',
+                        height: '9px',
+                        borderRadius: '50%',
+                        background: '#dc3545',
+                        marginRight: '8px',
+                        verticalAlign: 'middle',
+                        animation: 'tamper-pulse 1.4s ease-in-out infinite'
+                      }} title={`Record ID ${ev.id}: integrity fault detected`} />
+                    )}
+                    {new Date(ev.timestamp).toLocaleString()}
+                  </td>
                   <td style={{ padding: '10px' }}>{ev.workflow_type}</td>
                   <td style={{ padding: '10px' }}>{ev.agent_fingerprint_id.substring(0, 10)}...</td>
                   <td style={{ padding: '10px' }}>
@@ -210,7 +241,8 @@ export const MedicalAuditDashboard: React.FC = () => {
                   </tr>
                 )}
               </React.Fragment>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       )}

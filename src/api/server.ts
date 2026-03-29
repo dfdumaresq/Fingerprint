@@ -256,13 +256,61 @@ app.get('/v1/triage/encounters', async (req: Request, res: Response) => {
   try {
     const filters = {
       state: req.query.state as string,
-      acuity: req.query.acuity ? parseInt(req.query.acuity as string, 10) : undefined
+      acuity: req.query.acuity ? parseInt(req.query.acuity as string, 10) : undefined,
+      source: req.query.source as 'live' | 'scenario' | undefined,
     };
-    
     const encounters = await triageService.getTriageEncounters(filters);
     res.json({ success: true, data: encounters });
   } catch (error: any) {
     console.error('Error fetching triage encounters:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
+ * POST /v1/triage/encounters
+ * Clinician-driven: create a new encounter, get AI triage recommendation, log to ledger.
+ */
+app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
+  try {
+    const { chief_complaint, vitals, age, sex, red_flags, clinician_name } = req.body;
+
+    if (!chief_complaint || !vitals?.hr || !vitals?.bp) {
+      res.status(400).json({ error: { code: 'bad_request', message: 'chief_complaint, vitals.hr, and vitals.bp are required' } });
+      return;
+    }
+
+    const encounter = await triageService.createEncounterWithAI(
+      { chief_complaint, vitals, age, sex, red_flags },
+      clinician_name || 'clinician'
+    );
+
+    res.status(201).json({ success: true, data: encounter });
+  } catch (error: any) {
+    console.error('Error creating encounter:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
+ * POST /v1/triage/encounters/:session_id/action
+ * Log a clinician's accept / downgrade / escalate decision.
+ */
+app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: Response) => {
+  try {
+    const { session_id } = req.params;
+    const { action } = req.body;
+
+    const validActions = ['accepted', 'overridden', 'downgraded', 'escalated'];
+    if (!action || !validActions.includes(action)) {
+      res.status(400).json({ error: { code: 'bad_request', message: `action must be one of: ${validActions.join(', ')}` } });
+      return;
+    }
+
+    await triageService.logClinicianAction(session_id, action);
+    res.json({ success: true, action, session_id });
+  } catch (error: any) {
+    console.error('Error logging clinician action:', error);
     res.status(500).json({ error: { code: 'internal_error', message: error.message } });
   }
 });

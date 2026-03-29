@@ -61,7 +61,7 @@ export class EventService {
           $6, $7, $8, 
           $9, $10, 
           $11, $12
-        ) RETURNING event_id, event_hash, timestamp, previous_event_hash
+        ) RETURNING id, event_id, event_hash, timestamp, previous_event_hash
       `;
       
       const eventId = randomUUID();

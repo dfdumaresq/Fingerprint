@@ -33,7 +33,8 @@ CREATE TYPE clinician_action_enum AS ENUM (
     'overridden',
     'ignored',
     'escalated',
-    'autonomous'
+    'autonomous',
+    'downgraded'
 );
 
 CREATE TYPE anchor_status_enum AS ENUM ('pending', 'confirmed', 'failed');

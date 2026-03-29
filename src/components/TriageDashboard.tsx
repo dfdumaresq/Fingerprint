@@ -72,6 +72,7 @@ export const TriageDashboard: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<{ available: boolean; provider: string; model: string } | null>(null);
+  const [changingDecision, setChangingDecision] = useState(false);
 
   const [form, setForm] = useState<NewEncounterForm>({
     chief_complaint: '', custom_complaint: '',
@@ -108,7 +109,7 @@ export const TriageDashboard: React.FC = () => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (selectedEncounter) { setSelectedEncounter(null); return; }
+      if (selectedEncounter) { setSelectedEncounter(null); setChangingDecision(false); return; }
       if (showNewForm) setShowNewForm(false);
     };
     window.addEventListener('keydown', onKey);
@@ -152,6 +153,7 @@ export const TriageDashboard: React.FC = () => {
 
     // Optimistic update: reflect the action immediately in the drawer
     setSelectedEncounter(prev => prev ? { ...prev, clinician_action: action } : null);
+    setChangingDecision(false);
 
     try {
       await fetch(`${REACT_APP_API_URL}/v1/triage/encounters/${encodeURIComponent(selectedEncounter.encounter_id)}/action`, {
@@ -314,7 +316,11 @@ export const TriageDashboard: React.FC = () => {
               <td>{new Date(enc.arrival_time).toLocaleTimeString()}</td>
               <td style={{ fontWeight: 600 }}>{enc.clinical?.chief_complaint}</td>
               <td>{enc.clinical?.vitals?.heart_rate} bpm / {enc.clinical?.vitals?.blood_pressure}</td>
-              <td style={{ textTransform: 'capitalize' }}>{enc.clinical?.state?.replace('_', ' ') || 'waiting'}</td>
+              <td style={{ textTransform: 'capitalize' }}>
+                {enc.source === 'live' && enc.clinician_action
+                  ? <span style={{ color: '#2ed573' }}>{enc.clinician_action}</span>
+                  : enc.clinical?.state?.replace('_', ' ') || 'waiting'}
+              </td>
               <td>{getIntegrityIcon(enc.integrity.tamper_status)}</td>
             </tr>
           ))}
@@ -330,7 +336,7 @@ export const TriageDashboard: React.FC = () => {
       </table>
 
       {/* ── Drawer Overlay ── */}
-      <div className={`drawer-overlay ${selectedEncounter ? 'open' : ''}`} onClick={() => setSelectedEncounter(null)} />
+      <div className={`drawer-overlay ${selectedEncounter ? 'open' : ''}`} onClick={() => { setSelectedEncounter(null); setChangingDecision(false); }} />
 
       {/* ── Encounter Detail Drawer ── */}
       <div className={`encounter-drawer ${selectedEncounter ? 'open' : ''}`}>
@@ -390,8 +396,8 @@ export const TriageDashboard: React.FC = () => {
                     ))}
                   </ul>
 
-                  {/* Action buttons — only show if no action taken yet */}
-                  {!selectedEncounter.clinician_action ? (
+                  {/* Action buttons or decision badge */}
+                  {(!selectedEncounter.clinician_action || changingDecision) ? (
                     <div className="action-btn-group">
                       <button className="action-btn action-accept"
                         disabled={!!actionLoading}
@@ -410,8 +416,14 @@ export const TriageDashboard: React.FC = () => {
                       </button>
                     </div>
                   ) : (
-                    <div className="action-taken-badge">
-                      ✅ Clinician decision logged: <strong style={{ textTransform: 'capitalize' }}>{selectedEncounter.clinician_action}</strong>
+                    <div className="decision-block">
+                      <div className="action-taken-badge">
+                        <span className="decision-label">Clinician decision logged</span>
+                        <span className="decision-value" style={{ textTransform: 'capitalize' }}>{selectedEncounter.clinician_action}</span>
+                      </div>
+                      <button className="change-decision-link" onClick={() => setChangingDecision(true)}>
+                        Change decision
+                      </button>
                     </div>
                   )}
                 </div>

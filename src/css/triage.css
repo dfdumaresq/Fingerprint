@@ -586,12 +586,49 @@
 .action-escalate { background: #ff4757; color: #fff; }
 .action-escalate:not(:disabled):hover { box-shadow: 0 3px 12px rgba(255,71,87,0.4); transform: translateY(-1px); }
 
-.action-taken-badge {
+.decision-block {
+  display: flex;
+  flex-direction: column;
   margin-top: 8px;
-  padding: 8px 12px;
+}
+
+.action-taken-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
   background: rgba(46,213,115,0.1);
   border: 1px solid rgba(46,213,115,0.25);
   border-radius: 6px;
-  font-size: 0.85rem;
   color: #2ed573;
+}
+
+.decision-label {
+  font-size: 0.78rem;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+
+.decision-value {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.change-decision-link {
+  margin-top: 6px;
+  align-self: flex-end;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.change-decision-link:hover {
+  color: var(--text-primary);
 }

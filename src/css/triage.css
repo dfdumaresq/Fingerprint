@@ -633,3 +633,68 @@
 .change-decision-link:hover {
   color: var(--text-primary);
 }
+
+/* Amendment & History Styles */
+.amendment-note {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(30, 144, 255, 0.1);
+  border-left: 3px solid #1e90ff;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #a0c4ff;
+  line-height: 1.4;
+}
+
+.decision-history {
+  margin-top: 30px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.history-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.history-anchored {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.history-time {
+  opacity: 0.6;
+  min-width: 50px;
+}
+
+.history-action {
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  min-width: 80px;
+}
+
+.history-hash {
+  opacity: 0.4;
+  font-size: 0.75rem;
+}
+

@@ -307,10 +307,31 @@ app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: R
       return;
     }
 
-    await triageService.logClinicianAction(session_id, action);
-    res.json({ success: true, action, session_id });
+    const result = await triageService.logClinicianAction(session_id, action);
+    res.json({ 
+      success: true, 
+      action, 
+      session_id, 
+      is_amendment: result.is_amendment,
+      previous_action: result.previous_action 
+    });
   } catch (error: any) {
     console.error('Error logging clinician action:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
+ * GET /v1/triage/encounters/:session_id/history
+ * Fetch the full decision chain for a single encounter.
+ */
+app.get('/v1/triage/encounters/:session_id/history', async (req: Request, res: Response) => {
+  try {
+    const { session_id } = req.params;
+    const history = await triageService.getEncounterHistory(session_id);
+    res.json({ success: true, session_id, history });
+  } catch (error: any) {
+    console.error('Error fetching encounter history:', error);
     res.status(500).json({ error: { code: 'internal_error', message: error.message } });
   }
 });

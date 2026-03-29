@@ -24,6 +24,12 @@ interface TriageEncounter {
     anchored_to_chain: boolean;
     tamper_status: 'pending' | 'anchored' | 'tampered';
   };
+  decision_history?: { 
+    action: string; 
+    timestamp: string; 
+    anchored: boolean; 
+    event_hash: string 
+  }[];
 }
 
 interface NewEncounterForm {
@@ -73,6 +79,7 @@ export const TriageDashboard: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<{ available: boolean; provider: string; model: string } | null>(null);
   const [changingDecision, setChangingDecision] = useState(false);
+  const [lastActionResult, setLastActionResult] = useState<{ is_amendment: boolean; previous_action: string | null } | null>(null);
 
   const [form, setForm] = useState<NewEncounterForm>({
     chief_complaint: '', custom_complaint: '',
@@ -156,12 +163,18 @@ export const TriageDashboard: React.FC = () => {
     setChangingDecision(false);
 
     try {
-      await fetch(`${REACT_APP_API_URL}/v1/triage/encounters/${encodeURIComponent(selectedEncounter.encounter_id)}/action`, {
+      const res = await fetch(`${REACT_APP_API_URL}/v1/triage/encounters/${encodeURIComponent(selectedEncounter.encounter_id)}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${REACT_APP_API_KEY}` },
         body: JSON.stringify({ action }),
       });
-      // Refresh queue in background to sync integrity status
+      const data = await res.json();
+      if (data.success) {
+        setLastActionResult({ is_amendment: data.is_amendment, previous_action: data.previous_action });
+        // Clear result message after a few seconds
+        setTimeout(() => setLastActionResult(null), 5000);
+      }
+      // Refresh queue in background to sync integrity status and history
       fetchEncounters();
     } catch (err) {
       console.error('Failed to log clinician action', err);
@@ -423,10 +436,34 @@ export const TriageDashboard: React.FC = () => {
                         <span className="decision-value" style={{ textTransform: 'capitalize' }}>{selectedEncounter.clinician_action}</span>
                       </div>
                     </div>
+                    {lastActionResult?.is_amendment && (
+                      <div className="amendment-note">
+                        ℹ️ Amendment logged. Original record preserved in audit trail.
+                      </div>
+                    )}
                     <button className="change-decision-link" onClick={() => setChangingDecision(true)}>
-                      Change decision
+                      {selectedEncounter.integrity.anchored_to_chain
+                        ? 'Amend decision (new event)'
+                        : 'Change decision'}
                     </button>
                     </>
+                  )}
+
+                  {/* Decision History Timeline */}
+                  {selectedEncounter.decision_history && selectedEncounter.decision_history.length > 0 && (
+                    <div className="decision-history">
+                      <div className="history-title">Decision History</div>
+                      <div className="history-timeline">
+                        {selectedEncounter.decision_history.map((h, i) => (
+                          <div key={i} className="history-item">
+                            <span className="history-anchored">{h.anchored ? '🔗' : '⏳'}</span>
+                            <span className="history-time">{new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="history-action">{h.action}</span>
+                            <span className="history-hash">{h.event_hash.substring(0, 10)}...</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

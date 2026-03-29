@@ -44,6 +44,12 @@ export interface TriageEncounter {
     anchored_to_chain: boolean;
     tamper_status: 'pending' | 'anchored' | 'tampered';
   };
+  decision_history?: { 
+    action: string; 
+    timestamp: string; 
+    anchored: boolean; 
+    event_hash: string 
+  }[];
 }
 
 // ─── AI Rule Engine ───────────────────────────────────────────────────────────
@@ -203,7 +209,18 @@ export class TriageService {
   async logClinicianAction(
     sessionId: string,
     action: 'accepted' | 'overridden' | 'downgraded' | 'escalated',
-  ): Promise<void> {
+  ): Promise<{ is_amendment: boolean; previous_action: string | null }> {
+    // 1. Check for existing clinician actions to see if this is an amendment
+    const existingRes = await this.db.query(
+      `SELECT clinician_action FROM agent_events 
+       WHERE session_id = $1 AND clinician_action IS NOT NULL 
+       ORDER BY id DESC LIMIT 1`,
+      [sessionId]
+    );
+    const isAmendment = existingRes.rows.length > 0;
+    const previousAction = isAmendment ? existingRes.rows[0].clinician_action : null;
+
+    // 2. Fetch the original recommendation data to carry forward refs
     const res = await this.db.query(
       `SELECT input_ref, output_ref, policy_id FROM agent_events WHERE session_id = $1 AND workflow_type = 'triage_recommendation' ORDER BY id ASC LIMIT 1`,
       [sessionId]
@@ -211,16 +228,19 @@ export class TriageService {
     if (res.rows.length === 0) throw new Error(`Session ${sessionId} not found`);
     const { input_ref, output_ref, policy_id } = res.rows[0];
 
+    // 3. Append the new decision event
     await this.eventService.ingestEvent({
       agent_fingerprint_id: TRIAGE_AGENT.id,
       model_version: 'clinician',
-      workflow_type: 'triage_recommendation',
+      workflow_type: isAmendment ? 'clinician_amendment' : 'triage_recommendation',
       policy_id,           // carry forward so clinical data stays correct
       session_id: sessionId,
       clinician_action: action,
       input_ref,
       output_ref,
     });
+
+    return { is_amendment: isAmendment, previous_action: previousAction };
   }
 
   /**
@@ -295,6 +315,36 @@ export class TriageService {
       };
     });
 
+    // 2. Fetch decision history for all sessions in this batch to provide a timeline
+    const sessionIds = encounters.map(e => e.encounter_id);
+    const historyMap: Record<string, any[]> = {};
+    
+    if (sessionIds.length > 0) {
+      const historyRes = await this.db.query(
+        `SELECT session_id, clinician_action, timestamp, event_hash, anchored_to_chain
+         FROM agent_events
+         WHERE clinician_action IS NOT NULL AND (session_id = ANY($1))
+         ORDER BY id ASC`,
+        [sessionIds]
+      );
+
+      // Group history entries by session_id
+      historyRes.rows.forEach(row => {
+        if (!historyMap[row.session_id]) historyMap[row.session_id] = [];
+        historyMap[row.session_id].push({
+          action: row.clinician_action,
+          timestamp: new Date(row.timestamp).toISOString(),
+          anchored: row.anchored_to_chain,
+          event_hash: row.event_hash,
+        });
+      });
+    }
+
+    // Attach history to each encounter object
+    encounters.forEach(e => {
+      e.decision_history = historyMap[e.encounter_id] || [];
+    });
+
     let filtered = encounters.sort((a, b) => new Date(b.arrival_time).getTime() - new Date(a.arrival_time).getTime());
 
     if (filters.source) filtered = filtered.filter(e => e.source === filters.source);
@@ -302,6 +352,26 @@ export class TriageService {
     if (filters.acuity) filtered = filtered.filter(e => e.clinical.acuity === Number(filters.acuity));
 
     return filtered;
+  }
+
+  /**
+   * Fetch full decision sequence for a specific encounter session.
+   */
+  async getEncounterHistory(sessionId: string) {
+    const res = await this.db.query(
+      `SELECT clinician_action, workflow_type, timestamp, event_hash, anchored_to_chain
+       FROM agent_events 
+       WHERE session_id = $1 AND clinician_action IS NOT NULL
+       ORDER BY id ASC`,
+      [sessionId]
+    );
+    return res.rows.map(row => ({
+      action: row.clinician_action,
+      timestamp: new Date(row.timestamp).toISOString(),
+      anchored: row.anchored_to_chain,
+      event_hash: row.event_hash,
+      workflow: row.workflow_type
+    }));
   }
 
   /**

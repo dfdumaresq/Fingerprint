@@ -615,17 +615,18 @@
 }
 
 .change-decision-link {
-  margin-top: 6px;
-  align-self: flex-end;
+  display: block;
+  width: fit-content;
+  margin-top: 8px;
+  margin-left: auto;
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
-  text-underline-offset: 2px;
-  white-space: nowrap;
+  text-underline-offset: 3px;
   transition: color 0.15s;
 }
 

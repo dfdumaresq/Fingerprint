@@ -416,15 +416,17 @@ export const TriageDashboard: React.FC = () => {
                       </button>
                     </div>
                   ) : (
+                    <>
                     <div className="decision-block">
                       <div className="action-taken-badge">
                         <span className="decision-label">Clinician decision logged</span>
                         <span className="decision-value" style={{ textTransform: 'capitalize' }}>{selectedEncounter.clinician_action}</span>
                       </div>
-                      <button className="change-decision-link" onClick={() => setChangingDecision(true)}>
-                        Change decision
-                      </button>
                     </div>
+                    <button className="change-decision-link" onClick={() => setChangingDecision(true)}>
+                      Change decision
+                    </button>
+                    </>
                   )}
                 </div>
               )}

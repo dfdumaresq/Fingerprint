@@ -305,19 +305,26 @@ export class TriageService {
       }
 
       // Inline tamper check
+      // Legacy records (created before provenance upgrade) do not have 
+      // amends_event_id, reason_code, or reason_text in their hash.
+      const isLegacyRecord = !event.amends_event_id && event.reason_code === 'initial_decision' && !event.reason_text;
+
       const reconstructedPayload: any = {
         agent_fingerprint_id: event.agent_fingerprint_id,
         model_version: event.model_version,
         workflow_type: event.workflow_type,
         input_ref: event.input_ref,
         output_ref: event.output_ref,
+        session_id: event.session_id,
+        policy_id: event.policy_id,
+        clinician_action: event.clinician_action
       };
-      if (event.policy_id !== null) reconstructedPayload.policy_id = event.policy_id;
-      if (event.session_id !== null) reconstructedPayload.session_id = event.session_id;
-      if (event.clinician_action !== null) reconstructedPayload.clinician_action = event.clinician_action;
-      if (event.amends_event_id !== null) reconstructedPayload.amends_event_id = event.amends_event_id;
-      if (event.reason_code !== null) reconstructedPayload.reason_code = event.reason_code;
-      if (event.reason_text !== null) reconstructedPayload.reason_text = event.reason_text;
+
+      if (!isLegacyRecord) {
+        reconstructedPayload.amends_event_id = event.amends_event_id;
+        reconstructedPayload.reason_code = event.reason_code;
+        reconstructedPayload.reason_text = event.reason_text;
+      }
 
       const trueHash = generateEventHash(reconstructedPayload, event.previous_event_hash, new Date(event.timestamp).toISOString());
       let tamperStatus: 'pending' | 'anchored' | 'tampered' = event.anchored_to_chain ? 'anchored' : 'pending';
@@ -443,19 +450,25 @@ export class TriageService {
     // 1. Re-verify Integrity & Build Nodes
     for (const event of events) {
       // Content-level hash check
+      // Legacy compatibility: skip provenance if it represents a default/migration state
+      const isLegacy = !event.amends_event_id && event.reason_code === 'initial_decision' && !event.reason_text;
+
       const reconstructed: any = {
         agent_fingerprint_id: event.agent_fingerprint_id,
         model_version: event.model_version,
         workflow_type: event.workflow_type,
         input_ref: event.input_ref,
         output_ref: event.output_ref,
+        session_id: event.session_id,
+        policy_id: event.policy_id,
+        clinician_action: event.clinician_action,
       };
-      if (event.session_id !== null) reconstructed.session_id = event.session_id;
-      if (event.policy_id !== null) reconstructed.policy_id = event.policy_id;
-      if (event.clinician_action !== null) reconstructed.clinician_action = event.clinician_action;
-      if (event.amends_event_id !== null) reconstructed.amends_event_id = event.amends_event_id;
-      if (event.reason_code !== null) reconstructed.reason_code = event.reason_code;
-      if (event.reason_text !== null) reconstructed.reason_text = event.reason_text;
+
+      if (!isLegacy) {
+        reconstructed.amends_event_id = event.amends_event_id;
+        reconstructed.reason_code = event.reason_code;
+        reconstructed.reason_text = event.reason_text;
+      }
 
       const trueHash = generateEventHash(reconstructed, event.previous_event_hash, new Date(event.timestamp).toISOString());
       

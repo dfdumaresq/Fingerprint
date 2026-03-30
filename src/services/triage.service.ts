@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { generateEventHash } from '../utils/crypto.utils';
 import { EventService } from './event.service';
 import { TRIAGE_AGENT, TriageAgentConfig } from '../config/agents';
@@ -48,7 +48,10 @@ export interface TriageEncounter {
     action: string; 
     timestamp: string; 
     anchored: boolean; 
-    event_hash: string 
+    event_hash: string;
+    reason_code?: string;
+    reason_text?: string;
+    amends_event_id?: string;
   }[];
 }
 
@@ -157,7 +160,7 @@ export class TriageService {
    * Clinician-driven: create an encounter, get AI recommendation, log to ledger.
    */
   async createEncounterWithAI(input: ClinicalInput, clinicianName: string): Promise<TriageEncounter> {
-    const sessionId = `${clinicianName.toLowerCase().replace(/\s+/g, '_')}_${uuidv4()}`;
+    const sessionId = `${clinicianName.toLowerCase().replace(/\s+/g, '_')}_${randomUUID()}`;
 
     // 1. Run AI triage
     const { result: recommendation, provider } = await runTriageAgent(input);
@@ -209,15 +212,30 @@ export class TriageService {
   async logClinicianAction(
     sessionId: string,
     action: 'accepted' | 'overridden' | 'downgraded' | 'escalated',
+    reasonCode: string = 'initial_decision',
+    reasonText?: string
   ): Promise<{ is_amendment: boolean; previous_action: string | null }> {
     // 1. Check for existing clinician actions to see if this is an amendment
+    // and fetch the latest event_id for the session to link via amends_event_id
     const existingRes = await this.db.query(
-      `SELECT clinician_action FROM agent_events 
-       WHERE session_id = $1 AND clinician_action IS NOT NULL 
+      `SELECT event_id, clinician_action FROM agent_events 
+       WHERE session_id = $1
        ORDER BY id DESC LIMIT 1`,
       [sessionId]
     );
-    const isAmendment = existingRes.rows.length > 0;
+    
+    // We link any clinician action to the *absolute latest* event in the session
+    const lastEventId = existingRes.rows.length > 0 ? existingRes.rows[0].event_id : null;
+    
+    // If ANY event exists for this session, it's an encounter. 
+    // If a clinician_action already exists in the chain, it's an amendment.
+    const cliniciansActionFoundRes = await this.db.query(
+      `SELECT clinician_action FROM agent_events 
+       WHERE session_id = $1 AND clinician_action IS NOT NULL 
+       LIMIT 1`,
+      [sessionId]
+    );
+    const isAmendment = cliniciansActionFoundRes.rows.length > 0;
     const previousAction = isAmendment ? existingRes.rows[0].clinician_action : null;
 
     // 2. Fetch the original recommendation data to carry forward refs
@@ -238,6 +256,10 @@ export class TriageService {
       clinician_action: action,
       input_ref,
       output_ref,
+      // Regulatory Provenance:
+      amends_event_id: lastEventId,
+      reason_code: reasonCode,
+      reason_text: reasonText
     });
 
     return { is_amendment: isAmendment, previous_action: previousAction };
@@ -293,6 +315,9 @@ export class TriageService {
       if (event.policy_id !== null) reconstructedPayload.policy_id = event.policy_id;
       if (event.session_id !== null) reconstructedPayload.session_id = event.session_id;
       if (event.clinician_action !== null) reconstructedPayload.clinician_action = event.clinician_action;
+      if (event.amends_event_id !== null) reconstructedPayload.amends_event_id = event.amends_event_id;
+      if (event.reason_code !== null) reconstructedPayload.reason_code = event.reason_code;
+      if (event.reason_text !== null) reconstructedPayload.reason_text = event.reason_text;
 
       const trueHash = generateEventHash(reconstructedPayload, event.previous_event_hash, new Date(event.timestamp).toISOString());
       let tamperStatus: 'pending' | 'anchored' | 'tampered' = event.anchored_to_chain ? 'anchored' : 'pending';
@@ -321,7 +346,7 @@ export class TriageService {
     
     if (sessionIds.length > 0) {
       const historyRes = await this.db.query(
-        `SELECT session_id, clinician_action, timestamp, event_hash, anchored_to_chain
+        `SELECT session_id, clinician_action, timestamp, event_hash, anchored_to_chain, amends_event_id, reason_code, reason_text
          FROM agent_events
          WHERE clinician_action IS NOT NULL AND (session_id = ANY($1))
          ORDER BY id ASC`,
@@ -336,6 +361,9 @@ export class TriageService {
           timestamp: new Date(row.timestamp).toISOString(),
           anchored: row.anchored_to_chain,
           event_hash: row.event_hash,
+          reason_code: row.reason_code,
+          reason_text: row.reason_text,
+          amends_event_id: row.amends_event_id,
         });
       });
     }
@@ -356,22 +384,38 @@ export class TriageService {
 
   /**
    * Fetch full decision sequence for a specific encounter session.
+   * Returns a graph-ready structure for lineage visualization.
    */
   async getEncounterHistory(sessionId: string) {
     const res = await this.db.query(
-      `SELECT clinician_action, workflow_type, timestamp, event_hash, anchored_to_chain
+      `SELECT event_id, clinician_action, workflow_type, timestamp, event_hash, anchored_to_chain, amends_event_id, reason_code, reason_text
        FROM agent_events 
-       WHERE session_id = $1 AND clinician_action IS NOT NULL
+       WHERE session_id = $1
        ORDER BY id ASC`,
       [sessionId]
     );
-    return res.rows.map(row => ({
+    
+    const nodes = res.rows.map(row => ({
+      id: row.event_id,
+      type: row.workflow_type === 'triage_recommendation' && !row.clinician_action ? 'ai_recommendation' : 'clinician_action',
       action: row.clinician_action,
       timestamp: new Date(row.timestamp).toISOString(),
       anchored: row.anchored_to_chain,
-      event_hash: row.event_hash,
+      hash: row.event_hash,
+      reason: row.reason_code,
+      note: row.reason_text,
       workflow: row.workflow_type
     }));
+
+    const edges = res.rows
+      .filter(row => row.amends_event_id)
+      .map(row => ({
+        from: row.event_id,
+        to: row.amends_event_id,
+        type: 'amends'
+      }));
+
+    return { session_id: sessionId, nodes, edges };
   }
 
   /**

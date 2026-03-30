@@ -28,7 +28,10 @@ interface TriageEncounter {
     action: string; 
     timestamp: string; 
     anchored: boolean; 
-    event_hash: string 
+    event_hash: string;
+    reason_code?: string;
+    reason_text?: string;
+    amends_event_id?: string;
   }[];
 }
 
@@ -63,6 +66,15 @@ const ACUITY_LABELS: Record<number, string> = {
   1: 'Resuscitation', 2: 'Emergent', 3: 'Urgent', 4: 'Less Urgent', 5: 'Non-Urgent'
 };
 
+const AMENDMENT_REASONS = [
+  { id: 'new_lab_data', label: 'New Lab Data' },
+  { id: 'senior_review', label: 'Senior Clinical Review' },
+  { id: 'deterioration', label: 'Patient Deterioration' },
+  { id: 'imaging_result', label: 'Imaging Result' },
+  { id: 'clerical_error', label: 'Clerical/Entry Error' },
+  { id: 'other', label: 'Other' },
+];
+
 const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
 
@@ -80,6 +92,9 @@ export const TriageDashboard: React.FC = () => {
   const [agentStatus, setAgentStatus] = useState<{ available: boolean; provider: string; model: string } | null>(null);
   const [changingDecision, setChangingDecision] = useState(false);
   const [lastActionResult, setLastActionResult] = useState<{ is_amendment: boolean; previous_action: string | null } | null>(null);
+  const [amendmentReason, setAmendmentReason] = useState('initial_decision');
+  const [amendmentNote, setAmendmentNote] = useState('');
+  const [showTechnicalProofs, setShowTechnicalProofs] = useState(false);
 
   const [form, setForm] = useState<NewEncounterForm>({
     chief_complaint: '', custom_complaint: '',
@@ -166,11 +181,19 @@ export const TriageDashboard: React.FC = () => {
       const res = await fetch(`${REACT_APP_API_URL}/v1/triage/encounters/${encodeURIComponent(selectedEncounter.encounter_id)}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${REACT_APP_API_KEY}` },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ 
+          action, 
+          reason_code: amendmentReason,
+          reason_text: amendmentNote
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setLastActionResult({ is_amendment: data.is_amendment, previous_action: data.previous_action });
+        // Reset reasons
+        setAmendmentReason('initial_decision');
+        setAmendmentNote('');
+        
         // Clear result message after a few seconds
         setTimeout(() => setLastActionResult(null), 5000);
       }
@@ -411,6 +434,27 @@ export const TriageDashboard: React.FC = () => {
 
                   {/* Action buttons or decision badge */}
                   {(!selectedEncounter.clinician_action || changingDecision) ? (
+                    <>
+                    {changingDecision && (
+                      <div className="amendment-reason-form">
+                        <label className="amendment-label">Reason for Amendment</label>
+                        <select 
+                          className="amendment-select"
+                          value={amendmentReason}
+                          onChange={(e) => setAmendmentReason(e.target.value)}
+                        >
+                          {AMENDMENT_REASONS.map(r => (
+                            <option key={r.id} value={r.id}>{r.label}</option>
+                          ))}
+                        </select>
+                        <textarea 
+                          className="amendment-textarea"
+                          placeholder="Add clinical context (optional)..."
+                          value={amendmentNote}
+                          onChange={(e) => setAmendmentNote(e.target.value)}
+                        />
+                      </div>
+                    )}
                     <div className="action-btn-group">
                       <button className="action-btn action-accept"
                         disabled={!!actionLoading}
@@ -428,6 +472,14 @@ export const TriageDashboard: React.FC = () => {
                         {actionLoading === 'escalated' ? '…' : '↑ Escalate'}
                       </button>
                     </div>
+                    {changingDecision && (
+                      <button className="cancel-amendment-btn" onClick={() => {
+                        setChangingDecision(false);
+                        setAmendmentReason('initial_decision');
+                        setAmendmentNote('');
+                      }}>Cancel</button>
+                    )}
+                    </>
                   ) : (
                     <>
                     <div className="decision-block">
@@ -452,14 +504,37 @@ export const TriageDashboard: React.FC = () => {
                   {/* Decision History Timeline */}
                   {selectedEncounter.decision_history && selectedEncounter.decision_history.length > 0 && (
                     <div className="decision-history">
-                      <div className="history-title">Decision History</div>
+                      <div className="history-header">
+                        <div className="history-title">Decision History</div>
+                        <button 
+                          className="proof-toggle-btn"
+                          onClick={() => setShowTechnicalProofs(!showTechnicalProofs)}
+                        >
+                          {showTechnicalProofs ? 'Technical Proofs' : 'Show Proofs'}
+                        </button>
+                      </div>
                       <div className="history-timeline">
                         {selectedEncounter.decision_history.map((h, i) => (
-                          <div key={i} className="history-item">
-                            <span className="history-anchored">{h.anchored ? '🔗' : '⏳'}</span>
-                            <span className="history-time">{new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            <span className="history-action">{h.action}</span>
-                            <span className="history-hash">{h.event_hash.substring(0, 10)}...</span>
+                          <div key={i} className="history-item-v2">
+                            <div className="history-main-line">
+                              <span className="history-anchored">{h.anchored ? '🔗' : '⏳'}</span>
+                              <span className="history-time">{new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="history-action-v2">{h.action}</span>
+                            </div>
+                            
+                            {h.reason_code && h.reason_code !== 'initial_decision' && (
+                              <div className="history-reason-badge">
+                                Reason: <strong>{AMENDMENT_REASONS.find(r => r.id === h.reason_code)?.label || h.reason_code}</strong>
+                              </div>
+                            )}
+                            
+                            {h.reason_text && <div className="history-text-note">"{h.reason_text}"</div>}
+                            
+                            {showTechnicalProofs && (
+                              <div className="history-technical-proof">
+                                Fingerprint: <code>{h.event_hash.substring(0, 14)}...</code>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

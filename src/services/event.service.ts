@@ -13,6 +13,11 @@ export interface ClinicalEventPayload {
   clinician_action?: string;
   input_ref: string;
   output_ref: string;
+  
+  // Provenance Fields
+  amends_event_id?: string;
+  reason_code?: string;
+  reason_text?: string;
 }
 
 export class EventService {
@@ -45,6 +50,7 @@ export class EventService {
       const timestamp = new Date();
       
       // 3. Compute immutable Event Hash (server-authoritative)
+      // crypto.utils.ts uses {...payload} so new fields are automatically hashed
       const eventHash = generateEventHash(payload, previousHash, timestamp.toISOString());
 
       // 4. Insert into append-only log
@@ -54,13 +60,15 @@ export class EventService {
           agent_fingerprint_id, model_version, 
           workflow_type, policy_id, clinician_action, 
           input_ref, output_ref, 
-          previous_event_hash, event_hash
+          previous_event_hash, event_hash,
+          amends_event_id, reason_code, reason_text
         ) VALUES (
           $1, $2, $3, 
           $4, $5, 
           $6, $7, $8, 
           $9, $10, 
-          $11, $12
+          $11, $12,
+          $13, $14, $15
         ) RETURNING id, event_id, event_hash, timestamp, previous_event_hash
       `;
       
@@ -71,7 +79,8 @@ export class EventService {
         payload.agent_fingerprint_id, payload.model_version,
         payload.workflow_type, payload.policy_id, payload.clinician_action,
         payload.input_ref, payload.output_ref,
-        previousHash, eventHash
+        previousHash, eventHash,
+        payload.amends_event_id, payload.reason_code, payload.reason_text
       ]);
 
       await client.query('COMMIT');

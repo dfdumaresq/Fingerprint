@@ -299,7 +299,7 @@ app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
 app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: Response) => {
   try {
     const { session_id } = req.params;
-    const { action } = req.body;
+    const { action, reason_code, reason_text } = req.body;
 
     const validActions = ['accepted', 'overridden', 'downgraded', 'escalated'];
     if (!action || !validActions.includes(action)) {
@@ -307,7 +307,7 @@ app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: R
       return;
     }
 
-    const result = await triageService.logClinicianAction(session_id, action);
+    const result = await triageService.logClinicianAction(session_id, action, reason_code, reason_text);
     res.json({ 
       success: true, 
       action, 
@@ -328,8 +328,8 @@ app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: R
 app.get('/v1/triage/encounters/:session_id/history', async (req: Request, res: Response) => {
   try {
     const { session_id } = req.params;
-    const history = await triageService.getEncounterHistory(session_id);
-    res.json({ success: true, session_id, history });
+    const lineage = await triageService.getEncounterHistory(session_id);
+    res.json({ success: true, session_id, lineage });
   } catch (error: any) {
     console.error('Error fetching encounter history:', error);
     res.status(500).json({ error: { code: 'internal_error', message: error.message } });

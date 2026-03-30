@@ -337,6 +337,26 @@ app.get('/v1/triage/encounters/:session_id/history', async (req: Request, res: R
 });
 
 /**
+ * GET /v1/triage/encounters/:session_id/audit-pack
+ * Export a regulatory-grade inspection bundle as a JSON file.
+ */
+app.get('/v1/triage/encounters/:session_id/audit-pack', async (req: Request, res: Response) => {
+  try {
+    const { session_id } = req.params;
+    const pack = await triageService.getAuditPack(session_id);
+    
+    // Set response headers for file download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-pack-${session_id.substring(0, 8)}.json"`);
+    
+    res.json(pack);
+  } catch (error: any) {
+    console.error('Error generating audit pack:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
  * POST /v1/events/anchor/trigger
  * DEV TRIGGER: Force the background anchoring job to run immediately.
  */

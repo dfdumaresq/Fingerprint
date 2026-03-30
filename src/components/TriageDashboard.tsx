@@ -207,6 +207,29 @@ export const TriageDashboard: React.FC = () => {
     setActionLoading(null);
   };
 
+  const downloadAuditPack = async (sessionId: string) => {
+    try {
+      const res = await fetch(`${REACT_APP_API_URL}/v1/triage/encounters/${encodeURIComponent(sessionId)}/audit-pack`, {
+        headers: { 'Authorization': `Bearer ${REACT_APP_API_KEY}` }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-pack-${sessionId.substring(0, 8)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download audit pack', err);
+      alert('Failed to generate audit pack. Please try again.');
+    }
+  };
+
   const toggleRedFlag = (id: string) => {
     setForm(f => ({
       ...f,
@@ -584,9 +607,16 @@ export const TriageDashboard: React.FC = () => {
                     <span className="hash-label">Anchored to Merkle Root ID</span>
                     <span className="hash-value">{selectedEncounter.integrity.merkle_root_id || 'Pending Block Anchor'}</span>
                   </div>
-                  <div className="hash-row">
-                    <span className="hash-label">Agent Model Provenance</span>
-                    <span className="hash-value">{selectedEncounter.agent_id}</span>
+                  <div className="hash-row" style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <button 
+                      className="download-pack-btn"
+                      onClick={() => downloadAuditPack(selectedEncounter.encounter_id)}
+                    >
+                      📄 Download Official Audit Pack (.json)
+                    </button>
+                    <p className="pack-disclaimer">
+                      Includes full decision lineage, reason codes, and Keccak256 event fingerprints.
+                    </p>
                   </div>
                 </div>
               )}

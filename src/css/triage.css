@@ -773,3 +773,35 @@
   word-break: break-all;
 }
 
+.download-pack-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(46, 213, 115, 0.1);
+  border: 1px solid rgba(46, 213, 115, 0.3);
+  border-radius: 6px;
+  color: #2ed573;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.download-pack-btn:hover {
+  background: rgba(46, 213, 115, 0.2);
+  border-color: #2ed573;
+  transform: translateY(-1px);
+}
+
+.pack-disclaimer {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+

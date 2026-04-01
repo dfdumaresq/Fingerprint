@@ -263,7 +263,7 @@ export const TriageDashboard: React.FC = () => {
             <div className="mode-toggle">
               {(['all', 'live', 'scenario'] as TriageMode[]).map(m => (
                 <button key={m} className={`mode-btn${mode === m ? ' active' : ''}`} onClick={() => setMode(m)}>
-                  {m === 'all' ? 'All' : m === 'live' ? '● Live' : '○ Scenario'}
+                  {m === 'all' ? 'All' : m === 'live' ? '● Live' : '● Scenario'}
                 </button>
               ))}
             </div>
@@ -376,7 +376,7 @@ export const TriageDashboard: React.FC = () => {
               <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
                 {enc.source === 'live'
                   ? <span className="live-badge">● Live</span>
-                  : <span className="scenario-badge">○ Sim</span>}
+                  : <span className="scenario-badge">● Sim</span>}
                 {' '}{enc.encounter_id.substring(0, 20)}…
               </td>
               <td>{new Date(enc.arrival_time).toLocaleTimeString()}</td>

@@ -13,7 +13,14 @@ interface TriageEncounter {
   clinical: {
     acuity: number;
     chief_complaint: string;
-    vitals: { heart_rate: number; blood_pressure: string };
+    age: number;
+    gender: string;
+    vitals: { 
+      heart_rate: number; 
+      blood_pressure: string;
+      respiratory_rate: number;
+      spo2: number;
+    };
     state: string;
     ai_recommendation?: { acuity: number; reasons: string[] };
     ai_provider?: string;
@@ -351,7 +358,7 @@ export const TriageDashboard: React.FC = () => {
             <th>Encounter ID</th>
             <th>Arrival Time</th>
             <th>Chief Complaint</th>
-            <th>Vitals (HR / BP)</th>
+            <th>Vitals (H/B/R/S)</th>
             <th>Status</th>
             <th>Integrity</th>
           </tr>
@@ -374,11 +381,16 @@ export const TriageDashboard: React.FC = () => {
               </td>
               <td>{new Date(enc.arrival_time).toLocaleTimeString()}</td>
               <td style={{ fontWeight: 600 }}>{enc.clinical?.chief_complaint}</td>
-              <td>{enc.clinical?.vitals?.heart_rate} bpm / {enc.clinical?.vitals?.blood_pressure}</td>
+              <td style={{ fontSize: '0.85rem' }}>
+                {enc.clinical?.vitals?.heart_rate} / {enc.clinical?.vitals?.blood_pressure} / {enc.clinical?.vitals?.respiratory_rate} / {enc.clinical?.vitals?.spo2}%
+              </td>
               <td style={{ textTransform: 'capitalize' }}>
-                {enc.source === 'live' && enc.clinician_action
-                  ? <span style={{ color: '#2ed573' }}>{enc.clinician_action}</span>
-                  : enc.clinical?.state?.replace('_', ' ') || 'waiting'}
+                <div 
+                  className={`status-pill status-${enc.clinical?.state}`}
+                  title={enc.clinical?.state === 'in_progress' ? "In Progress: AI recommendation logged; awaiting clinician decision or further action." : ""}
+                >
+                  {enc.clinical?.state?.replace('_', ' ')}
+                </div>
               </td>
               <td>{getIntegrityIcon(enc.integrity.tamper_status)}</td>
             </tr>
@@ -427,6 +439,18 @@ export const TriageDashboard: React.FC = () => {
 
               {/* Vitals */}
               <h3>Current Vitals</h3>
+              {/* Patient Context Block (Age/Gender) */}
+              <div className="patient-context-grid">
+                <div className="context-item">
+                  <span className="context-label">Age</span>
+                  <span className="context-value">{selectedEncounter.clinical?.age}</span>
+                </div>
+                <div className="context-item">
+                  <span className="context-label">Sex</span>
+                  <span className="context-value">{selectedEncounter.clinical?.gender}</span>
+                </div>
+              </div>
+
               <div className="vitals-grid">
                 <div className="vital-card">
                   <div className="vital-label">Heart Rate</div>
@@ -435,6 +459,14 @@ export const TriageDashboard: React.FC = () => {
                 <div className="vital-card">
                   <div className="vital-label">Blood Pressure</div>
                   <div className="vital-value">{selectedEncounter.clinical?.vitals?.blood_pressure}</div>
+                </div>
+                <div className="vital-card">
+                  <div className="vital-label">Resp. Rate</div>
+                  <div className="vital-value">{selectedEncounter.clinical?.vitals?.respiratory_rate} bpm</div>
+                </div>
+                <div className="vital-card">
+                  <div className="vital-label">SpO2</div>
+                  <div className="vital-value">{selectedEncounter.clinical?.vitals?.spo2}%</div>
                 </div>
               </div>
 
@@ -570,7 +602,17 @@ export const TriageDashboard: React.FC = () => {
               <h3 style={{ marginTop: '30px' }}>Clinical Disposition</h3>
               <div style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <p><strong>Action Taken:</strong> <span style={{ textTransform: 'capitalize' }}>{selectedEncounter.clinician_action || 'Awaiting decision'}</span></p>
-                <p><strong>Status:</strong> <span style={{ color: '#ffa502', textTransform: 'capitalize' }}>{selectedEncounter.clinical?.state?.replace('_', ' ') || 'Waiting'}</span></p>
+                <p>
+                  <strong>Status:</strong> 
+                  <span 
+                    style={{ color: '#ffa502', textTransform: 'capitalize', marginLeft: '5px', cursor: 'help' }}
+                    title={selectedEncounter.clinical?.state === 'in_progress' 
+                      ? "In Progress: AI recommendation logged; awaiting clinician decision or further action."
+                      : "Clinical closure: Final clinician action has been logged for this encounter."}
+                  >
+                    {selectedEncounter.clinical?.state?.replace('_', ' ')}
+                  </span>
+                </p>
 
                 {!selectedEncounter.clinical?.ai_recommendation && (
                   <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
@@ -584,7 +626,14 @@ export const TriageDashboard: React.FC = () => {
             {/* Security Audit */}
             <div className="security-footer">
               <div className="security-header" onClick={() => setSecurityExpanded(!securityExpanded)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div 
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'help' }}
+                  title={selectedEncounter.integrity.tamper_status === 'pending' 
+                    ? "Pending: Cryptographic anchoring and full integrity verification are not yet complete for this encounter."
+                    : selectedEncounter.integrity.tamper_status === 'anchored'
+                      ? "Anchored: Cryptographic fingerprint is fully verified and anchored to the blockchain."
+                      : "Tampered: Cryptographic verification failed. Ledger row has been altered."}
+                >
                   <span>🛡️ Security Audit</span>
                   {getIntegrityIcon(selectedEncounter.integrity.tamper_status)}
                 </div>

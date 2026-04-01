@@ -32,7 +32,14 @@ export interface TriageEncounter {
   clinical: {
     acuity: number;
     chief_complaint: string;
-    vitals: { heart_rate: number; blood_pressure: string };
+    age: number;
+    gender: string;
+    vitals: { 
+      heart_rate: number; 
+      blood_pressure: string;
+      respiratory_rate: number;
+      spo2: number;
+    };
     state: string;
     ai_recommendation?: TriageResult;
     ai_provider?: string;
@@ -133,15 +140,27 @@ function getMockClinicalData(sessionId: string) {
   const hash = ethers.id(sessionId || 'unknown');
   const seedNum = parseInt(hash.substring(2, 10), 16);
   const COMPLAINTS = ['Chest Pain', 'Laceration', 'Shortness of Breath', 'Abdominal Pain', 'Fever', 'Headache', 'Dizziness', 'Sprain'];
-  const DISPOSITIONS = ['waiting', 'in_room', 'completed', 'waiting'];
+  const GENDERS = ['Male', 'Female', 'Female', 'Male', 'Other']; // Deterministic but mixed
+  
   const acuity = [1,2,3,4,5][seedNum % 5];
   const hr = 60 + (acuity * 8) + (seedNum % 25);
   const bp = `${95 + (acuity * 5) + (seedNum % 30)}/${60 + (seedNum % 20)}`;
+  const rr = 12 + (seedNum % 10);
+  const spo2 = 92 + (seedNum % 8);
+  const age = 18 + (seedNum % 75);
+
   return {
     acuity,
     chief_complaint: COMPLAINTS[seedNum % COMPLAINTS.length],
-    vitals: { heart_rate: hr, blood_pressure: bp },
-    state: DISPOSITIONS[(seedNum >> 2) % DISPOSITIONS.length],
+    age,
+    gender: GENDERS[seedNum % GENDERS.length],
+    vitals: { 
+      heart_rate: hr, 
+      blood_pressure: bp, 
+      respiratory_rate: rr,
+      spo2
+    },
+    state: 'waiting', // Default, will be overridden by getTriageEncounters
   };
 }
 
@@ -182,6 +201,12 @@ export class TriageService {
       output_ref: outputRef,
     });
 
+    // Generate ephemeral context for UI (not persisted in ledger)
+    const age = input.age || 22 + (Math.floor(Math.random() * 60));
+    const gender = input.sex === 'M' ? 'Male' : (input.sex === 'F' ? 'Female' : 'Other');
+    const rr = input.vitals.rr || 12 + (Math.floor(Math.random() * 8));
+    const spo2 = input.vitals.spo2 || 95 + (Math.floor(Math.random() * 5));
+
     return {
       encounter_id: sessionId,
       db_row_id: (event as any).id ?? 0,
@@ -192,8 +217,15 @@ export class TriageService {
       clinical: {
         acuity: recommendation.acuity,
         chief_complaint: input.chief_complaint,
-        vitals: { heart_rate: input.vitals.hr, blood_pressure: input.vitals.bp },
-        state: 'waiting',
+        age,
+        gender,
+        vitals: { 
+          heart_rate: input.vitals.hr, 
+          blood_pressure: input.vitals.bp,
+          respiratory_rate: rr,
+          spo2
+        },
+        state: 'in_progress',
         ai_recommendation: recommendation,
         ai_provider: provider,
       },
@@ -285,23 +317,38 @@ export class TriageService {
       const source: 'live' | 'scenario' = isLive ? 'live' : 'scenario';
 
       // Hydrate clinical data:
-      // - Live encounters: decode from policy_id "live::<complaint>::<hr>::<bp>"
+      // - Live encounters: decode from policy_id "live::<complaint>::<hr>::<bp>::<acuity>::<reason1>|<reason2>"
       // - Scenario encounters: use deterministic mock hydrator
-      let clinicalData: { acuity: number; chief_complaint: string; vitals: { heart_rate: number; blood_pressure: string }; state: string };
+      let clinicalData: any;
       if (isLive && event.policy_id?.startsWith('live::')) {
         const parts = event.policy_id.split('::');
         const acuity = parts[4] ? parseInt(parts[4]) : 3;
         const reasons = parts[5] ? parts[5].split('|') : [];
+        
+        // Mocking RR, SpO2, Age, Gender for live context (not in ledger)
+        const rr = 12 + (event.id % 8);
+        const spo2 = 95 + (event.id % 5);
+        const age = 22 + (event.id % 60);
+        const gender = (event.id % 2 === 0) ? 'Male' : 'Female';
+
         clinicalData = {
           acuity,
           chief_complaint: parts[1] || 'Unknown',
-          vitals: { heart_rate: parseInt(parts[2]) || 0, blood_pressure: parts[3] || '--/--' },
-          state: event.clinician_action ? 'completed' : 'waiting',
+          age,
+          gender,
+          vitals: { 
+            heart_rate: parseInt(parts[2]) || 70, 
+            blood_pressure: parts[3] || '120/80',
+            respiratory_rate: rr,
+            spo2
+          },
+          state: event.clinician_action ? 'completed' : 'in_progress',
           ai_recommendation: reasons.length > 0 ? { acuity, reasons } : undefined,
           ai_provider: event.model_version || 'rules_fallback',
-        } as any;
+        };
       } else {
         clinicalData = getMockClinicalData(sessionId);
+        clinicalData.state = event.clinician_action ? 'completed' : 'in_progress';
       }
 
       // Inline tamper check
@@ -375,9 +422,17 @@ export class TriageService {
       });
     }
 
-    // Attach history to each encounter object
+    // Attach history and update status based on clinical actions
     encounters.forEach(e => {
-      e.decision_history = historyMap[e.encounter_id] || [];
+      const history = historyMap[e.encounter_id] || [];
+      e.decision_history = history;
+      
+      // If any actions have been taken, the encounter is 'Completed'
+      // and the summary field should show the most recent action.
+      if (history.length > 0) {
+        e.clinical.state = 'completed';
+        e.clinician_action = history[history.length - 1].action;
+      }
     });
 
     let filtered = encounters.sort((a, b) => new Date(b.arrival_time).getTime() - new Date(a.arrival_time).getTime());

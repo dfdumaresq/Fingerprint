@@ -35,6 +35,8 @@ export const MedicalAuditDashboard: React.FC = () => {
   // Filters
   const [agentFilter, setAgentFilter] = useState('');
   const [daysBack, setDaysBack] = useState<number | ''>('');
+  const [workflowFilter, setWorkflowFilter] = useState('');
+  const [anomalyOnly, setAnomalyOnly] = useState(false);
   
   // Health
   const [auditResult, setAuditResult] = useState<any>(null);
@@ -45,6 +47,8 @@ export const MedicalAuditDashboard: React.FC = () => {
       const qs = new URLSearchParams();
       if (agentFilter) qs.append('agent_fingerprint_id', agentFilter);
       if (daysBack) qs.append('days_back', daysBack.toString());
+      if (workflowFilter) qs.append('workflow_type', workflowFilter);
+      if (anomalyOnly) qs.append('anomaly_only', 'true');
       
       const res = await fetch(`${REACT_APP_API_URL}/v1/events?${qs.toString()}`, {
         headers: {
@@ -97,7 +101,7 @@ export const MedicalAuditDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchEvents();
-  }, [agentFilter, daysBack]);
+  }, [agentFilter, daysBack, workflowFilter, anomalyOnly]);
 
   return (
     <div className="medical-dashboard" style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
@@ -105,46 +109,57 @@ export const MedicalAuditDashboard: React.FC = () => {
       <p>Immutable, Merkle-anchored history of AI actions in clinical workflows.</p>
 
       {/* Global Controls */}
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', background: '#f5f5f5', padding: '15px', borderRadius: '8px', alignItems: 'flex-start' }}>
-        <div>
-          <label style={{ display: 'block', marginBottom: '5px' }}><strong>Registered Agent: </strong></label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <select 
-              value={agentFilter} 
-              onChange={(e) => setAgentFilter(e.target.value)}
-              style={{ padding: '8px', width: '320px', borderRadius: '4px', border: '1px solid #ccc' }}
-            >
-              <option value="">All Agents</option>
-              {registeredAgents.map(a => (
-                <option key={a.fingerprintHash} value={a.fingerprintHash}>
-                  {a.name} - {a.fingerprintHash.substring(0, 10)}...
-                </option>
-              ))}
-            </select>
-            {/* Behavioral Badge Drop-in */}
-            {agentFilter && registeredAgents.find(a => a.fingerprintHash === agentFilter)?.hasBehavioralTrait && (
-              <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '5px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
-                🛡️ Active Behavioral Profile
-              </span>
-            )}
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', marginTop: '6px' }}>
-            Choose a fingerprint registered in the 'Register AI Agent' tab.
-          </div>
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', padding: '15px', borderRadius: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 250px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', color: '#8c9bb4', textTransform: 'uppercase' }}>Agent</label>
+          <select 
+            value={agentFilter} 
+            onChange={(e) => setAgentFilter(e.target.value)}
+            style={{ padding: '8px', width: '100%', borderRadius: '4px', background: '#1a1f2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            <option value="">All Agents</option>
+            {registeredAgents.map(a => (
+              <option key={a.fingerprintHash} value={a.fingerprintHash}>
+                {a.name} ({a.fingerprintHash.substring(0, 8)})
+              </option>
+            ))}
+          </select>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px' }}><strong>Timeframe: </strong></label>
-            <select value={daysBack} onChange={(e) => setDaysBack(e.target.value === '' ? '' : Number(e.target.value))} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
-              <option value="">All Time</option>
-              <option value={1}>Last 24 Hours</option>
-              <option value={7}>Last 7 Days</option>
-            </select>
-          </div>
-          <button onClick={fetchEvents} style={{ marginTop: '24px', padding: '8px 15px', background: '#4a6cf7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            Refresh Ledger
-          </button>
+
+        <div style={{ flex: '1 1 180px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', color: '#8c9bb4', textTransform: 'uppercase' }}>Workflow</label>
+          <select 
+            value={workflowFilter} 
+            onChange={(e) => setWorkflowFilter(e.target.value)}
+            style={{ padding: '8px', width: '100%', borderRadius: '4px', background: '#1a1f2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            <option value="">All Workflows</option>
+            <option value="triage_recommendation">Triage Recs</option>
+            <option value="clinician_action">Actions</option>
+            <option value="clinician_amendment">Amendments</option>
+          </select>
         </div>
+
+        <div style={{ flex: '1 1 150px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', color: '#8c9bb4', textTransform: 'uppercase' }}>Timeframe</label>
+          <select value={daysBack} onChange={(e) => setDaysBack(e.target.value === '' ? '' : Number(e.target.value))} style={{ padding: '8px', width: '100%', borderRadius: '4px', background: '#1a1f2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <option value="">All Time</option>
+            <option value={1}>Last 24 Hours</option>
+            <option value={7}>Last 7 Days</option>
+            <option value={30}>Last 30 Days</option>
+          </select>
+        </div>
+
+        <div style={{ paddingBottom: '10px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <input type="checkbox" checked={anomalyOnly} onChange={(e) => setAnomalyOnly(e.target.checked)} />
+            <span style={{ color: anomalyOnly ? '#ff4757' : 'inherit' }}>🚩 Anomaly Only</span>
+          </label>
+        </div>
+
+        <button onClick={fetchEvents} style={{ padding: '8px 15px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', cursor: 'pointer' }}>
+          ↻ Refresh
+        </button>
       </div>
 
       {/* Admin Actions */}

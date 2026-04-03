@@ -1,11 +1,11 @@
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
-import { generateEventHash } from '../utils/crypto.utils';
+import { generateEventHash, buildCanonicalPayload } from '../utils/crypto.utils';
 
 export class AnchorService {
-  private db: Pool;
+  private db: Pool | any;
 
-  constructor(dbPool: Pool) {
+  constructor(dbPool: Pool | any) {
     this.db = dbPool;
   }
 
@@ -42,7 +42,9 @@ export class AnchorService {
    * Background task: Anchor all unanchored events to the blockchain
    */
   async anchorPendingEvents() {
-    const client = await this.db.connect();
+    const isPool = (this.db as any).connect && typeof (this.db as any).release !== 'function';
+    const client = isPool ? await (this.db as any).connect() : this.db; 
+    const shouldRelease = isPool;
     
     try {
       await client.query('BEGIN');
@@ -108,7 +110,7 @@ export class AnchorService {
       await client.query('ROLLBACK');
       throw e;
     } finally {
-      client.release();
+      if (shouldRelease) client.release();
     }
   }
 
@@ -123,67 +125,65 @@ export class AnchorService {
     total_events_checked: number,
     faults_detected: number
   }> {
-    const res = await this.db.query('SELECT * FROM agent_events ORDER BY agent_fingerprint_id, timestamp ASC');
-    const events = res.rows;
-    
-    const chains: Record<string, string> = {}; // track latest hash per agent
-    const lastDates: Record<string, Date> = {}; // track latest temporal clock
-    
-    for (const event of events) {
-      const agentId = event.agent_fingerprint_id;
-      const expectedPrev = chains[agentId] || null;
-      
-      // Check 1: Temporal monotonicity
-      const eventTime = new Date(event.timestamp);
-      if (lastDates[agentId] && eventTime < lastDates[agentId]) {
-        return { 
-          is_healthy: false, 
-          first_bad_id: event.id, 
-          reason: 'temporal_violation', 
-          total_events_checked: events.length,
-          faults_detected: 1 
-        };
-      }
-      lastDates[agentId] = eventTime;
+    const isPool = (this.db as any).connect && typeof (this.db as any).release !== 'function';
+    const client = isPool ? await (this.db as any).connect() : this.db;
+    const shouldRelease = isPool;
 
-      // Check 2: Broken Chain Check
-      if (event.previous_event_hash !== expectedPrev) {
-        return { 
-          is_healthy: false, 
-          first_bad_id: event.id, 
-          reason: 'broken_chain', 
-          total_events_checked: events.length,
-          faults_detected: 1 
-        };
-      }
+    try {
+      const res = await client.query('SELECT * FROM agent_events ORDER BY id ASC');
+      const events = res.rows;
       
-      // Check 3: Recompute Content Hash (Hash Mismatch)
-      const reconstructedPayload: any = {
-        agent_fingerprint_id: event.agent_fingerprint_id,
-        model_version: event.model_version,
-        workflow_type: event.workflow_type,
-        input_ref: event.input_ref,
-        output_ref: event.output_ref
-      };
+      const chains: Record<string, string> = {}; // track latest hash per agent
+      const lastDates: Record<string, Date> = {}; // track latest temporal clock
       
-      if (event.policy_id !== null) reconstructedPayload.policy_id = event.policy_id;
-      if (event.session_id !== null) reconstructedPayload.session_id = event.session_id;
-      if (event.clinician_action !== null) reconstructedPayload.clinician_action = event.clinician_action;
-      
-      const trueHash = generateEventHash(reconstructedPayload, expectedPrev, eventTime.toISOString());
-      if (trueHash !== event.event_hash) {
-         return { 
-           is_healthy: false, 
-           first_bad_id: event.id, 
-           reason: 'hash_mismatch', 
-           total_events_checked: events.length,
-           faults_detected: 1 
-         };
+      for (const event of events) {
+        const agentId = event.agent_fingerprint_id;
+        const expectedPrev = chains[agentId] || null;
+        
+        // Check 1: Temporal monotonicity
+        const eventTime = new Date(event.timestamp);
+        if (lastDates[agentId] && eventTime < lastDates[agentId]) {
+          return { 
+            is_healthy: false, 
+            first_bad_id: event.id, 
+            reason: 'temporal_violation', 
+            total_events_checked: events.length,
+            faults_detected: 1 
+          };
+        }
+        lastDates[agentId] = eventTime;
+
+        // Check 2: Broken Chain Check
+        if (event.previous_event_hash !== expectedPrev) {
+          return { 
+            is_healthy: false, 
+            first_bad_id: event.id, 
+            reason: 'broken_chain', 
+            total_events_checked: events.length,
+            faults_detected: 1 
+          };
+        }
+        
+        // Check 3: Recompute Content Hash (Hash Mismatch)
+        const reconstructedPayload = buildCanonicalPayload(event);
+        
+        const trueHash = generateEventHash(reconstructedPayload, expectedPrev, eventTime.toISOString());
+        if (trueHash !== event.event_hash) {
+           return { 
+             is_healthy: false, 
+             first_bad_id: event.id, 
+             reason: 'hash_mismatch', 
+             total_events_checked: events.length,
+             faults_detected: 1 
+           };
+        }
+
+        chains[agentId] = event.event_hash;
       }
 
-      chains[agentId] = event.event_hash;
+      return { is_healthy: true, total_events_checked: events.length, faults_detected: 0 };
+    } finally {
+      if (shouldRelease) client.release();
     }
-
-    return { is_healthy: true, total_events_checked: events.length, faults_detected: 0 };
   }
 }

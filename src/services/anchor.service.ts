@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
-import { generateEventHash, buildCanonicalPayload } from '../utils/crypto.utils';
+import { generateEventHash, buildCanonicalPayload, AgentEvent } from '../utils/crypto.utils';
 
 export class AnchorService {
   private db: Pool | any;
@@ -63,11 +63,11 @@ export class AnchorService {
       // 2. Quarantine events with invalid hashes (tampered/corrupted records)
       // A valid event_hash is a 0x-prefixed 32-byte hex string (66 chars)
       const isValidHash = (h: string) => /^0x[0-9a-fA-F]{64}$/.test(h);
-      const validEvents   = events.filter(e => isValidHash(e.event_hash));
-      const quarantined   = events.filter(e => !isValidHash(e.event_hash));
+      const validEvents = (events as AgentEvent[]).filter((e: AgentEvent) => isValidHash(e.event_hash));
+      const quarantined = (events as AgentEvent[]).filter((e: AgentEvent) => !isValidHash(e.event_hash));
 
       if (quarantined.length > 0) {
-        console.warn(`[AnchorService] Quarantined ${quarantined.length} event(s) with invalid hashes: IDs [${quarantined.map(e => e.id).join(', ')}]`);
+        console.warn(`[AnchorService] Quarantined ${quarantined.length} event(s) with invalid hashes: IDs [${quarantined.map((e: AgentEvent) => e.id).join(', ')}]`);
       }
 
       if (validEvents.length === 0) {
@@ -76,7 +76,7 @@ export class AnchorService {
       }
 
       // 3. Build Merkle Root from valid events only
-      const leaves = validEvents.map(e => e.event_hash);
+      const leaves = validEvents.map((e: AgentEvent) => e.event_hash);
       const merkleRoot = this.buildMerkleRoot(leaves);
 
       // 4. Mock Smart Contract Call (Phase 1)

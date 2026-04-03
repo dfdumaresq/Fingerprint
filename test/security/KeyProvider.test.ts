@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from '@jest/globals';
+import { describe, expect, it, beforeEach, afterEach } from '@jest/globals';
 import { MockKeyProvider } from '../mocks/MockKeyProvider';
 import { EnvKeyProvider } from '../../src/security/EnvKeyProvider';
 import { KeyMetadata } from '../../src/security/KeyProvider';
@@ -6,14 +6,21 @@ import { KeyMetadata } from '../../src/security/KeyProvider';
 describe('KeyProvider Interface', () => {
   // We'll use the MockKeyProvider to test the interface
   let mockProvider: MockKeyProvider;
-
+  let originalEnv: NodeJS.ProcessEnv;
+  
   beforeEach(() => {
+    originalEnv = { ...process.env };
     mockProvider = new MockKeyProvider();
     mockProvider.clear(); // Clear any existing keys
     
     // Set environment variables for EnvKeyProvider tests
-    process.env.TEST_KEY_1 = 'test-key-value-1';
-    process.env.TEST_KEY_2 = 'test-key-value-2';
+    // EnvKeyProvider by default uses 'KEY_' prefix
+    process.env.KEY_TEST_KEY_1 = 'test-key-value-1';
+    process.env.KEY_TEST_KEY_2 = 'test-key-value-2';
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
   });
 
   describe('MockKeyProvider Implementation', () => {
@@ -206,7 +213,7 @@ describe('KeyProvider Interface', () => {
       });
       
       expect(keyId).toBe('TEST_NEW_KEY');
-      expect(process.env.TEST_NEW_KEY).toBe('new-env-key-value');
+      expect(process.env.KEY_TEST_NEW_KEY).toBe('new-env-key-value');
       
       // Should be able to retrieve it
       const retrievedKey = await envProvider.getKey('TEST_NEW_KEY');

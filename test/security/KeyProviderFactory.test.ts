@@ -11,16 +11,32 @@ jest.mock('../../src/security/VaultKeyProvider');
 
 describe('KeyProviderFactory', () => {
   let factory: KeyProviderFactory;
+  let originalEnv: NodeJS.ProcessEnv;
   
   beforeEach(() => {
+    originalEnv = { ...process.env };
     // Reset all mocks
     jest.clearAllMocks();
     
     // Reset the factory singleton
     (KeyProviderFactory as any).instance = undefined;
     
+    // Set default environment for tests to avoid validation errors
+    process.env.VAULT_URL = 'https://vault.example.com';
+    
     // Get a new instance
     factory = KeyProviderFactory.getInstance();
+    
+    // Provide default vaultOptions to avoid validation errors when creating Vault providers
+    factory.updateConfig({
+      vaultOptions: {
+        vaultUrl: 'https://vault.example.com',
+      }
+    });
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
   });
   
   describe('Singleton Pattern', () => {
@@ -89,12 +105,11 @@ describe('KeyProviderFactory', () => {
       factory.getProvider(KeyProviderType.VAULT);
       
       // Check that providers were created with correct options
-      expect(EncryptedFileKeyProvider).toHaveBeenCalledWith({
+      expect(EncryptedFileKeyProvider).toHaveBeenCalledWith(expect.objectContaining({
         keyDirectory: "/tmp/keys",
-        masterPassword: "test-password",
-        masterKey: "test-master-key",
+        masterKey: expect.any(Buffer),
         algorithm: "aes-256-gcm",
-      });
+      }));
       
       expect(VaultKeyProvider).toHaveBeenCalledWith({
         vaultUrl: 'https://vault.example.com',

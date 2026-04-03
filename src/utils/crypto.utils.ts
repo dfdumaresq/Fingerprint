@@ -2,6 +2,32 @@ import { ethers } from 'ethers';
 import stringify from 'fast-json-stable-stringify';
 
 /**
+ * Shared interface representing the canonical agent_events database row.
+ * Used for deterministic hash reconstruction across services.
+ */
+export interface AgentEvent {
+  id: number;
+  event_id: string;
+  session_id: string | null;
+  timestamp: string | Date;
+  agent_fingerprint_id: string;
+  model_version: string;
+  workflow_type: string;
+  policy_id: string | null;
+  clinician_action: string | null;
+  input_ref: string;
+  output_ref: string;
+  previous_event_hash: string | null;
+  event_hash: string;
+  amends_event_id: string | null;
+  reason_code: string | null;
+  reason_text: string | null;
+  clinical_data: any | null;
+  anchored_to_chain: boolean;
+  merkle_root_id: number | null;
+}
+
+/**
  * Deterministically constructs a standard canonical payload representing minimum required clinical fields.
  * 
  * NOTE ON NULL SEMANTICS:

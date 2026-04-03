@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { EventService } from '../../src/services/event.service';
 import { TriageService } from '../../src/services/triage.service';
-import { generateEventHash } from '../../src/utils/crypto.utils';
+import { generateEventHash, buildCanonicalPayload } from '../../src/utils/crypto.utils';
 
 describe('Regulatory-Grade Provenance Integration', () => {
   let pool: Pool;
@@ -58,7 +58,7 @@ describe('Regulatory-Grade Provenance Integration', () => {
 
     // 4. Verify the chain in the DB
     const res = await pool.query(
-      'SELECT event_id, workflow_type, clinician_action, amends_event_id, reason_code, event_hash FROM agent_events WHERE session_id = $1 ORDER BY id ASC',
+      'SELECT * FROM agent_events WHERE session_id = $1 ORDER BY id ASC',
       [sessionId]
     );
 
@@ -106,31 +106,19 @@ describe('Regulatory-Grade Provenance Integration', () => {
       reason_text: 'Validated by Dr. Smith'
     });
 
-    // Manually mutate the reason_code in the DB (bypassing triggers if possible, 
-    // but here we just want to see if our read logic flags it)
-    // Note: The trigger we wrote blocks UPDATE, but for testing read-integrity, 
-    // we can check if the calculated hash matches the stored hash.
-
+    // We can check if the calculated hash matches the stored hash.
     const dbRow = (await pool.query('SELECT * FROM agent_events WHERE event_id = $1', [event.event_id])).rows[0];
     
-    // Reconstruct the payload to check integrity
-    const payload: any = {
-      agent_fingerprint_id: dbRow.agent_fingerprint_id,
-      model_version: dbRow.model_version,
-      workflow_type: dbRow.workflow_type,
-      input_ref: dbRow.input_ref,
-      output_ref: dbRow.output_ref,
-      session_id: dbRow.session_id,
-      reason_code: dbRow.reason_code,
-      reason_text: dbRow.reason_text
-    };
+    // Use the official canonical reconstruction logic
+    const canonicalPayload = buildCanonicalPayload(dbRow);
 
-    const validHash = generateEventHash(payload, dbRow.previous_event_hash, new Date(dbRow.timestamp).toISOString());
+    const validHash = generateEventHash(canonicalPayload, dbRow.previous_event_hash, new Date(dbRow.timestamp).toISOString());
     expect(validHash).toBe(dbRow.event_hash);
 
     // Tamper with the reason_code
-    payload.reason_code = 'clerical_error';
-    const tamperedHash = generateEventHash(payload, dbRow.previous_event_hash, new Date(dbRow.timestamp).toISOString());
+    dbRow.reason_code = 'clerical_error';
+    const tamperedPayload = buildCanonicalPayload(dbRow);
+    const tamperedHash = generateEventHash(tamperedPayload, dbRow.previous_event_hash, new Date(dbRow.timestamp).toISOString());
     expect(tamperedHash).not.toBe(dbRow.event_hash);
   });
 });

@@ -2,11 +2,15 @@ import { describe, expect, it, beforeEach, jest, afterEach } from '@jest/globals
 import { AnchorService } from '../../src/services/anchor.service';
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
-import { generateEventHash } from '../../src/utils/crypto.utils';
+import { generateEventHash, buildCanonicalPayload } from '../../src/utils/crypto.utils';
 
-jest.mock('../../src/utils/crypto.utils', () => ({
-  generateEventHash: jest.fn()
-}));
+jest.mock('../../src/utils/crypto.utils', () => {
+  const actual = jest.requireActual('../../src/utils/crypto.utils') as any;
+  return {
+    ...actual,
+    generateEventHash: jest.fn(actual.generateEventHash)
+  };
+});
 jest.mock('pg', () => {
   const mClient = {
     query: jest.fn(),
@@ -37,9 +41,9 @@ describe('AnchorService', () => {
   describe('Merkle Root Generation via anchorPendingEvents', () => {
     it('should generate a valid Merkle Root for pending events', async () => {
       const mockLeaves = [
-        { id: 1, event_hash: ethers.id('leaf1') },
-        { id: 2, event_hash: ethers.id('leaf2') },
-        { id: 3, event_hash: ethers.id('leaf3') }
+        { id: 1, event_hash: ethers.keccak256(ethers.toUtf8Bytes('leaf1')) },
+        { id: 2, event_hash: ethers.keccak256(ethers.toUtf8Bytes('leaf2')) },
+        { id: 3, event_hash: ethers.keccak256(ethers.toUtf8Bytes('leaf3')) }
         // 3 leaves means the algorithm must duplicate the last leaf dynamically
       ];
 
@@ -72,32 +76,63 @@ describe('AnchorService', () => {
 
   describe('Database Integrity Constraints via verifyDatabaseIntegrity', () => {
     it('should report healthy if the hash-chain is mathematically sound', async () => {
-      // Mock db returns correctly chained events
-      dbPool.query.mockResolvedValueOnce({
+      // Mock data that passes validation
+      const e1 = { 
+        agent_fingerprint_id: 'agentA', 
+        model_version: '1.0', 
+        workflow_type: 'triage_recommendation',
+        input_ref: 'in1',
+        output_ref: 'out1',
+        timestamp: new Date('2025-01-01T10:00:00Z'),
+        previous_event_hash: null 
+      };
+      const h1 = generateEventHash(buildCanonicalPayload(e1), null, e1.timestamp.toISOString());
+      
+      const e2 = { 
+        agent_fingerprint_id: 'agentA', 
+        model_version: '1.0', 
+        workflow_type: 'triage_recommendation',
+        input_ref: 'in2',
+        output_ref: 'out2',
+        timestamp: new Date('2025-01-01T10:01:00Z'),
+        previous_event_hash: h1 
+      };
+      const h2 = generateEventHash(buildCanonicalPayload(e2), h1, e2.timestamp.toISOString());
+
+      client.query.mockResolvedValueOnce({
         rows: [
-          { id: 1, agent_fingerprint_id: 'agentA', timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: null, event_hash: 'hash1' },
-          { id: 2, agent_fingerprint_id: 'agentA', timestamp: new Date('2025-01-01T10:01:00Z'), previous_event_hash: 'hash1', event_hash: 'hash2' },
-          { id: 3, agent_fingerprint_id: 'agentB', timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: null, event_hash: 'hashB1' },
+          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp },
+          { ...e2, id: 2, event_hash: h2, timestamp: e2.timestamp },
         ]
       } as never);
 
-      (generateEventHash as jest.Mock)
-        .mockReturnValueOnce('hash1')
-        .mockReturnValueOnce('hash2')
-        .mockReturnValueOnce('hashB1');
-
       const health = await anchorService.verifyDatabaseIntegrity();
       
-      expect(health.total_events_checked).toBe(3);
+      expect(health.total_events_checked).toBe(2);
       expect(health.is_healthy).toBe(true);
     });
 
     it('should catch manipulation and report unhealthy if a link in the chain is broken', async () => {
-      // Mock db returns a broken chain (DB manipulation occurred!)
-      dbPool.query.mockResolvedValueOnce({
+      // Mock data where Row 1 is valid, but Row 2 has a broken previous_event_hash
+      const e1 = { 
+        agent_fingerprint_id: 'agentX', 
+        model_version: '1.0', 
+        workflow_type: 'triage_recommendation',
+        input_ref: 'in1',
+        output_ref: 'out1',
+        timestamp: new Date('2025-01-01T10:00:00Z'),
+        previous_event_hash: null 
+      };
+      const h1 = generateEventHash(buildCanonicalPayload(e1), null, e1.timestamp.toISOString());
+
+      client.query.mockResolvedValueOnce({
         rows: [
-          { id: 1, agent_fingerprint_id: 'agentX', timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: null, event_hash: 'hash1' },
-          { id: 2, agent_fingerprint_id: 'agentX', timestamp: new Date('2025-01-01T10:01:00Z'), previous_event_hash: 'TAMPERED_HASH', event_hash: 'hash2' }, 
+          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp },
+          { 
+            id: 2, agent_fingerprint_id: 'agentX', model_version: '1.0', workflow_type: 'triage_recommendation',
+            input_ref: 'in2', output_ref: 'out2',
+            timestamp: new Date('2025-01-01T10:01:00Z'), previous_event_hash: 'TAMPERED_HASH', event_hash: 'hash2' 
+          }, 
         ]
       } as never);
 
@@ -107,13 +142,33 @@ describe('AnchorService', () => {
       expect(health.is_healthy).toBe(false);
     });
 
-    it('should detect a broken cryptographic chain (previous_hash mismatch)', async () => {
-      // Manual tamper via pg client (bypassing the service which ensures integrity)
-      await dbPool.query("UPDATE agent_events SET previous_event_hash = '0xBAD_HASH' WHERE id = (SELECT id FROM agent_events ORDER BY id DESC LIMIT 1)");
-      
+    it('should detect a broken cryptographic chain (temporal violation)', async () => {
+      // Mock data where Row 2 is BEFORE Row 1
+      const e1 = { 
+        agent_fingerprint_id: 'agentT', 
+        model_version: '1.0', 
+        workflow_type: 'triage_recommendation',
+        input_ref: 'in1',
+        output_ref: 'out1',
+        timestamp: new Date('2025-01-01T10:05:00Z'),
+        previous_event_hash: null 
+      };
+      const h1 = generateEventHash(buildCanonicalPayload(e1), null, e1.timestamp.toISOString());
+
+      client.query.mockResolvedValueOnce({
+        rows: [
+          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp },
+          { 
+            id: 2, agent_fingerprint_id: 'agentT', model_version: '1.0', workflow_type: 'triage_recommendation',
+            input_ref: 'in2', output_ref: 'out2',
+            timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: h1, event_hash: 'hash2' 
+          }, 
+        ]
+      } as never);
+
       const health = await anchorService.verifyDatabaseIntegrity();
       expect(health.is_healthy).toBe(false);
-      expect(health.reason).toBe('broken_chain');
+      expect(health.reason).toBe('temporal_violation');
     });
   });
 });

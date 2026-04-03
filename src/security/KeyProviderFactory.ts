@@ -150,10 +150,10 @@ export class KeyProviderFactory {
     }
     
     return {
+      algorithm: 'aes-256-gcm',
+      ...options,
       keyDirectory,
       masterKey,
-      algorithm: 'aes-256-gcm',
-      ...options
     };
   }
   

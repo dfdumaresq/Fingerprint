@@ -5,20 +5,23 @@ import { MockKeyProvider } from '../mocks/MockKeyProvider';
 
 // Mock the KeyProviderFactory
 jest.mock('../../src/security/KeyProviderFactory', () => {
-  // Store the original module
-  const originalModule = jest.requireActual('../../src/security/KeyProviderFactory');
-  
-  // Create a mock MockKeyProvider instance
+  const { MockKeyProvider } = require('../mocks/MockKeyProvider');
   const mockProvider = new MockKeyProvider();
   
+  const mockInstance = {
+    getProvider: jest.fn(() => mockProvider),
+    updateConfig: jest.fn(),
+  };
+
   return {
     __esModule: true,
-    ...(originalModule as object),
+    KeyProviderType: {
+      ENV: 'env',
+      ENCRYPTED_FILE: 'encrypted-file',
+      VAULT: 'vault'
+    },
     KeyProviderFactory: {
-      getInstance: jest.fn().mockReturnValue({
-        getProvider: jest.fn().mockReturnValue(mockProvider),
-        updateConfig: jest.fn(),
-      }),
+      getInstance: jest.fn(() => mockInstance),
     },
   };
 });
@@ -41,6 +44,12 @@ describe('KeyManager', () => {
     // Get reference to the mock provider
     mockProvider = mockFactory.getInstance().getProvider() as unknown as MockKeyProvider;
     mockProvider.clear();
+    
+    // Default keys for all types to prevent "Key not found" errors during configuration tests
+    mockProvider.storeKey('default-wallet-key', { keyId: 'default_wallet_key', tags: { keyType: 'wallet' } });
+    mockProvider.storeKey('default-signing-key', { keyId: 'default_signing_key', tags: { keyType: 'signing' } });
+    mockProvider.storeKey('default-api-key', { keyId: 'default_api_key', tags: { keyType: 'api' } });
+    mockProvider.storeKey('default-deployment-key', { keyId: 'default_deployment_key', tags: { keyType: 'deployment' } });
   });
   
   afterEach(() => {
@@ -67,7 +76,9 @@ describe('KeyManager', () => {
       expect(mockFactory.getInstance().updateConfig).toHaveBeenCalledWith({
         masterKeyPassword: 'test-password',
         encryptedFileOptions: {
-          keyDirectory: undefined
+          keyDirectory: './keys',
+          masterKey: '',
+          algorithm: ''
         }
       });
     });

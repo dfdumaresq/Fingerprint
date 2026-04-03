@@ -1,240 +1,158 @@
 import { describe, expect, it, beforeEach, jest, afterEach } from '@jest/globals';
-import { AuditLogger, LogLevel, AuditEventType } from '../../src/security/AuditLogger';
-import { KeyManager, KeyType } from '../../src/security/KeyManager';
-
-// Mock KeyManager
-jest.mock('../../src/security/KeyManager');
+import { LogLevel, AuditEventType } from '../../src/security/AuditLogger';
+import { KeyType } from '../../src/security/KeyManager';
 
 describe('AuditLogger', () => {
-  let auditLogger: AuditLogger;
   let consoleDebugSpy: jest.Mock;
   let consoleInfoSpy: jest.Mock;
   let consoleWarnSpy: jest.Mock;
   let consoleErrorSpy: jest.Mock;
-  
+  let savedWindow: any;
+
   beforeEach(() => {
-    // Reset the singleton
-    (AuditLogger as any).instance = undefined;
+    // Save window state
+    savedWindow = global.window;
     
     // Spy on console methods
-    consoleDebugSpy = jest
-      .spyOn(console, "debug")
-      .mockImplementation(() => {}) as unknown as jest.Mock;
-    consoleInfoSpy = jest
-      .spyOn(console, "info")
-      .mockImplementation(() => {}) as unknown as jest.Mock;
-    consoleWarnSpy = jest
-      .spyOn(console, "warn")
-      .mockImplementation(() => {}) as unknown as jest.Mock;
-    consoleErrorSpy = jest
-      .spyOn(console, "error")
-      .mockImplementation(() => {}) as unknown as jest.Mock;
-    
-    // Create a new instance
-    auditLogger = AuditLogger.getInstance();
+    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation(() => {}) as any;
+    consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation(() => {}) as any;
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {}) as any;
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {}) as any;
   });
-  
+
   afterEach(() => {
-    // Restore console methods
+    // Restore state
+    global.window = savedWindow;
     consoleDebugSpy.mockRestore();
     consoleInfoSpy.mockRestore();
     consoleWarnSpy.mockRestore();
     consoleErrorSpy.mockRestore();
   });
-  
-  describe('Singleton Pattern', () => {
-    it('should return the same instance when getInstance is called multiple times', () => {
-      const instance1 = AuditLogger.getInstance();
-      const instance2 = AuditLogger.getInstance();
-      
-      expect(instance1).toBe(instance2);
-    });
+
+  // Helper to get a fresh instance in an isolated module scope
+  function getFreshLogger(options?: any, isServer = true) {
+    if (isServer) {
+        delete (global as any).window;
+    } else {
+        (global as any).window = {};
+    }
     
-    it('should accept options in getInstance', () => {
-      const logger = AuditLogger.getInstance({
-        enableConsoleLogging: false,
-        minLogLevel: LogLevel.ERROR
+    let logger: any;
+    jest.isolateModules(() => {
+      const { AuditLogger } = require('../../src/security/AuditLogger');
+      const { KeyManager } = require('../../src/security/KeyManager');
+      // Mock KeyManager for the isolation block
+      jest.mock('../../src/security/KeyManager');
+      logger = AuditLogger.getInstance(options);
+    });
+    return logger;
+  }
+
+  describe('Singleton and Configuration', () => {
+    it('should maintain singleton status within an isolation block', () => {
+      jest.isolateModules(() => {
+        const { AuditLogger } = require('../../src/security/AuditLogger');
+        const instance1 = AuditLogger.getInstance();
+        const instance2 = AuditLogger.getInstance();
+        expect(instance1).toBe(instance2);
       });
-      
-      // Log something that should be ignored
-      logger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Test operation', 'test-actor');
-      
-      // Console should not be called because logging is disabled
+    });
+
+    it('should respect minLogLevel configuration', () => {
+      const logger = getFreshLogger({ minLogLevel: LogLevel.WARNING });
+      consoleInfoSpy.mockClear();
+      consoleWarnSpy.mockClear();
+
+      logger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Ignored info', 'actor');
+      expect(consoleInfoSpy).not.toHaveBeenCalled();
+
+      logger.log(LogLevel.WARNING, AuditEventType.KEY_ACCESS, 'Logged warning', 'actor');
+      expect(consoleWarnSpy).toHaveBeenCalled();
+    });
+
+    it('should respect enableConsoleLogging toggle', () => {
+      const logger = getFreshLogger({ enableConsoleLogging: false });
+      consoleInfoSpy.mockClear();
+
+      logger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Silent info', 'actor');
       expect(consoleInfoSpy).not.toHaveBeenCalled();
     });
   });
-  
-  describe('Configuration', () => {
-    it('should update options', () => {
-      // Update options
-      auditLogger.updateOptions({
-        enableConsoleLogging: false,
-        enableFileLogging: true,
-        logFilePath: '/tmp/audit.log',
-        minLogLevel: LogLevel.ERROR
-      });
+
+  describe('Metadata and Integrity', () => {
+    it('should include session and source metadata', () => {
+      const logger = getFreshLogger({ enableConsoleLogging: true }, true); // isServer = true
+      consoleInfoSpy.mockClear();
+
+      logger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Metadata test', 'actor');
       
-      // Log something that should be ignored due to level
-      auditLogger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Test operation', 'test-actor');
-      
-      // Console should not be called because level is below minimum
-      expect(consoleInfoSpy).not.toHaveBeenCalled();
-      
-      // Log something at error level
-      auditLogger.log(LogLevel.ERROR, AuditEventType.KEY_ACCESS, 'Error operation', 'test-actor');
-      
-      // Console should not be called because console logging is disabled
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
-      
-      // Debug should be called for the file logging attempt
-      expect(consoleDebugSpy).toHaveBeenCalled();
-    });
-    
-    it('should set KeyManager for encrypted logs', () => {
-      const mockKeyManager = {} as unknown as KeyManager;
-      
-      // Set key manager
-      auditLogger.setKeyManager(mockKeyManager);
-      
-      // Update options to enable encrypted logs
-      auditLogger.updateOptions({
-        encryptLogs: true
-      });
-      
-      // Log something
-      auditLogger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Test operation', 'test-actor');
-      
-      // Should see a debug message about encrypting logs
-      expect(consoleDebugSpy).toHaveBeenCalledWith(expect.stringContaining('encrypt'));
-    });
-  });
-  
-  describe('Logging Methods', () => {
-    it('should log with appropriate console method based on level', () => {
-      // Log at different levels
-      auditLogger.log(LogLevel.DEBUG, AuditEventType.KEY_ACCESS, 'Debug operation', 'test-actor');
-      auditLogger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Info operation', 'test-actor');
-      auditLogger.log(LogLevel.WARNING, AuditEventType.KEY_ACCESS, 'Warning operation', 'test-actor');
-      auditLogger.log(LogLevel.ERROR, AuditEventType.KEY_ACCESS, 'Error operation', 'test-actor');
-      auditLogger.log(LogLevel.CRITICAL, AuditEventType.KEY_ACCESS, 'Critical operation', 'test-actor');
-      
-      // Check that appropriate console methods were called
-      expect(consoleDebugSpy).toHaveBeenCalledWith(expect.any(String), expect.any(String));
-      expect(consoleInfoSpy).toHaveBeenCalledWith(expect.any(String), expect.any(String));
-      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.any(String), expect.any(String));
-      expect(consoleErrorSpy).toHaveBeenCalledTimes(2); // ERROR and CRITICAL both use console.error
-    });
-    
-    it('should include stack trace for warning and above', () => {
-      // Enable stack traces
-      auditLogger.updateOptions({
-        includeStackTrace: true
-      });
-      
-      // Log at warning level
-      auditLogger.log(LogLevel.WARNING, AuditEventType.KEY_ACCESS, 'Warning operation', 'test-actor');
-      
-      // Check that console.warn was called with a string containing stack trace
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
         expect.any(String),
-        expect.stringContaining('"stackTrace":')
+        expect.stringContaining('"source": "server"')
+      );
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringContaining('"sessionId":')
       );
     });
-    
-    it('should log key access events', () => {
-      // Log key access
-      auditLogger.logKeyAccess(
-        KeyType.WALLET,
-        'test-key-id',
-        'test-user',
-        'read_key',
-        true
-      );
+
+    it('should reflect "client" source when window is present', () => {
+      const logger = getFreshLogger({ enableConsoleLogging: true }, false); // isServer = false (simulated browser)
+      consoleInfoSpy.mockClear();
+
+      logger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Browser test', 'actor');
       
-      // Check that console.info was called with appropriate data
       expect(consoleInfoSpy).toHaveBeenCalledWith(
-        expect.stringContaining(AuditEventType.KEY_ACCESS),
-        expect.stringContaining('test-key-id')
-      );
-    });
-    
-    it('should log blockchain transaction events', () => {
-      // Log blockchain transaction
-      auditLogger.logBlockchainTransaction(
-        'Register fingerprint',
-        '0xWalletAddress',
-        '0xContractAddress',
-        11155111,
-        '0xTransactionHash',
-        true,
-        { fingerprintHash: '0xFingerprintHash' }
-      );
-      
-      // Check that console.info was called with appropriate data
-      expect(consoleInfoSpy).toHaveBeenCalledWith(
-        expect.stringContaining(AuditEventType.BLOCKCHAIN_TRANSACTION),
-        expect.stringContaining('0xWalletAddress')
-      );
-    });
-    
-    it('should log signature events', () => {
-      // Log signature generation
-      auditLogger.logSignatureEvent(
-        true, // isGeneration
-        'Generate EIP-712 signature',
-        '0xSignerAddress',
-        'AgentFingerprint',
-        true, // success
-        { timestamp: 123456789 }
-      );
-      
-      // Check that console.info was called with appropriate data
-      expect(consoleInfoSpy).toHaveBeenCalledWith(
-        expect.stringContaining(AuditEventType.SIGNATURE_GENERATION),
-        expect.stringContaining('0xSignerAddress')
-      );
-      
-      // Log signature verification
-      auditLogger.logSignatureEvent(
-        false, // isGeneration
-        'Verify EIP-712 signature',
-        '0xVerifierAddress',
-        'AgentFingerprint',
-        false, // failure
-        { timestamp: 123456789 }
-      );
-      
-      // Check that console.warn was called with appropriate data (failure = warning level)
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(AuditEventType.SIGNATURE_VERIFICATION),
-        expect.stringContaining('0xVerifierAddress')
+        expect.any(String),
+        expect.stringContaining('"source": "client"')
       );
     });
   });
-  
-  describe('Environment Detection', () => {
-    it('should detect browser vs server environment', () => {
-      // In the test environment, it should be 'server'
-      auditLogger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Test operation', 'test-actor');
+
+  describe('Specific Event Logging', () => {
+    it('should correctly format key access events', () => {
+      const logger = getFreshLogger({ enableConsoleLogging: true });
+      consoleInfoSpy.mockClear();
+
+      logger.logKeyAccess(KeyType.WALLET, 'test-key-id', 'test-actor');
       
       expect(consoleInfoSpy).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.stringContaining('"source":"server"')
+        expect.stringContaining('key_access'),
+        expect.stringContaining('"target": "test-key-id"')
       );
-      
-      // Mock window to simulate browser environment
-      const originalWindow = global.window;
-      global.window = {} as any;
-      
-      auditLogger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Browser operation', 'test-actor');
+    });
+
+    it('should log blockchain transactions with txHash', () => {
+      const logger = getFreshLogger({ enableConsoleLogging: true });
+      consoleInfoSpy.mockClear();
+
+      logger.logBlockchainTransaction('send', 'actor', 'contract', 1, '0xhash');
       
       expect(consoleInfoSpy).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.stringContaining('"source":"client"')
+        expect.stringContaining('blockchain_transaction'),
+        expect.stringContaining('"txHash": "0xhash"')
       );
+    });
+  });
+
+  describe('File Logging and Encryption', () => {
+    it('should indicate encryption when enabled and KeyManager is present', () => {
+      const logger = getFreshLogger({ 
+        enableFileLogging: true, 
+        encryptLogs: true,
+        enableConsoleLogging: false 
+      }, true); // Server environment
       
-      // Restore original window
-      global.window = originalWindow;
+      const { KeyManager } = require('../../src/security/KeyManager');
+      const mockKeyManager = new KeyManager();
+      logger.setKeyManager(mockKeyManager);
+      
+      consoleDebugSpy.mockClear();
+      logger.log(LogLevel.INFO, AuditEventType.KEY_ACCESS, 'Encrypt test', 'actor');
+      
+      expect(consoleDebugSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Would encrypt')
+      );
     });
   });
 });

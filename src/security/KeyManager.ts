@@ -71,7 +71,7 @@ export class KeyManager {
     } else {
       // In development, use encrypted file storage with the provided password
       this.factory.updateConfig({
-        masterKeyPassword: process.env.MASTER_KEY_PASSWORD || '',
+        masterKeyPassword: masterKeyPassword || process.env.MASTER_KEY_PASSWORD || '',
         encryptedFileOptions: {
           keyDirectory: process.env.KEY_DIRECTORY || './keys',
           masterKey: process.env.MASTER_KEY || '',

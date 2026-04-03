@@ -12,20 +12,23 @@ async function verify() {
   console.log("1. Creating a fresh encounter...");
   const encounter = await service.createEncounterWithAI({
     chief_complaint: "Testing Immutability",
-    vitals: { hr: 80, bp: "120/80" }
+    vitals: { hr: 80, bp_sys: 120, bp_dia: 80, rr: 16, spo2: 98, temp: 37.0, pain_score: 0 },
+    age: 45,
+    sex: 'M',
+    history: { allergies: [], medications: [], pmh: [] }
   }, "Dr. Verifier");
   
   const sid = encounter.encounter_id;
   console.log(`   Session ID: ${sid}`);
 
   console.log("2. Logging initial decision: accepted");
-  await service.logClinicianAction(sid, 'accepted');
+  await service.logClinicianAction(sid, 'accepted', 'initial_triage');
 
   console.log("3. Anchoring the session...");
   await pool.query('UPDATE agent_events SET anchored_to_chain = true WHERE session_id = $1', [sid]);
 
   console.log("4. Attempting to AMEND (should create NEW row)...");
-  const result = await service.logClinicianAction(sid, 'escalated');
+  const result = await service.logClinicianAction(sid, 'escalated', 'reevaluation');
   console.log(`   Result: is_amendment=${result.is_amendment}, prev=${result.previous_action}`);
 
   console.log("5. Checking DB for rows...");

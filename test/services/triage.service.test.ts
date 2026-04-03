@@ -4,7 +4,8 @@ import { Pool } from 'pg';
 import { generateEventHash } from '../../src/utils/crypto.utils';
 
 jest.mock('../../src/utils/crypto.utils', () => ({
-  generateEventHash: jest.fn()
+  generateEventHash: jest.fn(),
+  buildCanonicalPayload: (jest.requireActual('../../src/utils/crypto.utils') as any).buildCanonicalPayload
 }));
 
 jest.mock('pg', () => {
@@ -12,27 +13,28 @@ jest.mock('pg', () => {
     query: jest.fn(),
     release: jest.fn(),
   };
-  return {
-    Pool: jest.fn(() => ({
-      connect: jest.fn().mockResolvedValue(mClient as never),
-      query: jest.fn(),
-    })),
+  const mPool = {
+    connect: jest.fn(() => mClient),
+    query: jest.fn(),
   };
+  return { Pool: jest.fn(() => mPool) };
 });
 
 describe('TriageService (Read-Model Hydrator)', () => {
   let dbPool: any;
+  let client: any;
   let triageService: TriageService;
 
   beforeEach(() => {
     dbPool = new Pool();
+    client = dbPool.connect();
     triageService = new TriageService(dbPool);
     jest.clearAllMocks();
   });
 
   it('hydrates deterministic mock PHI and sets integrity status to "anchored" with stable structure', async () => {
     // Db returns an anchored workflow
-    dbPool.query.mockResolvedValueOnce({
+    client.query.mockResolvedValueOnce({
       rows: [
         { 
           id: 1, 
@@ -49,6 +51,9 @@ describe('TriageService (Read-Model Hydrator)', () => {
         }
       ]
     } as never);
+    
+    // Mock for decision history query
+    client.query.mockResolvedValueOnce({ rows: [] } as never);
 
     (generateEventHash as jest.Mock).mockReturnValue('hash1');
 
@@ -62,7 +67,7 @@ describe('TriageService (Read-Model Hydrator)', () => {
     
     // Deterministic generation: if we run it twice it must be identical PHI
     expect(e.clinical.chief_complaint).toBeTruthy();
-    expect(e.clinical.acuity).toBeGreaterThanOrEqual(1);
+    expect(e.clinical.ai_recommendation?.acuity).toBeGreaterThanOrEqual(1);
     expect(e.clinical.vitals).toBeDefined();
     
     // Integrity structurally exact
@@ -75,7 +80,7 @@ describe('TriageService (Read-Model Hydrator)', () => {
   });
 
   it('flags tamper_status as "tampered" when reconstructed hash mismatches DB hash', async () => {
-    dbPool.query.mockResolvedValueOnce({
+    client.query.mockResolvedValueOnce({
       rows: [
         { 
           id: 2, 
@@ -91,6 +96,9 @@ describe('TriageService (Read-Model Hydrator)', () => {
         }
       ]
     } as never);
+
+    // Mock for decision history query
+    client.query.mockResolvedValueOnce({ rows: [] } as never);
 
     // Mock the crypto function to return a DIFFERENT hash than 'hash2', simulating that a user changed table contents
     (generateEventHash as jest.Mock).mockReturnValue('COMPLETELY_DIFFERENT_HASH');

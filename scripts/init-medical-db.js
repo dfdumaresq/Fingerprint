@@ -25,7 +25,9 @@ CREATE TYPE workflow_type_enum AS ENUM (
     'draft_clinical_note',
     'simulated_patient_interaction',
     'care_plan_decision',
-    'system_alert'
+    'system_alert',
+    'clinician_action',
+    'clinician_amendment'
 );
 
 CREATE TYPE clinician_action_enum AS ENUM (
@@ -71,6 +73,11 @@ CREATE TABLE agent_events (
     previous_event_hash VARCHAR(66),
     event_hash VARCHAR(66) NOT NULL,
     
+    amends_event_id UUID,
+    reason_code VARCHAR(100),
+    reason_text TEXT,
+    clinical_data JSONB,
+    
     anchored_to_chain BOOLEAN DEFAULT false,
     merkle_root_id INTEGER REFERENCES merkle_anchors(id)
 );
@@ -80,10 +87,40 @@ CREATE INDEX idx_events_fingerprint ON agent_events(agent_fingerprint_id);
 CREATE INDEX idx_events_workflow ON agent_events(workflow_type);
 CREATE INDEX idx_events_anchoring ON agent_events(anchored_to_chain, merkle_root_id);
 
--- Optional: Create app_user and enforce immutability
--- DO NOT RUN THESE in script natively unless we know app_user exists
--- REASSIGN OWNED BY postgres TO postgres;
--- REVOKE UPDATE, DELETE ON agent_events FROM public;
+-- 3. Create the immutability trigger function
+CREATE OR REPLACE FUNCTION prevent_anchored_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.anchored_to_chain = true THEN
+    -- Allow ONLY the anchoring metadata columns to change (merkle_root_id, anchored_to_chain, etc.)
+    -- All content and clinical provenance fields are protected:
+    IF NEW.event_hash             IS DISTINCT FROM OLD.event_hash
+    OR NEW.session_id             IS DISTINCT FROM OLD.session_id
+    OR NEW.clinician_action       IS DISTINCT FROM OLD.clinician_action
+    OR NEW.input_ref              IS DISTINCT FROM OLD.input_ref
+    OR NEW.output_ref             IS DISTINCT FROM OLD.output_ref
+    OR NEW.policy_id              IS DISTINCT FROM OLD.policy_id
+    OR NEW.model_version          IS DISTINCT FROM OLD.model_version
+    OR NEW.workflow_type          IS DISTINCT FROM OLD.workflow_type
+    OR NEW.previous_event_hash    IS DISTINCT FROM OLD.previous_event_hash
+    OR NEW.agent_fingerprint_id   IS DISTINCT FROM OLD.agent_fingerprint_id
+    OR NEW.timestamp              IS DISTINCT FROM OLD.timestamp
+    OR NEW.amends_event_id        IS DISTINCT FROM OLD.amends_event_id
+    OR NEW.reason_code            IS DISTINCT FROM OLD.reason_code
+    OR NEW.reason_text            IS DISTINCT FROM OLD.reason_text
+    OR NEW.clinical_data          IS DISTINCT FROM OLD.clinical_data
+    THEN
+      RAISE EXCEPTION 'IMMUTABLE: Cannot modify content, provenance, or clinical payload of anchored event (id=%)', OLD.id;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_prevent_anchored_mutation ON agent_events;
+CREATE TRIGGER trg_prevent_anchored_mutation
+BEFORE UPDATE ON agent_events
+FOR EACH ROW EXECUTE FUNCTION prevent_anchored_mutation();
 `;
 
 async function initDb() {

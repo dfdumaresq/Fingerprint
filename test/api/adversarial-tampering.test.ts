@@ -25,6 +25,10 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
 
   beforeEach(async () => {
     client = await dbPool.connect();
+    
+    // TRUNCATE to avoid state-leakage from parallel test suites
+    await client.query('TRUNCATE TABLE agent_events CASCADE');
+    
     anchorService = new AnchorService(dbPool);
     // Explicitly pass the connected transaction client to the Service to maintain the transaction envelope
     // Note: The EventService is built assuming pool semantics. We override `.connect()` locally 
@@ -73,7 +77,7 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
 
   it('Tamper Test 1: Content Update (clinician_action)', async () => {
     // Attack: Change action from accepted to overridden directly in DB
-    const res = await client.query('SELECT id FROM agent_events WHERE agent_fingerprint_id = $1 ORDER BY timestamp ASC LIMIT 1 OFFSET 2', [agentId]);
+    const res = await client.query('SELECT id, event_hash FROM agent_events WHERE agent_fingerprint_id = $1 ORDER BY timestamp ASC LIMIT 1 OFFSET 2', [agentId]);
     const tamperedId = res.rows[0].id;
 
     await client.query("UPDATE agent_events SET clinician_action = 'overridden' WHERE id = $1", [tamperedId]);
@@ -113,14 +117,17 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     // Create an event backdated 1 minute before the first event!
     const forgeDate = new Date(res.rows[0].timestamp.getTime() - 60000).toISOString();
     
-    // We expect temporal_violation or broken_chain depending on index
+    // Create a forged Keccak256 hash
+    const fakeHash = '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470';
+    
+    // We expect temporal_violation or broken_chain
     await client.query(`
       INSERT INTO agent_events (
-        event_id, agent_fingerprint_id, timestamp, workflow_type, model_version, input_ref, output_ref, previous_event_hash, event_hash
+        event_id, agent_fingerprint_id, timestamp, workflow_type, model_version, input_ref, output_ref, clinician_action, previous_event_hash, event_hash
       ) VALUES (
-        gen_random_uuid(), $1, $2, 'triage_recommendation', 'test-1.0', 'forged-in', 'forged-out', $3, 'forged-hash'
+        gen_random_uuid(), $1, $2, 'triage_recommendation', 'test-1.0', 'forged-in', 'forged-out', 'accepted', $3, $4
       ) RETURNING id
-    `, [agentId, forgeDate, prevHash]);
+    `, [agentId, forgeDate, prevHash, fakeHash]);
 
     (anchorService as any).db = client;
     const health = await anchorService.verifyDatabaseIntegrity();

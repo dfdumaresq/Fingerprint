@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { ethers } from 'ethers';
 import { randomUUID } from 'crypto';
-import { generateEventHash, buildCanonicalPayload } from '../utils/crypto.utils';
+import { generateEventHash, buildCanonicalPayload, AgentEvent } from '../utils/crypto.utils';
 import { EventService } from './event.service';
 import { TRIAGE_AGENT, TriageAgentConfig } from '../config/agents';
 
@@ -365,7 +365,7 @@ export class TriageService {
          ORDER BY COALESCE(session_id, id::text), id DESC`
       );
 
-      const encounters: TriageEncounter[] = res.rows.map(event => {
+      const encounters: TriageEncounter[] = (res.rows as AgentEvent[]).map((event: AgentEvent) => {
         const sessionId = event.session_id || `enc_${event.id}`;
         const isLive = /^.+_[0-9a-f]{8}-[0-9a-f]{4}/.test(sessionId);
         const source: 'live' | 'scenario' = isLive ? 'live' : 'scenario';
@@ -422,17 +422,18 @@ export class TriageService {
            ORDER BY id ASC`,
           [sessionIds]
         );
-        historyRes.rows.forEach((row: any) => {
-          if (!historyMap[row.session_id]) historyMap[row.session_id] = [];
-          historyMap[row.session_id].push({
-            action: row.clinician_action,
+        (historyRes.rows as AgentEvent[]).forEach((row: AgentEvent) => {
+          const sid = row.session_id || 'unknown';
+          if (!historyMap[sid]) historyMap[sid] = [];
+          historyMap[sid].push({
+            action: row.clinician_action!,
             timestamp: new Date(row.timestamp).toISOString(),
             anchored: row.anchored_to_chain,
             event_hash: row.event_hash,
-            reason_code: row.reason_code,
-            reason_text: row.reason_text,
-            amends_event_id: row.amends_event_id,
-            clinician_acuity: row.clinical_data?.clinician_acuity,
+            reason_code: row.reason_code || undefined,
+            reason_text: row.reason_text || undefined,
+            amends_event_id: row.amends_event_id || undefined,
+            clinician_acuity: (row.clinical_data as any)?.clinician_acuity,
           });
         });
       }
@@ -470,7 +471,7 @@ export class TriageService {
       );
       return {
         session_id: sessionId,
-        nodes: res.rows.map(row => ({
+        nodes: (res.rows as AgentEvent[]).map((row: AgentEvent) => ({
           id: row.event_id,
           type: row.workflow_type === 'triage_recommendation' && !row.clinician_action ? 'ai_recommendation' : 'clinician_action',
           action: row.clinician_action,
@@ -481,7 +482,7 @@ export class TriageService {
           note: row.reason_text,
           workflow: row.workflow_type
         })),
-        edges: res.rows.filter(row => row.amends_event_id).map(row => ({ from: row.event_id, to: row.amends_event_id, type: 'amends' }))
+        edges: (res.rows as AgentEvent[]).filter((row: AgentEvent) => row.amends_event_id).map((row: AgentEvent) => ({ from: row.event_id, to: row.amends_event_id!, type: 'amends' }))
       };
     } finally {
       if (shouldRelease) client.release();

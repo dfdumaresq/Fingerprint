@@ -295,12 +295,12 @@ export function verifyBehavioralSignature(
     if (!perturbationPass || perturbation.suspicious) {
       reason += " (suspicious patterns also detected)";
     }
+  } else if (perturbation.suspicious) {
+    reason = "Verification passed but suspicious patterns detected";
   } else if (!perturbationPass) {
     reason = `Perturbation score ${perturbation.perturbationScore.toFixed(
       2,
     )} above threshold ${thresholds.maxPerturbation}`;
-  } else if (perturbation.suspicious) {
-    reason = "Verification passed but suspicious patterns detected";
   }
 
   // Confidence calculation (heuristic)

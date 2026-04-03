@@ -1,0 +1,3168 @@
+{
+  "numFailedTestSuites": 4,
+  "numFailedTests": 9,
+  "numPassedTestSuites": 20,
+  "numPassedTests": 183,
+  "numPendingTestSuites": 0,
+  "numPendingTests": 0,
+  "numRuntimeErrorTestSuites": 0,
+  "numTodoTests": 0,
+  "numTotalTestSuites": 24,
+  "numTotalTests": 192,
+  "openHandles": [],
+  "snapshot": {
+    "added": 0,
+    "didUpdate": false,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0
+  },
+  "startTime": 1775242069856,
+  "success": false,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Adversarial Tampering - DB Ledger Integrity"],
+          "duration": 91,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "actual": false,
+                "expected": true,
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                "name": "toBe",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:74:31\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "Adversarial Tampering - DB Ledger Integrity Control: valid chain should pass Health Audit unconditionally",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 0,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "Control: valid chain should pass Health Audit unconditionally"
+        },
+        {
+          "ancestorTitles": ["Adversarial Tampering - DB Ledger Integrity"],
+          "duration": 80,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "actual": 6,
+                "expected": 8,
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m8\u001b[39m\nReceived: \u001b[31m6\u001b[39m",
+                "name": "toBe",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m8\u001b[39m\nReceived: \u001b[31m6\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:89:33\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "Adversarial Tampering - DB Ledger Integrity Tamper Test 1: Content Update (clinician_action)",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "Tamper Test 1: Content Update (clinician_action)"
+        },
+        {
+          "ancestorTitles": ["Adversarial Tampering - DB Ledger Integrity"],
+          "duration": 75,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "actual": 11,
+                "expected": 14,
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m14\u001b[39m\nReceived: \u001b[31m11\u001b[39m",
+                "name": "toBe",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m14\u001b[39m\nReceived: \u001b[31m11\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:107:33\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "Adversarial Tampering - DB Ledger Integrity Tamper Test 2: Chain Deletion",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "Tamper Test 2: Chain Deletion"
+        },
+        {
+          "ancestorTitles": ["Adversarial Tampering - DB Ledger Integrity"],
+          "duration": 82,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected value: \u001b[32m\"hash_mismatch\"\u001b[39m\nReceived array: \u001b[31m[\"temporal_violation\", \"broken_chain\"]\u001b[39m",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected value: \u001b[32m\"hash_mismatch\"\u001b[39m\nReceived array: \u001b[31m[\"temporal_violation\", \"broken_chain\"]\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:136:52\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "Adversarial Tampering - DB Ledger Integrity Tamper Test 3: Temporal Forgery",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "Tamper Test 3: Temporal Forgery"
+        }
+      ],
+      "endTime": 1775242070541,
+      "message": "\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mAdversarial Tampering - DB Ledger Integrity › Control: valid chain should pass Health Audit unconditionally\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\n    Expected: \u001b[32mtrue\u001b[39m\n    Received: \u001b[31mfalse\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 72 |\u001b[39m     (anchorService \u001b[36mas\u001b[39m any)\u001b[33m.\u001b[39mdb \u001b[33m=\u001b[39m client\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 73 |\u001b[39m     \u001b[36mconst\u001b[39m health \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m anchorService\u001b[33m.\u001b[39mverifyDatabaseIntegrity()\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 74 |\u001b[39m     expect(health\u001b[33m.\u001b[39mis_healthy)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m    |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 75 |\u001b[39m     expect(health\u001b[33m.\u001b[39mtotal_events_checked)\u001b[33m.\u001b[39mtoBeGreaterThanOrEqual(\u001b[35m5\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 76 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 77 |\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:74:31\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n\n\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mAdversarial Tampering - DB Ledger Integrity › Tamper Test 1: Content Update (clinician_action)\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\n    Expected: \u001b[32m8\u001b[39m\n    Received: \u001b[31m6\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 87 |\u001b[39m     \u001b[22m\n\u001b[2m     \u001b[90m 88 |\u001b[39m     expect(health\u001b[33m.\u001b[39mis_healthy)\u001b[33m.\u001b[39mtoBe(\u001b[36mfalse\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 89 |\u001b[39m     expect(health\u001b[33m.\u001b[39mfirst_bad_id)\u001b[33m.\u001b[39mtoBe(tamperedId)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m    |\u001b[39m                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 90 |\u001b[39m     expect(health\u001b[33m.\u001b[39mreason)\u001b[33m.\u001b[39mtoBe(\u001b[32m'hash_mismatch'\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 91 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 92 |\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:89:33\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n\n\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mAdversarial Tampering - DB Ledger Integrity › Tamper Test 2: Chain Deletion\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\n    Expected: \u001b[32m14\u001b[39m\n    Received: \u001b[31m11\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 105 |\u001b[39m     \u001b[22m\n\u001b[2m     \u001b[90m 106 |\u001b[39m     expect(health\u001b[33m.\u001b[39mis_healthy)\u001b[33m.\u001b[39mtoBe(\u001b[36mfalse\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 107 |\u001b[39m     expect(health\u001b[33m.\u001b[39mfirst_bad_id)\u001b[33m.\u001b[39mtoBe(nextId)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 108 |\u001b[39m     expect(health\u001b[33m.\u001b[39mreason)\u001b[33m.\u001b[39mtoBe(\u001b[32m'broken_chain'\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 109 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 110 |\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:107:33\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n\n\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mAdversarial Tampering - DB Ledger Integrity › Tamper Test 3: Temporal Forgery\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\n    Expected value: \u001b[32m\"hash_mismatch\"\u001b[39m\n    Received array: \u001b[31m[\"temporal_violation\", \"broken_chain\"]\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 134 |\u001b[39m     \u001b[22m\n\u001b[2m     \u001b[90m 135 |\u001b[39m     expect(health\u001b[33m.\u001b[39mis_healthy)\u001b[33m.\u001b[39mtoBe(\u001b[36mfalse\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 136 |\u001b[39m     expect([\u001b[32m'temporal_violation'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'broken_chain'\u001b[39m])\u001b[33m.\u001b[39mtoContain(health\u001b[33m.\u001b[39mreason)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                                                    \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 137 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 138 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 139 |\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:136:52\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/adversarial-tampering.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/api/adversarial-tampering.test.ts",
+      "startTime": 1775242070011,
+      "status": "failed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["One-Click Audit Pack Export"],
+          "duration": 41,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "One-Click Audit Pack Export should generate a verifiable Audit Pack with anchoring proofs",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 10,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should generate a verifiable Audit Pack with anchoring proofs"
+        },
+        {
+          "ancestorTitles": ["One-Click Audit Pack Export"],
+          "duration": 3,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "One-Click Audit Pack Export should flag a failed audit if hashes are tampered with",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should flag a failed audit if hashes are tampered with"
+        },
+        {
+          "ancestorTitles": ["One-Click Audit Pack Export"],
+          "duration": 4,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "actual": "failed",
+                "expected": "verified",
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7mverifi\u001b[27med\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7mfail\u001b[27med\"\u001b[39m",
+                "name": "toBe",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7mverifi\u001b[27med\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7mfail\u001b[27med\"\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts:127:57\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "One-Click Audit Pack Export should maintain hash consistency for events with missing optional fields (Regression Test)",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 0,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "should maintain hash consistency for events with missing optional fields (Regression Test)"
+        },
+        {
+          "ancestorTitles": ["One-Click Audit Pack Export"],
+          "duration": 2,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "actual": "failed",
+                "expected": "verified",
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7mverifi\u001b[27med\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7mfail\u001b[27med\"\u001b[39m",
+                "name": "toBe",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7mverifi\u001b[27med\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7mfail\u001b[27med\"\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts:188:57\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "One-Click Audit Pack Export should correctly verify legacy records created before the clinical_data upgrade",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 0,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "should correctly verify legacy records created before the clinical_data upgrade"
+        }
+      ],
+      "endTime": 1775242070697,
+      "message": "\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mOne-Click Audit Pack Export › should maintain hash consistency for events with missing optional fields (Regression Test)\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\n    Expected: \u001b[32m\"\u001b[7mverifi\u001b[27med\"\u001b[39m\n    Received: \u001b[31m\"\u001b[7mfail\u001b[27med\"\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 125 |\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 126 |\u001b[39m     \u001b[36mconst\u001b[39m pack \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m triageService\u001b[33m.\u001b[39mgetAuditPack(sessionId \u001b[33m+\u001b[39m \u001b[32m'_1'\u001b[39m)\u001b[33m;\u001b[39m \u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 127 |\u001b[39m     expect(pack\u001b[33m.\u001b[39mverification_certificate\u001b[33m!\u001b[39m\u001b[33m.\u001b[39maudit_status)\u001b[33m.\u001b[39mtoBe(\u001b[32m'verified'\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                                                         \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 128 |\u001b[39m     expect(pack\u001b[33m.\u001b[39mverification_certificate\u001b[33m!\u001b[39m\u001b[33m.\u001b[39mfaults\u001b[33m.\u001b[39mlength)\u001b[33m.\u001b[39mtoBe(\u001b[35m0\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 129 |\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 130 |\u001b[39m     \u001b[90m// Test 2: Field is EXPLICITLY null in the DB\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/audit-pack.test.ts\u001b[39m\u001b[0m\u001b[2m:127:57\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/audit-pack.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/audit-pack.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/audit-pack.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n\n\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mOne-Click Audit Pack Export › should correctly verify legacy records created before the clinical_data upgrade\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\n    Expected: \u001b[32m\"\u001b[7mverifi\u001b[27med\"\u001b[39m\n    Received: \u001b[31m\"\u001b[7mfail\u001b[27med\"\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 186 |\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 187 |\u001b[39m     \u001b[36mconst\u001b[39m pack \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m triageService\u001b[33m.\u001b[39mgetAuditPack(sessionId)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 188 |\u001b[39m     expect(pack\u001b[33m.\u001b[39mverification_certificate\u001b[33m!\u001b[39m\u001b[33m.\u001b[39maudit_status)\u001b[33m.\u001b[39mtoBe(\u001b[32m'verified'\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                                                         \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 189 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 190 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 191 |\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/audit-pack.test.ts\u001b[39m\u001b[0m\u001b[2m:188:57\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/audit-pack.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/audit-pack.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/audit-pack.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/api/audit-pack.test.ts",
+      "startTime": 1775242070545,
+      "status": "failed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "Hash Canonicalization - EventService vs AnchorService"
+          ],
+          "duration": 26,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "actual": false,
+                "expected": true,
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                "name": "toBe",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts:88:31\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "Hash Canonicalization - EventService vs AnchorService should stably canonicalize payloads where optional fields are explicitly null (scalar columns)",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "should stably canonicalize payloads where optional fields are explicitly null (scalar columns)"
+        },
+        {
+          "ancestorTitles": [
+            "Hash Canonicalization - EventService vs AnchorService"
+          ],
+          "duration": 11,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "actual": false,
+                "expected": true,
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m",
+                "name": "toBe",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32mtrue\u001b[39m\nReceived: \u001b[31mfalse\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts:125:31\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "Hash Canonicalization - EventService vs AnchorService should stably canonicalize payloads where optional fields are omitted (undefined)",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "should stably canonicalize payloads where optional fields are omitted (undefined)"
+        }
+      ],
+      "endTime": 1775242070820,
+      "message": "\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mHash Canonicalization - EventService vs AnchorService › should stably canonicalize payloads where optional fields are explicitly null (scalar columns)\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\n    Expected: \u001b[32mtrue\u001b[39m\n    Received: \u001b[31mfalse\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 86 |\u001b[39m     \u001b[36mconst\u001b[39m health \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m anchorService\u001b[33m.\u001b[39mverifyDatabaseIntegrity()\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 87 |\u001b[39m     \u001b[36mif\u001b[39m (\u001b[33m!\u001b[39mhealth\u001b[33m.\u001b[39mis_healthy) console\u001b[33m.\u001b[39merror(\u001b[32m'Health Check Failure:'\u001b[39m\u001b[33m,\u001b[39m health)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 88 |\u001b[39m     expect(health\u001b[33m.\u001b[39mis_healthy)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m    |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 89 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 90 |\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 91 |\u001b[39m   it(\u001b[32m'should stably canonicalize payloads where optional fields are omitted (undefined)'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m () \u001b[33m=>\u001b[39m {\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/services/canonicalization.test.ts\u001b[39m\u001b[0m\u001b[2m:88:31\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/services/canonicalization.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/services/canonicalization.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/services/canonicalization.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n\n\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mHash Canonicalization - EventService vs AnchorService › should stably canonicalize payloads where optional fields are omitted (undefined)\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\n    Expected: \u001b[32mtrue\u001b[39m\n    Received: \u001b[31mfalse\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 123 |\u001b[39m     \u001b[90m// 4. Verify AnchorService is healthy\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 124 |\u001b[39m     \u001b[36mconst\u001b[39m health \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m anchorService\u001b[33m.\u001b[39mverifyDatabaseIntegrity()\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 125 |\u001b[39m     expect(health\u001b[33m.\u001b[39mis_healthy)\u001b[33m.\u001b[39mtoBe(\u001b[36mtrue\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 126 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 127 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 128 |\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/services/canonicalization.test.ts\u001b[39m\u001b[0m\u001b[2m:125:31\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/services/canonicalization.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/services/canonicalization.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/services/canonicalization.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/services/canonicalization.test.ts",
+      "startTime": 1775242070698,
+      "status": "failed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Regulatory-Grade Provenance Integration"],
+          "duration": 27,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Regulatory-Grade Provenance Integration should create a cryptographically linked DAG of decisions with reason codes",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 15,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create a cryptographically linked DAG of decisions with reason codes"
+        },
+        {
+          "ancestorTitles": ["Regulatory-Grade Provenance Integration"],
+          "duration": 4,
+          "failureDetails": [
+            {
+              "matcherResult": {
+                "actual": "0x1fd74a9659e26d913f3ddedb484de65cb8b1f905dce881537f42b4d47490df00",
+                "expected": "0x92cbeeebadb625d5bb675d5dbd4e692dec9d7c1a0266b5fe012dc60c20645239",
+                "message": "\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"0x\u001b[7m92cbeeebadb625d5bb675d5dbd4e692dec9d7c1a0266b5fe012dc60c20645239\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"0x\u001b[7m1fd74a9659e26d913f3ddedb484de65cb8b1f905dce881537f42b4d47490df00\u001b[27m\"\u001b[39m",
+                "name": "toBe",
+                "pass": false
+              }
+            }
+          ],
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"0x\u001b[7m92cbeeebadb625d5bb675d5dbd4e692dec9d7c1a0266b5fe012dc60c20645239\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"0x\u001b[7m1fd74a9659e26d913f3ddedb484de65cb8b1f905dce881537f42b4d47490df00\u001b[27m\"\u001b[39m\n    at /Users/dfdumaresq/Projects/Fingerprint/test/api/regulatory-provenance.test.ts:116:23\n    at step (/Users/dfdumaresq/Projects/Fingerprint/test/api/regulatory-provenance.test.ts:33:23)\n    at Object.next (/Users/dfdumaresq/Projects/Fingerprint/test/api/regulatory-provenance.test.ts:14:53)\n    at fulfilled (/Users/dfdumaresq/Projects/Fingerprint/test/api/regulatory-provenance.test.ts:5:58)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+          ],
+          "fullName": "Regulatory-Grade Provenance Integration should detect tampering specifically in the reason code",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 0,
+          "retryReasons": [],
+          "status": "failed",
+          "title": "should detect tampering specifically in the reason code"
+        }
+      ],
+      "endTime": 1775242070938,
+      "message": "\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mRegulatory-Grade Provenance Integration › should detect tampering specifically in the reason code\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\n    Expected: \u001b[32m\"0x\u001b[7m92cbeeebadb625d5bb675d5dbd4e692dec9d7c1a0266b5fe012dc60c20645239\u001b[27m\"\u001b[39m\n    Received: \u001b[31m\"0x\u001b[7m1fd74a9659e26d913f3ddedb484de65cb8b1f905dce881537f42b4d47490df00\u001b[27m\"\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 114 |\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 115 |\u001b[39m     \u001b[36mconst\u001b[39m validHash \u001b[33m=\u001b[39m generateEventHash(canonicalPayload\u001b[33m,\u001b[39m dbRow\u001b[33m.\u001b[39mprevious_event_hash\u001b[33m,\u001b[39m \u001b[36mnew\u001b[39m \u001b[33mDate\u001b[39m(dbRow\u001b[33m.\u001b[39mtimestamp)\u001b[33m.\u001b[39mtoISOString())\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 116 |\u001b[39m     expect(validHash)\u001b[33m.\u001b[39mtoBe(dbRow\u001b[33m.\u001b[39mevent_hash)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                       \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 117 |\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 118 |\u001b[39m     \u001b[90m// Tamper with the reason_code\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 119 |\u001b[39m     dbRow\u001b[33m.\u001b[39mreason_code \u001b[33m=\u001b[39m \u001b[32m'clerical_error'\u001b[39m\u001b[33m;\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/regulatory-provenance.test.ts\u001b[39m\u001b[0m\u001b[2m:116:23\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat step (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/regulatory-provenance.test.ts\u001b[39m\u001b[0m\u001b[2m:33:23)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.next (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/regulatory-provenance.test.ts\u001b[39m\u001b[0m\u001b[2m:14:53)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat fulfilled (\u001b[22m\u001b[2m\u001b[0m\u001b[36mtest/api/regulatory-provenance.test.ts\u001b[39m\u001b[0m\u001b[2m:5:58)\u001b[22m\u001b[2m\u001b[22m\n",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/api/regulatory-provenance.test.ts",
+      "startTime": 1775242070821,
+      "status": "failed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Model Comparison Utility"],
+          "duration": 895,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Model Comparison Utility should compare GPT-4 against baseline",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should compare GPT-4 against baseline"
+        },
+        {
+          "ancestorTitles": ["Model Comparison Utility"],
+          "duration": 761,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Model Comparison Utility should compare CLAUDE-3-SONNET against baseline",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 0,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should compare CLAUDE-3-SONNET against baseline"
+        },
+        {
+          "ancestorTitles": ["Model Comparison Utility"],
+          "duration": 512,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Model Comparison Utility should compare LLAMA-3-70B against baseline",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 0,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should compare LLAMA-3-70B against baseline"
+        }
+      ],
+      "endTime": 1775242073184,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/compare-models.test.ts",
+      "startTime": 1775242070939,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "Append-Only Immutability - Anchored Event Protection"
+          ],
+          "duration": 28,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Append-Only Immutability - Anchored Event Protection should ALLOW setting anchored_to_chain and merkle_root_id on a pending event",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should ALLOW setting anchored_to_chain and merkle_root_id on a pending event"
+        },
+        {
+          "ancestorTitles": [
+            "Append-Only Immutability - Anchored Event Protection"
+          ],
+          "duration": 17,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Append-Only Immutability - Anchored Event Protection should BLOCK updating clinician_action on an anchored event",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should BLOCK updating clinician_action on an anchored event"
+        },
+        {
+          "ancestorTitles": [
+            "Append-Only Immutability - Anchored Event Protection"
+          ],
+          "duration": 16,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Append-Only Immutability - Anchored Event Protection should BLOCK updating event_hash on an anchored event",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should BLOCK updating event_hash on an anchored event"
+        },
+        {
+          "ancestorTitles": [
+            "Append-Only Immutability - Anchored Event Protection"
+          ],
+          "duration": 15,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Append-Only Immutability - Anchored Event Protection should BLOCK updating model_version on an anchored event",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should BLOCK updating model_version on an anchored event"
+        },
+        {
+          "ancestorTitles": [
+            "Append-Only Immutability - Anchored Event Protection"
+          ],
+          "duration": 17,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Append-Only Immutability - Anchored Event Protection should BLOCK updating input_ref on an anchored event",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should BLOCK updating input_ref on an anchored event"
+        },
+        {
+          "ancestorTitles": [
+            "Append-Only Immutability - Anchored Event Protection"
+          ],
+          "duration": 15,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Append-Only Immutability - Anchored Event Protection should BLOCK updating timestamp on an anchored event",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should BLOCK updating timestamp on an anchored event"
+        },
+        {
+          "ancestorTitles": [
+            "Append-Only Immutability - Anchored Event Protection"
+          ],
+          "duration": 14,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Append-Only Immutability - Anchored Event Protection should ALLOW updating clinician_action on a PENDING (unanchored) event",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should ALLOW updating clinician_action on a PENDING (unanchored) event"
+        },
+        {
+          "ancestorTitles": [
+            "Append-Only Immutability - Anchored Event Protection"
+          ],
+          "duration": 16,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Append-Only Immutability - Anchored Event Protection should ALLOW re-setting anchored_to_chain on an already-anchored event (no-op)",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should ALLOW re-setting anchored_to_chain on an already-anchored event (no-op)"
+        }
+      ],
+      "endTime": 1775242073406,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/api/append-only-immutability.test.ts",
+      "startTime": 1775242073187,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Adversarial Test Farm"],
+          "duration": 34,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Adversarial Test Farm Vector 1: Formatting Assault (Extra spaces, casing, punctuation) should match",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "Vector 1: Formatting Assault (Extra spaces, casing, punctuation) should match"
+        },
+        {
+          "ancestorTitles": ["Adversarial Test Farm"],
+          "duration": 29,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Adversarial Test Farm Vector 2: Homograph Attack (Cyrillic injection) should flag perturbations",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "Vector 2: Homograph Attack (Cyrillic injection) should flag perturbations"
+        },
+        {
+          "ancestorTitles": ["Adversarial Test Farm"],
+          "duration": 58,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Adversarial Test Farm Vector 3: Synonym Substitution (Light Paraphrasing) should pass Triage mode but fail Strict",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "Vector 3: Synonym Substitution (Light Paraphrasing) should pass Triage mode but fail Strict"
+        },
+        {
+          "ancestorTitles": ["Adversarial Test Farm"],
+          "duration": 9,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Adversarial Test Farm Vector 4: True Imposter (Complete context mismatch) should be completely rejected",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "Vector 4: True Imposter (Complete context mismatch) should be completely rejected"
+        }
+      ],
+      "endTime": 1775242073622,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/src/tests/adversarialFarm.test.ts",
+      "startTime": 1775242073408,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Medical API Integration", "Authentication Guard"],
+          "duration": 9,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Medical API Integration Authentication Guard should reject requests without a Bearer token",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject requests without a Bearer token"
+        },
+        {
+          "ancestorTitles": [
+            "Medical API Integration",
+            "PHI Strict Guards (POST /v1/events)"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Medical API Integration PHI Strict Guards (POST /v1/events) should strictly reject payload refs containing raw text to prevent PHI leaks",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should strictly reject payload refs containing raw text to prevent PHI leaks"
+        },
+        {
+          "ancestorTitles": [
+            "Medical API Integration",
+            "PHI Strict Guards (POST /v1/events)"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Medical API Integration PHI Strict Guards (POST /v1/events) should permit payload refs that represent hashes or IPF URIs",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should permit payload refs that represent hashes or IPF URIs"
+        },
+        {
+          "ancestorTitles": [
+            "Medical API Integration",
+            "E2E Ledger Flow (Stretch Goal)"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Medical API Integration E2E Ledger Flow (Stretch Goal) should return a 200 health check matching the expected API contract",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return a 200 health check matching the expected API contract"
+        }
+      ],
+      "endTime": 1775242073733,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/api/medical-events.test.ts",
+      "startTime": 1775242073623,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Type correctness"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Type correctness should define correct TypedDataField interface",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should define correct TypedDataField interface"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Type correctness"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Type correctness should define correct TypedDataTypes interface",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should define correct TypedDataTypes interface"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Type correctness"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Type correctness should define correct EIP712Domain interface",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should define correct EIP712Domain interface"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Type correctness"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Type correctness should define correct AgentFingerprintMessage interface",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should define correct AgentFingerprintMessage interface"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Type correctness"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Type correctness should define correct TypedData interface",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should define correct TypedData interface"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Domain parameter validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Domain parameter validation should create valid domain from parameters",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 5,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create valid domain from parameters"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Domain parameter validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Domain parameter validation should handle bigint chainId",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle bigint chainId"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Domain parameter validation"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Domain parameter validation should validate domain parameters",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 5,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should validate domain parameters"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Domain parameter validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Domain parameter validation should throw an error when creating domain with invalid parameters",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should throw an error when creating domain with invalid parameters"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Domain parameter validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Domain parameter validation should validate domain in depth with validateEIP712Domain",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should validate domain in depth with validateEIP712Domain"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Message creation and validation"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Message creation and validation should create valid agent message",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 6,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create valid agent message"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Message creation and validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Message creation and validation should validate agent message",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 5,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should validate agent message"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Message creation and validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Message creation and validation should detect empty values in message validation",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect empty values in message validation"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Message creation and validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Message creation and validation should detect future timestamps in message validation",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect future timestamps in message validation"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Message creation and validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Message creation and validation should detect old timestamps in message validation",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect old timestamps in message validation"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Message creation and validation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Message creation and validation should throw when validating non-message object",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should throw when validating non-message object"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Create TypedData"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Create TypedData should create full typed data object",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 6,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create full typed data object"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Create TypedData"
+          ],
+          "duration": 5,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Create TypedData should hash typed data correctly",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should hash typed data correctly"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Create TypedData"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Create TypedData should throw on invalid hash inputs",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should throw on invalid hash inputs"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Error handling"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Error handling should create proper error from unknown error",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create proper error from unknown error"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Error handling"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Error handling should detect user rejection errors",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 7,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect user rejection errors"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Error handling"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Error handling should wrap unknown errors in EIP712Error",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 6,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should wrap unknown errors in EIP712Error"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Utility validations"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Utility validations should validate Ethereum addresses",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 8,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should validate Ethereum addresses"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "Utility validations"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation Utility validations should validate EIP-712 signatures",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 7,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should validate EIP-712 signatures"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "EIP-712 Error classes"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation EIP-712 Error classes should create base EIP-712 error with code",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 9,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create base EIP-712 error with code"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "EIP-712 Error classes"
+          ],
+          "duration": 6,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation EIP-712 Error classes should create EIP-712 signing error with cause",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 8,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create EIP-712 signing error with cause"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "EIP-712 Error classes"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation EIP-712 Error classes should create EIP-712 domain error with validation errors",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 9,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create EIP-712 domain error with validation errors"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "EIP-712 Error classes"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation EIP-712 Error classes should create EIP-712 message error with validation errors",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 9,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create EIP-712 message error with validation errors"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "EIP-712 Error classes"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation EIP-712 Error classes should create EIP-712 verification error with cause",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 9,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create EIP-712 verification error with cause"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "EIP-712 Error classes"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation EIP-712 Error classes should create wallet not connected error with default message",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 7,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create wallet not connected error with default message"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Typed Data Implementation",
+            "EIP-712 Error classes"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Typed Data Implementation EIP-712 Error classes should create user rejected signature error with default message",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 7,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create user rejected signature error with default message"
+        }
+      ],
+      "endTime": 1775242073830,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/utils/eip712.test.ts",
+      "startTime": 1775242073735,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["EIP-712 Edge Cases", "Empty string handling"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Empty string handling should detect empty strings in agent data",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 8,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect empty strings in agent data"
+        },
+        {
+          "ancestorTitles": ["EIP-712 Edge Cases", "Empty string handling"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Empty string handling should handle empty strings in domain data",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle empty strings in domain data"
+        },
+        {
+          "ancestorTitles": ["EIP-712 Edge Cases", "Empty string handling"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Empty string handling should handle whitespace-only strings",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle whitespace-only strings"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Extremely long string handling"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Extremely long string handling should handle extremely long agent data",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 8,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle extremely long agent data"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Extremely long string handling"
+          ],
+          "duration": 7,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Extremely long string handling should test performance with reasonable hash generation",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should test performance with reasonable hash generation"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Non-string and invalid values"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Non-string and invalid values should reject non-string agent fields",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 5,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject non-string agent fields"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Non-string and invalid values"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Non-string and invalid values should reject non-number timestamp",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject non-number timestamp"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Non-string and invalid values"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Non-string and invalid values should reject negative or zero timestamp",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject negative or zero timestamp"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Non-string and invalid values"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Non-string and invalid values should reject decimal timestamp",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject decimal timestamp"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Non-string and invalid values"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Non-string and invalid values should reject missing fields",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject missing fields"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Domain validation edge cases"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Domain validation edge cases should reject invalid contract addresses",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject invalid contract addresses"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Domain validation edge cases"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Domain validation edge cases should reject invalid chainId values",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject invalid chainId values"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Domain validation edge cases"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Domain validation edge cases should throw errors when creating domains with invalid parameters",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should throw errors when creating domains with invalid parameters"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Signature validation edge cases"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Signature validation edge cases should validate proper EIP-712 signatures",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should validate proper EIP-712 signatures"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Signature validation edge cases"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Signature validation edge cases should reject invalid EIP-712 signatures",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject invalid EIP-712 signatures"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Signature validation edge cases"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Signature validation edge cases should reject non-string signature values",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject non-string signature values"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Special character handling"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Special character handling should handle special characters in agent data",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 8,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle special characters in agent data"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "Special character handling"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Special character handling should handle special characters when hashing",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle special characters when hashing"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "TypedData structure edge cases"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases TypedData structure edge cases should reject invalid TypedDataTypes structures",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject invalid TypedDataTypes structures"
+        },
+        {
+          "ancestorTitles": [
+            "EIP-712 Edge Cases",
+            "TypedData structure edge cases"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases TypedData structure edge cases should reject invalid TypedData structures",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject invalid TypedData structures"
+        },
+        {
+          "ancestorTitles": ["EIP-712 Edge Cases", "Mixed utility test cases"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Mixed utility test cases should handle undefined/null inputs gracefully",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle undefined/null inputs gracefully"
+        },
+        {
+          "ancestorTitles": ["EIP-712 Edge Cases", "Mixed utility test cases"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Mixed utility test cases should reject objects with missing required properties",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reject objects with missing required properties"
+        },
+        {
+          "ancestorTitles": ["EIP-712 Edge Cases", "Mixed utility test cases"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EIP-712 Edge Cases Mixed utility test cases should create valid messages from valid agent data",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create valid messages from valid agent data"
+        }
+      ],
+      "endTime": 1775242073917,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/utils/eip712-edge-cases.test.ts",
+      "startTime": 1775242073832,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "Behavioral Similarity Verification",
+            "generateBehavioralTraitHash with canonicalization"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Behavioral Similarity Verification generateBehavioralTraitHash with canonicalization should produce different hash when canonicalization is enabled",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should produce different hash when canonicalization is enabled"
+        },
+        {
+          "ancestorTitles": [
+            "Behavioral Similarity Verification",
+            "generateBehavioralTraitHash with canonicalization"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Behavioral Similarity Verification generateBehavioralTraitHash with canonicalization should be robust to formatting when using canonical hashing",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should be robust to formatting when using canonical hashing"
+        },
+        {
+          "ancestorTitles": [
+            "Behavioral Similarity Verification",
+            "verifyBehavioralSignature"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Behavioral Similarity Verification verifyBehavioralSignature should pass for identical response sets",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should pass for identical response sets"
+        },
+        {
+          "ancestorTitles": [
+            "Behavioral Similarity Verification",
+            "verifyBehavioralSignature"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Behavioral Similarity Verification verifyBehavioralSignature should pass for slight variations in enforcement mode",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should pass for slight variations in enforcement mode"
+        },
+        {
+          "ancestorTitles": [
+            "Behavioral Similarity Verification",
+            "verifyBehavioralSignature"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Behavioral Similarity Verification verifyBehavioralSignature should fail for moderate variations in enforcement mode but pass in triage",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should fail for moderate variations in enforcement mode but pass in triage"
+        },
+        {
+          "ancestorTitles": [
+            "Behavioral Similarity Verification",
+            "verifyBehavioralSignature"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Behavioral Similarity Verification verifyBehavioralSignature should detect and flag suspicious perturbations",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect and flag suspicious perturbations"
+        },
+        {
+          "ancestorTitles": [
+            "Behavioral Similarity Verification",
+            "verifyBehavioralSignature"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Behavioral Similarity Verification verifyBehavioralSignature should fail if similarity is too low",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should fail if similarity is too low"
+        }
+      ],
+      "endTime": 1775242074002,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/utils/behavioralSimilarity.test.ts",
+      "startTime": 1775242073920,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "EventService",
+            "ingestEvent (Hash-Chaining & Canonicalization)"
+          ],
+          "duration": 4,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EventService ingestEvent (Hash-Chaining & Canonicalization) should generate identical hashes for identically semantic payloads regardless of key order",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should generate identical hashes for identically semantic payloads regardless of key order"
+        },
+        {
+          "ancestorTitles": [
+            "EventService",
+            "ingestEvent (Hash-Chaining & Canonicalization)"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EventService ingestEvent (Hash-Chaining & Canonicalization) should chain accurately to the previous event hash",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should chain accurately to the previous event hash"
+        },
+        {
+          "ancestorTitles": [
+            "EventService",
+            "ingestEvent (Hash-Chaining & Canonicalization)"
+          ],
+          "duration": 3,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "EventService ingestEvent (Hash-Chaining & Canonicalization) should rollback transaction if insertion fails",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should rollback transaction if insertion fails"
+        }
+      ],
+      "endTime": 1775242074085,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/services/event.service.test.ts",
+      "startTime": 1775242074004,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "AnchorService",
+            "Merkle Root Generation via anchorPendingEvents"
+          ],
+          "duration": 2,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AnchorService Merkle Root Generation via anchorPendingEvents should generate a valid Merkle Root for pending events",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should generate a valid Merkle Root for pending events"
+        },
+        {
+          "ancestorTitles": [
+            "AnchorService",
+            "Merkle Root Generation via anchorPendingEvents"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AnchorService Merkle Root Generation via anchorPendingEvents should handle zero pending events gracefully",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle zero pending events gracefully"
+        },
+        {
+          "ancestorTitles": [
+            "AnchorService",
+            "Database Integrity Constraints via verifyDatabaseIntegrity"
+          ],
+          "duration": 2,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AnchorService Database Integrity Constraints via verifyDatabaseIntegrity should report healthy if the hash-chain is mathematically sound",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should report healthy if the hash-chain is mathematically sound"
+        },
+        {
+          "ancestorTitles": [
+            "AnchorService",
+            "Database Integrity Constraints via verifyDatabaseIntegrity"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AnchorService Database Integrity Constraints via verifyDatabaseIntegrity should catch manipulation and report unhealthy if a link in the chain is broken",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should catch manipulation and report unhealthy if a link in the chain is broken"
+        },
+        {
+          "ancestorTitles": [
+            "AnchorService",
+            "Database Integrity Constraints via verifyDatabaseIntegrity"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AnchorService Database Integrity Constraints via verifyDatabaseIntegrity should detect a broken cryptographic chain (temporal violation)",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect a broken cryptographic chain (temporal violation)"
+        }
+      ],
+      "endTime": 1775242074166,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/services/anchor.service.test.ts",
+      "startTime": 1775242074087,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["TriageService (Read-Model Hydrator)"],
+          "duration": 4,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "TriageService (Read-Model Hydrator) hydrates deterministic mock PHI and sets integrity status to \"anchored\" with stable structure",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 7,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "hydrates deterministic mock PHI and sets integrity status to \"anchored\" with stable structure"
+        },
+        {
+          "ancestorTitles": ["TriageService (Read-Model Hydrator)"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "TriageService (Read-Model Hydrator) flags tamper_status as \"tampered\" when reconstructed hash mismatches DB hash",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "flags tamper_status as \"tampered\" when reconstructed hash mismatches DB hash"
+        }
+      ],
+      "endTime": 1775242074243,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/services/triage.service.test.ts",
+      "startTime": 1775242074168,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["AuditLogger", "Singleton and Configuration"],
+          "duration": 2,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AuditLogger Singleton and Configuration should maintain singleton status within an isolation block",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should maintain singleton status within an isolation block"
+        },
+        {
+          "ancestorTitles": ["AuditLogger", "Singleton and Configuration"],
+          "duration": 10,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AuditLogger Singleton and Configuration should respect minLogLevel configuration",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should respect minLogLevel configuration"
+        },
+        {
+          "ancestorTitles": ["AuditLogger", "Singleton and Configuration"],
+          "duration": 4,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AuditLogger Singleton and Configuration should respect enableConsoleLogging toggle",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should respect enableConsoleLogging toggle"
+        },
+        {
+          "ancestorTitles": ["AuditLogger", "Metadata and Integrity"],
+          "duration": 2,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AuditLogger Metadata and Integrity should include session and source metadata",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should include session and source metadata"
+        },
+        {
+          "ancestorTitles": ["AuditLogger", "Metadata and Integrity"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AuditLogger Metadata and Integrity should reflect \"client\" source when window is present",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reflect \"client\" source when window is present"
+        },
+        {
+          "ancestorTitles": ["AuditLogger", "Specific Event Logging"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AuditLogger Specific Event Logging should correctly format key access events",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should correctly format key access events"
+        },
+        {
+          "ancestorTitles": ["AuditLogger", "Specific Event Logging"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AuditLogger Specific Event Logging should log blockchain transactions with txHash",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should log blockchain transactions with txHash"
+        },
+        {
+          "ancestorTitles": ["AuditLogger", "File Logging and Encryption"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "AuditLogger File Logging and Encryption should indicate encryption when enabled and KeyManager is present",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should indicate encryption when enabled and KeyManager is present"
+        }
+      ],
+      "endTime": 1775242074307,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/security/AuditLogger.test.ts",
+      "startTime": 1775242074245,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "MockKeyProvider Implementation"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface MockKeyProvider Implementation should store and retrieve keys",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should store and retrieve keys"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "MockKeyProvider Implementation"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface MockKeyProvider Implementation should track access metadata",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should track access metadata"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "MockKeyProvider Implementation"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface MockKeyProvider Implementation should list all keys",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should list all keys"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "MockKeyProvider Implementation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface MockKeyProvider Implementation should delete keys",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should delete keys"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "MockKeyProvider Implementation"
+          ],
+          "duration": 2,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface MockKeyProvider Implementation should rotate keys",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 6,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should rotate keys"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "MockKeyProvider Implementation"
+          ],
+          "duration": 4,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface MockKeyProvider Implementation should enforce key expiration",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should enforce key expiration"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "MockKeyProvider Implementation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface MockKeyProvider Implementation should log access operations",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 13,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should log access operations"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "EnvKeyProvider Implementation"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface EnvKeyProvider Implementation should retrieve keys from environment variables",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should retrieve keys from environment variables"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "EnvKeyProvider Implementation"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface EnvKeyProvider Implementation should fail when environment variable does not exist",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should fail when environment variable does not exist"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "EnvKeyProvider Implementation"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface EnvKeyProvider Implementation should list keys with metadata",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should list keys with metadata"
+        },
+        {
+          "ancestorTitles": [
+            "KeyProvider Interface",
+            "EnvKeyProvider Implementation"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProvider Interface EnvKeyProvider Implementation should store key as environment variable",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should store key as environment variable"
+        }
+      ],
+      "endTime": 1775242074358,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/security/KeyProvider.test.ts",
+      "startTime": 1775242074308,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["BlockchainService"],
+          "duration": 9,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "BlockchainService should correctly process revocation record",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should correctly process revocation record"
+        },
+        {
+          "ancestorTitles": ["BlockchainService"],
+          "duration": 6,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "BlockchainService should verify fingerprint data",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should verify fingerprint data"
+        }
+      ],
+      "endTime": 1775242074409,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/blockchain.service.test.ts",
+      "startTime": 1775242074359,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["KeyProviderFactory", "Singleton Pattern"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProviderFactory Singleton Pattern should return the same instance when getInstance is called multiple times",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return the same instance when getInstance is called multiple times"
+        },
+        {
+          "ancestorTitles": ["KeyProviderFactory", "Provider Creation"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProviderFactory Provider Creation should create EnvKeyProvider by default",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create EnvKeyProvider by default"
+        },
+        {
+          "ancestorTitles": ["KeyProviderFactory", "Provider Creation"],
+          "duration": 3,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProviderFactory Provider Creation should create EncryptedFileKeyProvider when requested",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create EncryptedFileKeyProvider when requested"
+        },
+        {
+          "ancestorTitles": ["KeyProviderFactory", "Provider Creation"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProviderFactory Provider Creation should create VaultKeyProvider when requested",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should create VaultKeyProvider when requested"
+        },
+        {
+          "ancestorTitles": ["KeyProviderFactory", "Provider Creation"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProviderFactory Provider Creation should reuse provider instances",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should reuse provider instances"
+        },
+        {
+          "ancestorTitles": ["KeyProviderFactory", "Configuration"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProviderFactory Configuration should update configuration and pass to providers",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should update configuration and pass to providers"
+        },
+        {
+          "ancestorTitles": ["KeyProviderFactory", "Configuration"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyProviderFactory Configuration should set default provider type",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should set default provider type"
+        }
+      ],
+      "endTime": 1775242074456,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/security/KeyProviderFactory.test.ts",
+      "startTime": 1775242074410,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["SecureBlockchainService"],
+          "duration": 4,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "SecureBlockchainService should register a fingerprint and log audit",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should register a fingerprint and log audit"
+        },
+        {
+          "ancestorTitles": ["SecureBlockchainService"],
+          "duration": 3,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "SecureBlockchainService should verify fingerprint successfully",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should verify fingerprint successfully"
+        },
+        {
+          "ancestorTitles": ["SecureBlockchainService"],
+          "duration": 4,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "SecureBlockchainService should check revocation successfully",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should check revocation successfully"
+        }
+      ],
+      "endTime": 1775242074509,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/services/secure-blockchain.service.test.ts",
+      "startTime": 1775242074461,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["C2PA Functional Exporting"],
+          "duration": 3,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "C2PA Functional Exporting should generate a valid Identity Manifest JSON",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should generate a valid Identity Manifest JSON"
+        },
+        {
+          "ancestorTitles": ["C2PA Functional Exporting"],
+          "duration": 2,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "C2PA Functional Exporting should generate and verify a Verification Certificate",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should generate and verify a Verification Certificate"
+        }
+      ],
+      "endTime": 1775242074558,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/services/c2paExport.test.ts",
+      "startTime": 1775242074510,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should return low score for clean text",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return low score for clean text"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should detect high edit distance",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect high edit distance"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 2,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should detect homograph characters",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect homograph characters"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should detect invisible characters",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect invisible characters"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should detect encoding artifacts",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect encoding artifacts"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should detect URL encoding",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect URL encoding"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should detect excessive punctuation",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect excessive punctuation"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should detect suspicious repetition",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect suspicious repetition"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "analyzePerturbation"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzePerturbation should flag suspicious inputs above threshold",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should flag suspicious inputs above threshold"
+        },
+        {
+          "ancestorTitles": [
+            "Perturbation Detection",
+            "analyzeFromCanonicalization"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection analyzeFromCanonicalization should work with canonicalization result",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should work with canonicalization result"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "isSuspicious"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection isSuspicious should return false for normal text",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return false for normal text"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "isSuspicious"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection isSuspicious should return true for text with homographs",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return true for text with homographs"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "isSuspicious"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection isSuspicious should return true for text with invisible chars",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return true for text with invisible chars"
+        },
+        {
+          "ancestorTitles": ["Perturbation Detection", "isSuspicious"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection isSuspicious should return true for text with encoding artifacts",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return true for text with encoding artifacts"
+        },
+        {
+          "ancestorTitles": [
+            "Perturbation Detection",
+            "Real-world evasion scenarios"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection Real-world evasion scenarios should detect Cyrillic homograph attack",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect Cyrillic homograph attack"
+        },
+        {
+          "ancestorTitles": [
+            "Perturbation Detection",
+            "Real-world evasion scenarios"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection Real-world evasion scenarios should detect zero-width character injection",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should detect zero-width character injection"
+        },
+        {
+          "ancestorTitles": [
+            "Perturbation Detection",
+            "Real-world evasion scenarios"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Perturbation Detection Real-world evasion scenarios should handle mixed attack vectors",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle mixed attack vectors"
+        }
+      ],
+      "endTime": 1775242074604,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/detection/perturbation.test.ts",
+      "startTime": 1775242074559,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["Canonicalization Utils", "levenshteinDistance"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils levenshteinDistance should return 0 for identical strings",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return 0 for identical strings"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "levenshteinDistance"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils levenshteinDistance should return length for empty comparisons",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return length for empty comparisons"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "levenshteinDistance"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils levenshteinDistance should calculate correct distance for substitutions",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should calculate correct distance for substitutions"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "levenshteinDistance"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils levenshteinDistance should calculate correct distance for insertions",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should calculate correct distance for insertions"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "levenshteinDistance"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils levenshteinDistance should calculate correct distance for deletions",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should calculate correct distance for deletions"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "levenshteinDistance"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils levenshteinDistance should handle complex transformations",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle complex transformations"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "normalizedEditDistance"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils normalizedEditDistance should return 0 for identical strings",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return 0 for identical strings"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "normalizedEditDistance"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils normalizedEditDistance should return value between 0 and 1",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return value between 0 and 1"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "normalizedEditDistance"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils normalizedEditDistance should return 0 for two empty strings",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return 0 for two empty strings"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should handle basic whitespace normalization",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle basic whitespace normalization"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should convert to lowercase",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should convert to lowercase"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should trim whitespace",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should trim whitespace"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 2,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should standardize smart quotes",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should standardize smart quotes"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should standardize dashes",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should standardize dashes"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should normalize multiple punctuation",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should normalize multiple punctuation"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should track edit distance",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should track edit distance"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should preserve original in result",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should preserve original in result"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should respect options to skip transformations",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should respect options to skip transformations"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalize"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalize should handle Unicode normalization",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should handle Unicode normalization"
+        },
+        {
+          "ancestorTitles": ["Canonicalization Utils", "canonicalizeResponses"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils canonicalizeResponses should canonicalize array of responses",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 3,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should canonicalize array of responses"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "areSimilarAfterCanonicalization"
+          ],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils areSimilarAfterCanonicalization should return true for identical strings",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return true for identical strings"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "areSimilarAfterCanonicalization"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils areSimilarAfterCanonicalization should return true for strings differing only by formatting",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return true for strings differing only by formatting"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "areSimilarAfterCanonicalization"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils areSimilarAfterCanonicalization should return false for very different strings",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return false for very different strings"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "areSimilarAfterCanonicalization"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils areSimilarAfterCanonicalization should respect custom threshold",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should respect custom threshold"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "Adversarial evasion resistance"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils Adversarial evasion resistance should produce same canonical form for whitespace variations",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should produce same canonical form for whitespace variations"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "Adversarial evasion resistance"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils Adversarial evasion resistance should produce same canonical form for casing variations",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should produce same canonical form for casing variations"
+        },
+        {
+          "ancestorTitles": [
+            "Canonicalization Utils",
+            "Adversarial evasion resistance"
+          ],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "Canonicalization Utils Adversarial evasion resistance should produce same canonical form for punctuation variations",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should produce same canonical form for punctuation variations"
+        }
+      ],
+      "endTime": 1775242074648,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/utils/canonicalization.test.ts",
+      "startTime": 1775242074605,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["KeyManager", "Singleton Pattern"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Singleton Pattern should return the same instance when getInstance is called multiple times",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should return the same instance when getInstance is called multiple times"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Initialization"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Initialization should initialize with default providers for each key type",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should initialize with default providers for each key type"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Initialization"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Initialization should configure for production when environment is production",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should configure for production when environment is production"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Key Operations"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Key Operations should get key with default key ID",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should get key with default key ID"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Key Operations"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Key Operations should store key with specified type",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should store key with specified type"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Key Operations"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Key Operations should list keys of specified type",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should list keys of specified type"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Key Operations"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Key Operations should delete key of specified type",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should delete key of specified type"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Key Operations"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Key Operations should rotate key of specified type",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 4,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should rotate key of specified type"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Key Operations"],
+          "duration": 1,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Key Operations should get key metadata",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 2,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should get key metadata"
+        },
+        {
+          "ancestorTitles": ["KeyManager", "Provider Configuration"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "KeyManager Provider Configuration should set provider for key type",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should set provider for key type"
+        }
+      ],
+      "endTime": 1775242074690,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/security/KeyManager.test.ts",
+      "startTime": 1775242074649,
+      "status": "passed",
+      "summary": ""
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["C2PA Infrastructure", "C2PAService"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "C2PA Infrastructure C2PAService should be defined",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should be defined"
+        },
+        {
+          "ancestorTitles": ["C2PA Infrastructure", "C2PAService"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "C2PA Infrastructure C2PAService should have key management methods",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should have key management methods"
+        },
+        {
+          "ancestorTitles": ["C2PA Infrastructure", "C2PAService"],
+          "duration": 0,
+          "failureDetails": [],
+          "failureMessages": [],
+          "fullName": "C2PA Infrastructure C2PAService should project verification results to C2PA schema",
+          "invocations": 1,
+          "location": null,
+          "numPassingAsserts": 1,
+          "retryReasons": [],
+          "status": "passed",
+          "title": "should project verification results to C2PA schema"
+        }
+      ],
+      "endTime": 1775242074730,
+      "message": "",
+      "name": "/Users/dfdumaresq/Projects/Fingerprint/test/services/c2paInfrastructure.test.ts",
+      "startTime": 1775242074693,
+      "status": "passed",
+      "summary": ""
+    }
+  ],
+  "wasInterrupted": false
+}

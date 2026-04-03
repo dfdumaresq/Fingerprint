@@ -275,13 +275,20 @@ app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
   try {
     const { chief_complaint, vitals, age, sex, red_flags, clinician_name } = req.body;
 
-    if (!chief_complaint || !vitals?.hr || !vitals?.bp) {
-      res.status(400).json({ error: { code: 'bad_request', message: 'chief_complaint, vitals.hr, and vitals.bp are required' } });
+    if (!chief_complaint || !vitals?.hr || !vitals?.bp_sys || !vitals?.bp_dia) {
+      res.status(400).json({ error: { code: 'bad_request', message: 'chief_complaint, vitals.hr, vitals.bp_sys, and vitals.bp_dia are required' } });
       return;
     }
 
     const encounter = await triageService.createEncounterWithAI(
-      { chief_complaint, vitals, age, sex, red_flags },
+      { 
+        chief_complaint, 
+        vitals, 
+        age: age || 0, 
+        sex: sex || 'F', 
+        red_flags,
+        history: req.body.history || { allergies: [], medications: [], pmh: [] }
+      },
       clinician_name || 'clinician'
     );
 
@@ -299,7 +306,7 @@ app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
 app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: Response) => {
   try {
     const { session_id } = req.params;
-    const { action, reason_code, reason_text } = req.body;
+    const { action, reason_code, reason_text, assigned_acuity } = req.body;
 
     const validActions = ['accepted', 'overridden', 'downgraded', 'escalated'];
     if (!action || !validActions.includes(action)) {
@@ -307,7 +314,7 @@ app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: R
       return;
     }
 
-    const result = await triageService.logClinicianAction(session_id, action, reason_code, reason_text);
+    const result = await triageService.logClinicianAction(session_id, action, reason_code, reason_text, assigned_acuity);
     res.json({ 
       success: true, 
       action, 

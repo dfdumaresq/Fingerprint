@@ -3,6 +3,41 @@ import '../css/triage.css';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface ClinicalData {
+  schemaVersion: number;
+  vitals: {
+    hr: number;
+    bp_sys: number;
+    bp_dia: number;
+    rr: number;
+    spo2: number;
+    spo2_support?: 'room_air' | 'supplemental';
+    temp: number;
+    temp_method?: 'oral' | 'tympanic' | 'axillary' | 'rectal';
+    pain_score: number;
+    weight_kg?: number;
+    height_cm?: number;
+    glucose_mmol?: number;
+    map?: number;
+    avpu?: 'A' | 'V' | 'P' | 'U';
+  };
+  history: {
+    allergies: string[];
+    medications: string[];
+    pmh: string[];
+    notes?: string;
+  };
+  acuity?: number; // legacy
+  clinician_acuity?: number;
+  chief_complaint: string;
+  age: number;
+  gender: string;
+  red_flags?: string[];
+  ai_recommendation?: { acuity: number; reasons: string[] };
+  ai_provider?: string;
+  state: string;
+}
+
 interface TriageEncounter {
   encounter_id: string;
   db_row_id: number;
@@ -10,21 +45,7 @@ interface TriageEncounter {
   clinician_action: string | null;
   agent_id: string;
   source: 'live' | 'scenario';
-  clinical: {
-    acuity: number;
-    chief_complaint: string;
-    age: number;
-    gender: string;
-    vitals: { 
-      heart_rate: number; 
-      blood_pressure: string;
-      respiratory_rate: number;
-      spo2: number;
-    };
-    state: string;
-    ai_recommendation?: { acuity: number; reasons: string[] };
-    ai_provider?: string;
-  };
+  clinical: ClinicalData;
   integrity: {
     event_hash: string;
     merkle_root_id: number | null;
@@ -45,12 +66,35 @@ interface TriageEncounter {
 interface NewEncounterForm {
   chief_complaint: string;
   custom_complaint: string;
+  
+  // Vitals Row 1 (Core)
   hr: string;
-  bp: string;
+  bp_sys: string;
+  bp_dia: string;
   rr: string;
   spo2: string;
+  spo2_support: 'room_air' | 'supplemental';
+  
+  // Vitals Row 2 (Extended)
+  temp: string;
+  temp_method: 'oral' | 'tympanic' | 'axillary' | 'rectal';
+  pain_score: string;
+  weight_kg: string;
+  height_cm: string;
+  glucose_mmol: string;
+  avpu: 'A' | 'V' | 'P' | 'U' | '';
+  
   age: string;
   sex: 'M' | 'F' | '';
+  
+  // SAMPLE History
+  history: {
+    allergies: string;
+    medications: string;
+    pmh: string;
+    notes: string;
+  };
+
   red_flags: string[];
   clinician_name: string;
 }
@@ -98,15 +142,25 @@ export const TriageDashboard: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [agentStatus, setAgentStatus] = useState<{ available: boolean; provider: string; model: string } | null>(null);
   const [changingDecision, setChangingDecision] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [lastActionResult, setLastActionResult] = useState<{ is_amendment: boolean; previous_action: string | null } | null>(null);
   const [amendmentReason, setAmendmentReason] = useState('initial_decision');
   const [amendmentNote, setAmendmentNote] = useState('');
   const [showTechnicalProofs, setShowTechnicalProofs] = useState(false);
+  const [showExtendedVitals, setShowExtendedVitals] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const [form, setForm] = useState<NewEncounterForm>({
     chief_complaint: '', custom_complaint: '',
-    hr: '', bp: '', rr: '', spo2: '',
+    hr: '', bp_sys: '', bp_dia: '', rr: '', spo2: '',
+    spo2_support: 'room_air',
+    temp: '', temp_method: 'oral',
+    pain_score: '', weight_kg: '', height_cm: '', glucose_mmol: '',
+    avpu: '',
     age: '', sex: '',
+    history: {
+      allergies: '', medications: '', pmh: '', notes: ''
+    },
     red_flags: [],
     clinician_name: localStorage.getItem('clinician_name') || '',
   });
@@ -146,22 +200,45 @@ export const TriageDashboard: React.FC = () => {
   }, [selectedEncounter, showNewForm]);
 
   const submitEncounter = async () => {
-    if (!form.chief_complaint || !form.hr || !form.bp) return;
+    if (!form.chief_complaint || !form.hr || !form.bp_sys || !form.bp_dia) return;
     setSubmitting(true);
     const complaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
     try {
       if (form.clinician_name) localStorage.setItem('clinician_name', form.clinician_name);
+      
+      const payload = {
+        chief_complaint: complaint,
+        vitals: { 
+          hr: Number(form.hr), 
+          bp_sys: Number(form.bp_sys), 
+          bp_dia: Number(form.bp_dia),
+          rr: Number(form.rr || 16), 
+          spo2: Number(form.spo2 || 98),
+          spo2_support: form.spo2_support,
+          temp: Number(form.temp || 37.0),
+          temp_method: form.temp_method,
+          pain_score: Number(form.pain_score || 0),
+          weight_kg: form.weight_kg ? Number(form.weight_kg) : undefined,
+          height_cm: form.height_cm ? Number(form.height_cm) : undefined,
+          glucose_mmol: form.glucose_mmol ? Number(form.glucose_mmol) : undefined,
+          avpu: form.avpu || 'A'
+        },
+        age: Number(form.age || 0),
+        sex: form.sex || 'F',
+        history: {
+          allergies: form.history.allergies.split(',').map(s => s.trim()).filter(Boolean),
+          medications: form.history.medications.split(',').map(s => s.trim()).filter(Boolean),
+          pmh: form.history.pmh.split(',').map(s => s.trim()).filter(Boolean),
+          notes: form.history.notes
+        },
+        red_flags: form.red_flags,
+        clinician_name: form.clinician_name || 'clinician',
+      };
+
       const res = await fetch(`${REACT_APP_API_URL}/v1/triage/encounters`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${REACT_APP_API_KEY}` },
-        body: JSON.stringify({
-          chief_complaint: complaint,
-          vitals: { hr: Number(form.hr), bp: form.bp, rr: form.rr ? Number(form.rr) : undefined, spo2: form.spo2 ? Number(form.spo2) : undefined },
-          age: form.age ? Number(form.age) : undefined,
-          sex: form.sex || undefined,
-          red_flags: form.red_flags,
-          clinician_name: form.clinician_name || 'clinician',
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
@@ -176,13 +253,25 @@ export const TriageDashboard: React.FC = () => {
     setSubmitting(false);
   };
 
-  const dispatchAction = async (action: string) => {
+  const dispatchAction = async (action: string, assignedAcuity?: number) => {
     if (!selectedEncounter) return;
     setActionLoading(action);
 
-    // Optimistic update: reflect the action immediately in the drawer
-    setSelectedEncounter(prev => prev ? { ...prev, clinician_action: action } : null);
+    // Optimistic update: reflect the action immediately in the drawer and main queue
+    setSelectedEncounter(prev => prev ? { 
+      ...prev, 
+      clinician_action: action,
+      clinical: { ...prev.clinical, clinician_acuity: assignedAcuity ?? prev.clinical.clinician_acuity }
+    } : null);
+    
+    setEncounters(prev => prev.map(e => e.encounter_id === selectedEncounter.encounter_id ? { 
+      ...e, 
+      clinician_action: action, 
+      clinical: { ...e.clinical, state: 'completed', clinician_acuity: assignedAcuity ?? e.clinical.clinician_acuity } 
+    } : e));
+    
     setChangingDecision(false);
+    setPendingAction(null);
 
     try {
       const res = await fetch(`${REACT_APP_API_URL}/v1/triage/encounters/${encodeURIComponent(selectedEncounter.encounter_id)}/action`, {
@@ -191,7 +280,8 @@ export const TriageDashboard: React.FC = () => {
         body: JSON.stringify({ 
           action, 
           reason_code: amendmentReason,
-          reason_text: amendmentNote
+          reason_text: amendmentNote,
+          assigned_acuity: assignedAcuity
         }),
       });
       const data = await res.json();
@@ -200,6 +290,9 @@ export const TriageDashboard: React.FC = () => {
         // Reset reasons
         setAmendmentReason('initial_decision');
         setAmendmentNote('');
+        
+        // Return clinician to queue
+        setSelectedEncounter(null);
         
         // Clear result message after a few seconds
         setTimeout(() => setLastActionResult(null), 5000);
@@ -298,13 +391,87 @@ export const TriageDashboard: React.FC = () => {
           </div>
 
           <div className="form-section">
-            <label className="form-label">Vitals *</label>
+            <label className="form-label">Core Vitals *</label>
             <div className="vitals-input-grid">
-              <div><span className="vital-unit">HR</span><input className="form-input" type="number" placeholder="72" value={form.hr} onChange={e => setForm(f => ({ ...f, hr: e.target.value }))} /><span className="vital-unit-suffix">bpm</span></div>
-              <div><span className="vital-unit">BP</span><input className="form-input" type="text" placeholder="120/80" value={form.bp} onChange={e => setForm(f => ({ ...f, bp: e.target.value }))} /></div>
-              <div><span className="vital-unit">RR</span><input className="form-input" type="number" placeholder="16" value={form.rr} onChange={e => setForm(f => ({ ...f, rr: e.target.value }))} /><span className="vital-unit-suffix">/min</span></div>
-              <div><span className="vital-unit">SpO₂</span><input className="form-input" type="number" placeholder="98" value={form.spo2} onChange={e => setForm(f => ({ ...f, spo2: e.target.value }))} /><span className="vital-unit-suffix">%</span></div>
+              <div className="vital-input-box">
+                <span className="vital-unit">HR</span>
+                <input className="form-input tabular-nums" type="number" placeholder="72" value={form.hr} onChange={e => setForm(f => ({ ...f, hr: e.target.value }))} />
+                <span className="vital-unit-suffix">bpm</span>
+              </div>
+              <div className="vital-input-box wide">
+                <span className="vital-unit">BP</span>
+                <div className="bp-input-wrapper">
+                  <input className="form-input bp-sys" type="number" placeholder="120" value={form.bp_sys} onChange={e => setForm(f => ({ ...f, bp_sys: e.target.value }))} />
+                  <span className="bp-divider">/</span>
+                  <input className="form-input bp-dia" type="number" placeholder="80" value={form.bp_dia} onChange={e => setForm(f => ({ ...f, bp_dia: e.target.value }))} />
+                </div>
+                <span className="vital-unit-suffix">mmHg</span>
+              </div>
+              <div className="vital-input-box">
+                <span className="vital-unit">RR</span>
+                <input className="form-input tabular-nums" type="number" placeholder="16" value={form.rr} onChange={e => setForm(f => ({ ...f, rr: e.target.value }))} />
+                <span className="vital-unit-suffix">/min</span>
+              </div>
+              <div className="vital-input-box">
+                <span className="vital-unit">SpO₂</span>
+                <input className="form-input tabular-nums" type="number" placeholder="98" value={form.spo2} onChange={e => setForm(f => ({ ...f, spo2: e.target.value }))} />
+                <span className="vital-unit-suffix">%</span>
+              </div>
             </div>
+          </div>
+
+          <div className="progressive-toggle" onClick={() => setShowExtendedVitals(!showExtendedVitals)}>
+            {showExtendedVitals ? '− Hide Extended Vitals' : '+ Add Extended Vitals (Temp, Pain, Glucose…)'}
+          </div>
+
+          {showExtendedVitals && (
+            <div className="form-section extended-vitals-section">
+              <div className="vitals-input-grid secondary">
+                <div className="vital-input-box">
+                  <span className="vital-unit">Temp</span>
+                  <input className="form-input tabular-nums" type="number" step="0.1" placeholder="37.0" value={form.temp} onChange={e => setForm(f => ({ ...f, temp: e.target.value }))} />
+                  <span className="vital-unit-suffix">°C</span>
+                </div>
+                <div className="vital-input-box">
+                  <span className="vital-unit">Pain</span>
+                  <input className="form-input tabular-nums" type="number" min="0" max="10" placeholder="0" value={form.pain_score} onChange={e => setForm(f => ({ ...f, pain_score: e.target.value }))} />
+                  <span className="vital-unit-suffix">/10</span>
+                </div>
+                <div className="vital-input-box">
+                  <span className="vital-unit">Glu</span>
+                  <input className="form-input tabular-nums" type="number" step="0.1" placeholder="5.5" value={form.glucose_mmol} onChange={e => setForm(f => ({ ...f, glucose_mmol: e.target.value }))} />
+                  <span className="vital-unit-suffix">mmol</span>
+                </div>
+                <div className="vital-input-box">
+                  <span className="vital-unit">Wt</span>
+                  <input className="form-input tabular-nums" type="number" placeholder="70" value={form.weight_kg} onChange={e => setForm(f => ({ ...f, weight_kg: e.target.value }))} />
+                  <span className="vital-unit-suffix">kg</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="form-section">
+            <label className="form-label" onClick={() => setShowHistory(!showHistory)} style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
+              Relevant History (SAMPLE)
+              <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>{showHistory ? 'Collapse' : 'Expand'}</span>
+            </label>
+            {showHistory && (
+              <div className="history-form-grid">
+                <div className="history-field">
+                  <span className="history-label">Allergies</span>
+                  <input className="form-input" placeholder="NKDA, Penicillin..." value={form.history.allergies} onChange={e => setForm(f => ({ ...f, history: { ...f.history, allergies: e.target.value } }))} />
+                </div>
+                <div className="history-field">
+                  <span className="history-label">Medications</span>
+                  <input className="form-input" placeholder="Aspirin, Metformin..." value={form.history.medications} onChange={e => setForm(f => ({ ...f, history: { ...f.history, medications: e.target.value } }))} />
+                </div>
+                <div className="history-field">
+                  <span className="history-label">PMH</span>
+                  <input className="form-input" placeholder="HTN, Diabetes..." value={form.history.pmh} onChange={e => setForm(f => ({ ...f, history: { ...f.history, pmh: e.target.value } }))} />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-section">
@@ -342,7 +509,7 @@ export const TriageDashboard: React.FC = () => {
 
           <button
             className="submit-btn"
-            disabled={submitting || !form.chief_complaint || !form.hr || !form.bp}
+            disabled={submitting || !form.chief_complaint || !form.hr || !form.bp_sys || !form.bp_dia}
             onClick={submitEncounter}
           >
             {submitting ? '⏳ Running AI Triage…' : '→ Submit & Triage'}
@@ -369,9 +536,15 @@ export const TriageDashboard: React.FC = () => {
               className={`triage-row${enc.integrity.tamper_status === 'tampered' ? ' row-tampered' : ''}`}
               onClick={() => { setSelectedEncounter(enc); setSecurityExpanded(false); }}>
               <td>
-                <span className={`acuity-badge acuity-${enc.clinical?.acuity}`}>
-                  {enc.clinical?.acuity}
-                </span>
+                {enc.clinical?.clinician_acuity ? (
+                  <span className={`acuity-badge acuity-${enc.clinical.clinician_acuity}`} style={{ border: '2px solid #555' }}>
+                    {enc.clinical.clinician_acuity} <span style={{fontSize: '0.6em'}}>OVR</span>
+                  </span>
+                ) : (
+                  <span className={`acuity-badge acuity-${enc.clinical?.ai_recommendation?.acuity || enc.clinical?.acuity || 0}`}>
+                    {enc.clinical?.ai_recommendation?.acuity || enc.clinical?.acuity || '-'}
+                  </span>
+                )}
               </td>
               <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
                 {enc.source === 'live'
@@ -380,9 +553,9 @@ export const TriageDashboard: React.FC = () => {
                 {' '}{enc.encounter_id.substring(0, 20)}…
               </td>
               <td>{new Date(enc.arrival_time).toLocaleTimeString()}</td>
-              <td style={{ fontWeight: 600 }}>{enc.clinical?.chief_complaint}</td>
-              <td style={{ fontSize: '0.85rem' }}>
-                {enc.clinical?.vitals?.heart_rate} / {enc.clinical?.vitals?.blood_pressure} / {enc.clinical?.vitals?.respiratory_rate} / {enc.clinical?.vitals?.spo2}%
+              <td style={{ fontWeight: 600 }}>{enc.clinical.chief_complaint}</td>
+              <td style={{ fontSize: '0.85rem' }} className="tabular-nums">
+                {enc.clinical.vitals.hr} / {enc.clinical.vitals.bp_sys}/{enc.clinical.vitals.bp_dia} / {enc.clinical.vitals.rr} / {enc.clinical.vitals.spo2}%
               </td>
               <td style={{ textTransform: 'capitalize' }}>
                 <div 
@@ -426,13 +599,15 @@ export const TriageDashboard: React.FC = () => {
             <div className="drawer-content">
               {/* Acuity badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
-                <div className={`acuity-badge acuity-${selectedEncounter.clinical?.acuity}`} style={{ width: 40, height: 40, fontSize: '1.2rem' }}>
-                  {selectedEncounter.clinical?.acuity}
+                <div className={`acuity-badge acuity-${selectedEncounter.clinical?.clinician_acuity || selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 0}`} style={{ width: 40, height: 40, fontSize: '1.2rem', border: selectedEncounter.clinical?.clinician_acuity ? '2px solid #555' : 'none' }}>
+                  {selectedEncounter.clinical?.clinician_acuity || selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || '-'}
                 </div>
                 <div>
-                  <div style={{ color: '#8c9bb4', fontSize: '0.85rem', textTransform: 'uppercase' }}>AI Triage Level</div>
+                  <div style={{ color: '#8c9bb4', fontSize: '0.85rem', textTransform: 'uppercase' }}>
+                    {selectedEncounter.clinical?.clinician_acuity ? 'Assigned Acuity' : 'AI Triage Level'}
+                  </div>
                   <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                    {ACUITY_LABELS[selectedEncounter.clinical?.acuity] || 'Unknown'}
+                    {ACUITY_LABELS[selectedEncounter.clinical?.clinician_acuity as number || selectedEncounter.clinical?.ai_recommendation?.acuity as number || selectedEncounter.clinical?.acuity as number] || 'Unknown'}
                   </div>
                 </div>
               </div>
@@ -454,25 +629,74 @@ export const TriageDashboard: React.FC = () => {
               <div className="vitals-grid">
                 <div className="vital-card">
                   <div className="vital-label">Heart Rate</div>
-                  <div className="vital-value">{selectedEncounter.clinical?.vitals?.heart_rate} bpm</div>
+                  <div className="vital-value tabular-nums">{selectedEncounter.clinical.vitals.hr} <small className="unit">bpm</small></div>
                 </div>
                 <div className="vital-card">
                   <div className="vital-label">Blood Pressure</div>
-                  <div className="vital-value">{selectedEncounter.clinical?.vitals?.blood_pressure}</div>
+                  <div className="vital-value tabular-nums">{selectedEncounter.clinical.vitals.bp_sys}/{selectedEncounter.clinical.vitals.bp_dia} <small className="unit">mmHg</small></div>
                 </div>
                 <div className="vital-card">
                   <div className="vital-label">Resp. Rate</div>
-                  <div className="vital-value">{selectedEncounter.clinical?.vitals?.respiratory_rate} bpm</div>
+                  <div className="vital-value tabular-nums">{selectedEncounter.clinical.vitals.rr} <small className="unit">/min</small></div>
                 </div>
                 <div className="vital-card">
                   <div className="vital-label">SpO2</div>
-                  <div className="vital-value">{selectedEncounter.clinical?.vitals?.spo2}%</div>
+                  <div className="vital-value tabular-nums">{selectedEncounter.clinical.vitals.spo2}%</div>
+                </div>
+              </div>
+
+              {/* Extended Vitals (Row 2) */}
+              {(selectedEncounter.clinical.vitals.temp || selectedEncounter.clinical.vitals.glucose_mmol || selectedEncounter.clinical.vitals.pain_score !== undefined) && (
+                <div className="vitals-grid extended" style={{ marginTop: '10px' }}>
+                  {selectedEncounter.clinical.vitals.temp && (
+                    <div className="vital-card secondary">
+                      <div className="vital-label">Temp</div>
+                      <div className="vital-value tabular-nums">{selectedEncounter.clinical.vitals.temp.toFixed(1)}°C <small className="unit">({selectedEncounter.clinical.vitals.temp_method || 'o'})</small></div>
+                    </div>
+                  )}
+                  {selectedEncounter.clinical.vitals.pain_score !== undefined && (
+                    <div className="vital-card secondary">
+                      <div className="vital-label">Pain</div>
+                      <div className="vital-value tabular-nums">{selectedEncounter.clinical.vitals.pain_score}/10</div>
+                    </div>
+                  )}
+                  {selectedEncounter.clinical.vitals.glucose_mmol && (
+                    <div className="vital-card secondary">
+                      <div className="vital-label">Glucose</div>
+                      <div className="vital-value tabular-nums">{selectedEncounter.clinical.vitals.glucose_mmol} <small className="unit">mmol</small></div>
+                    </div>
+                  )}
+                  {selectedEncounter.clinical.vitals.avpu && (
+                    <div className="vital-card secondary">
+                      <div className="vital-label">AVPU</div>
+                      <div className="vital-value">{selectedEncounter.clinical.vitals.avpu}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Relevant History (SAMPLE) */}
+              <div className="history-drawer-section">
+                <h3>Relevant History</h3>
+                <div className="history-grid">
+                  <div className="history-item">
+                    <span className="history-label">Allergies</span>
+                    <span className="history-value">{selectedEncounter.clinical.history?.allergies?.length ? selectedEncounter.clinical.history.allergies.join(', ') : 'None known'}</span>
+                  </div>
+                  <div className="history-item">
+                    <span className="history-label">Medications</span>
+                    <span className="history-value">{selectedEncounter.clinical.history?.medications?.length ? selectedEncounter.clinical.history.medications.join(', ') : 'None'}</span>
+                  </div>
+                  <div className="history-item">
+                    <span className="history-label">PMH</span>
+                    <span className="history-value">{selectedEncounter.clinical.history?.pmh?.length ? selectedEncounter.clinical.history.pmh.join(', ') : 'None'}</span>
+                  </div>
                 </div>
               </div>
 
               {/* AI Recommendation Panel — shown only for live encounters with AI data */}
               {selectedEncounter.clinical?.ai_recommendation && (
-                <div className={`ai-recommendation-card acuity-border-${selectedEncounter.clinical.acuity}`}>
+                <div className={`ai-recommendation-card acuity-border-${selectedEncounter.clinical.ai_recommendation.acuity}`}>
                   <div className="ai-rec-header">
                     <span>🤖 AI Triage Recommendation</span>
                     <span className="provider-badge">{selectedEncounter.clinical?.ai_provider || 'rules'}</span>
@@ -512,24 +736,50 @@ export const TriageDashboard: React.FC = () => {
                     )}
                     <div className="action-btn-group">
                       <button className="action-btn action-accept"
-                        disabled={!!actionLoading}
-                        onClick={() => dispatchAction('accepted')}>
+                        disabled={!!actionLoading || pendingAction !== null}
+                        onClick={() => dispatchAction('accepted', selectedEncounter.clinical?.ai_recommendation?.acuity)}>
                         {actionLoading === 'accepted' ? '…' : '✓ Accept'}
                       </button>
                       <button className="action-btn action-downgrade"
-                        disabled={!!actionLoading}
-                        onClick={() => dispatchAction('downgraded')}>
+                        disabled={!!actionLoading || pendingAction !== null}
+                        onClick={() => setPendingAction('downgraded')}>
                         {actionLoading === 'downgraded' ? '…' : '↓ Downgrade'}
                       </button>
                       <button className="action-btn action-escalate"
-                        disabled={!!actionLoading}
-                        onClick={() => dispatchAction('escalated')}>
+                        disabled={!!actionLoading || pendingAction !== null}
+                        onClick={() => setPendingAction('escalated')}>
                         {actionLoading === 'escalated' ? '…' : '↑ Escalate'}
                       </button>
                     </div>
+                    {pendingAction && (
+                      <div className="acuity-selector" style={{ marginTop: '15px', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                        <div style={{ marginBottom: '10px', fontSize: '0.9rem', color: '#ccc' }}>
+                          Select new Acuity Level ({pendingAction}):
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {[1, 2, 3, 4, 5].map(level => {
+                            const aiLevel = selectedEncounter.clinical?.ai_recommendation?.acuity || 3;
+                            const isValid = pendingAction === 'downgraded' ? level > aiLevel : level < aiLevel;
+                            return (
+                              <button
+                                key={level}
+                                disabled={!isValid || !!actionLoading}
+                                onClick={() => dispatchAction(pendingAction, level)}
+                                className={`acuity-badge acuity-${level}`}
+                                style={{ width: 40, height: 40, opacity: isValid ? 1 : 0.3, cursor: isValid ? 'pointer' : 'not-allowed', border: 'none' }}
+                                title={isValid ? `Assign Acuity ${level}` : `Invalid for ${pendingAction}`}
+                              >
+                                {level}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     {changingDecision && (
                       <button className="cancel-amendment-btn" onClick={() => {
                         setChangingDecision(false);
+                        setPendingAction(null);
                         setAmendmentReason('initial_decision');
                         setAmendmentNote('');
                       }}>Cancel</button>

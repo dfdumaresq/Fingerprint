@@ -20,10 +20,11 @@ export interface TriageAgentConfig {
 }
 
 export const TRIAGE_AGENT: TriageAgentConfig = {
-  id: '0x28f2ed93f69f9f78460fe13bfcba66eb77018034146aa4a76c0a2d1630db4a97',
-  name: 'TriageBot',
-  provider: (process.env.TRIAGE_AGENT_PROVIDER as TriageAgentProvider) || 'ollama',
-  model: process.env.TRIAGE_AGENT_MODEL || 'llama3:8b',
-  endpoint: process.env.OLLAMA_ENDPOINT || 'http://localhost:11434',
+  id: "0x28f2ed93f69f9f78460fe13bfcba66eb77018034146aa4a76c0a2d1630db4a97",
+  name: "TriageBot (Ollama · llama3:8b)",
+  provider:
+    (process.env.TRIAGE_AGENT_PROVIDER as TriageAgentProvider) || "ollama",
+  model: process.env.TRIAGE_AGENT_MODEL || "llama3:8b",
+  endpoint: process.env.OLLAMA_ENDPOINT || "http://localhost:11434",
   temperature: 0,
 };

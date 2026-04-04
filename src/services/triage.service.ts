@@ -104,6 +104,13 @@ export interface TriageEncounter {
   }[];
 }
 
+export class AgentNotAvailableError extends Error {
+  constructor(public slug: string) {
+    super(`Active agent for role/identity '${slug}' not found or has been revoked.`);
+    this.name = 'AgentNotAvailableError';
+  }
+}
+
 // ─── AI Rule Engine ───────────────────────────────────────────────────────────
 
 function runRuleEngine(input: ClinicalInput): TriageResult {
@@ -224,23 +231,45 @@ export class TriageService {
   }
 
   /**
+   * Resolve the active fingerprint ID from the database based on a logical slug.
+   * Logic: matching slug, not revoked, latest created.
+   */
+  async resolveActiveAgent(slug: string): Promise<string> {
+    const res = await this.db.query(
+      `SELECT fingerprint_hash FROM agents 
+       WHERE agent_id = $1 AND is_revoked = false 
+       ORDER BY created_at DESC LIMIT 1`,
+      [slug]
+    );
+
+    if (res.rows.length === 0) {
+      throw new AgentNotAvailableError(slug);
+    }
+
+    return res.rows[0].fingerprint_hash;
+  }
+
+  /**
    * Clinician-driven: create an encounter, get AI recommendation, log to ledger.
    */
   async createEncounterWithAI(input: ClinicalInput, clinicianName: string): Promise<TriageEncounter> {
     const sessionId = `${clinicianName.toLowerCase().replace(/\s+/g, '_')}_${randomUUID()}`;
 
-    // 1. Run AI triage
+    // 1. Resolve active agent fingerprint
+    const activeFingerprint = await this.resolveActiveAgent(TRIAGE_AGENT.slug);
+
+    // 2. Run AI triage
     const { result: recommendation, provider } = await runTriageAgent(input);
 
-    // 2. Write the event referencing pointers (never raw PHI)
+    // 3. Write the event referencing pointers (never raw PHI)
     const event = await this.eventService.ingestEvent({
-       agent_fingerprint_id: TRIAGE_AGENT.id,
+       agent_fingerprint_id: activeFingerprint,
        model_version: provider === 'ollama' ? TRIAGE_AGENT.model : 'rules_fallback',
        workflow_type: 'triage_recommendation',
        session_id: sessionId,
        input_ref: 'clinical_admission_form', 
        output_ref: 'ai_triage_audit',
-       policy_id: `live::${input.chief_complaint}::${input.vitals.hr}::${input.vitals.bp_sys}/${input.vitals.bp_dia}::${recommendation.acuity}::${recommendation.reasons.join('|')}`,
+       policy_id: `live::${input.chief_complaint}::${input.vitals.hr}::${input.vitals.bp_sys}/${input.vitals.bp_sys}::${recommendation.acuity}::${recommendation.reasons.join('|')}`,
        clinical_data: {
           schemaVersion: 1,
           chief_complaint: input.chief_complaint,
@@ -261,7 +290,7 @@ export class TriageService {
        db_row_id: event.id,
        arrival_time: event.timestamp,
        clinician_action: null,
-       agent_id: TRIAGE_AGENT.id,
+       agent_id: activeFingerprint,
        source: 'live',
        clinical: {
          ...input,
@@ -327,9 +356,11 @@ export class TriageService {
         payload = { ...clinical_data, schemaVersion: 1, clinician_acuity: Number(assignedAcuity) };
       }
 
-      // 3. Append the new decision event
+      // 3. Append the new decision event (resolving current platform agent)
+      const activeFingerprint = await this.resolveActiveAgent(TRIAGE_AGENT.slug);
+      
       await this.eventService.ingestEvent({
-        agent_fingerprint_id: TRIAGE_AGENT.id,
+        agent_fingerprint_id: activeFingerprint,
         model_version: 'clinician',
         workflow_type: isAmendment ? 'clinician_amendment' : 'clinician_action',
         policy_id,
@@ -537,6 +568,18 @@ export class TriageService {
     } finally {
       if (shouldRelease) client.release();
     }
+  }
+
+  async getActiveAgent(slug: string): Promise<any> {
+    const res = await this.db.query(
+      `SELECT * FROM agents 
+       WHERE agent_id = $1 AND is_revoked = false 
+       ORDER BY created_at DESC LIMIT 1`,
+      [slug]
+    );
+
+    if (res.rows.length === 0) return null;
+    return res.rows[0];
   }
 
   async triageAgentHealth(): Promise<{ available: boolean; provider: string; model: string }> {

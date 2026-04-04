@@ -5,7 +5,6 @@ import {
   createManualResponseSet,
   generateBehavioralTraitHash,
     BehavioralHashResult,
-    VerificationResult,
     ResponseSet
 } from '../utils/behavioral.utils';
 import { C2PAService } from '../services/c2pa.service';
@@ -123,38 +122,26 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
     const handleDownloadCertificate = async () => {
         if (!gatewayResult) return;
         try {
-            // Update C2PA manifest generation to support the new Gateway response format
             const manifest = await c2paService.generateVerificationManifest(fingerprintHash, gatewayResult);
             downloadC2PAManifest(manifest, getVerificationFilename(fingerprintHash));
-            alert("C2PA export needs updating for new Gateway format.");
         } catch (err: any) {
             setError(`Failed to export certificate: ${err.message}`);
         }
     };
 
     const loadDemoBaseline = () => {
-        // Load a significantly different version as baseline to show a realistic similarity score (e.g. 80-90%)
-        // We append a generic AI phrase to simulate an agent that has drifted slightly in personality
         const baseline = createManualResponseSet(REASONING_TEST_SUITE_V1, responses.map((r: string) => r + " As an AI, I believe this is the optimal approach."));
         setBaselineResponses(baseline);
-        alert("Baseline loaded! Now try verifying to see similarity results.");
     };
 
     const injectHomograph = () => {
         const newResponses = [...responses];
-        // Replace 'a' with Cyrillic 'а', 'e' with Cyrillic 'е', 'o' with Cyrillic 'о' in the first response
         if (newResponses[0]) {
             newResponses[0] = newResponses[0].replace(/a/gi, 'а').replace(/e/gi, 'е').replace(/o/gi, 'о');
             setResponses(newResponses);
-
-            // Re-generate the hash result so the verification engine receives the polluted text
             const responseSet = createManualResponseSet(REASONING_TEST_SUITE_V1, newResponses);
             const result = generateBehavioralTraitHash(responseSet);
             setHashResult(result);
-
-            alert("Injected Cyrillic homographs into Prompt 1! The perturbation detector should flag this.");
-        } else {
-            alert("Please enter a response in Prompt 1 first before injecting homographs.");
         }
     };
 
@@ -166,96 +153,82 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
 
   if (!isConnected) {
     return (
-      <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '5px' }}>
-        <h3>Behavioral Trait Verification</h3>
-        <p style={{ color: '#f44336' }}>Please connect your wallet first.</p>
+      <div className="plasma-card" style={{ textAlign: 'center', padding: '40px' }}>
+        <h3 className="text-error">Clinical Access Required</h3>
+        <p className="text-secondary">Please connect your provider wallet to perform behavioral drift audits.</p>
       </div>
     );
   }
 
-    if (gatewayResult) {
-        // Map the API response metrics to variables for the UI
-        // The Gateway returns: { decision, trust_score, signals, recommendations, verification_details }
-        const isSuccess = gatewayResult.decision === 'accept';
-        const similarityPercent = gatewayResult.verification_details?.similarity_score ? (gatewayResult.verification_details.similarity_score * 100).toFixed(1) : "N/A";
-        const integrityScore = gatewayResult.trust_score || 0;
-        const signals = gatewayResult.signals || [];
+  if (gatewayResult) {
+    const isSuccess = gatewayResult.decision === 'accept';
+    const similarityPercent = gatewayResult.verification_details?.similarity_score ? (gatewayResult.verification_details.similarity_score * 100).toFixed(1) : "N/A";
+    const integrityScore = gatewayResult.trust_score || 0;
+    const signals = gatewayResult.signals || [];
 
     return (
-      <div style={{
-            padding: '24px',
-            border: isSuccess ? '2px solid #4caf50' : '2px solid #ff9800',
-            borderRadius: '12px',
-            background: '#fff',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+      <div className="plasma-card" style={{ 
+            border: isSuccess ? '2px solid var(--plasma-integrity-green)' : '2px solid var(--plasma-warning-amber)',
       }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: 0, color: isSuccess ? '#2e7d32' : '#ed6c02' }}>
-                    {isSuccess ? '✅ Verification Passed' : '⚠️ Verification Attention Required'}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h3 style={{ margin: 0, color: isSuccess ? 'var(--plasma-integrity-green)' : 'var(--plasma-warning-amber)' }}>
+                    {isSuccess ? '✅ Audit Passed: Baseline Consistent' : '⚠️ Audit Warning: Behavioral Drift Detected'}
                 </h3>
-                <div style={{ fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    Agent ID: {fingerprintHash.substring(0, 10)}...
+                <div className="text-muted" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Agent: <span className="tabular-nums">{fingerprintHash.substring(0, 10)}...</span>
                     <button
                         onClick={() => copyToClipboard(fingerprintHash, 'fingerprint')}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: 0 }}
+                        className="icon-btn"
                         title="Copy Fingerprint Hash"
                     >
-                        {copiedField === 'fingerprint' ? '✅' : '📋'}
+                        {copiedField === 'fingerprint' ? '✓' : '📋'}
                     </button>
                 </div>
             </div>
-            <span style={{
-                padding: '4px 12px',
-                borderRadius: '20px',
-                background: mode === 'enforcement' ? '#e3f2fd' : '#fff3e0',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                color: mode === 'enforcement' ? '#1976d2' : '#e65100',
-                textTransform: 'uppercase'
-            }}>
-                {mode} mode
-            </span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Similarity Score</div>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{similarityPercent}%</div>
+
+            <div style={{ marginBottom: '24px' }}>
+                <span className="status-pill" style={{
+                    background: mode === 'enforcement' ? 'rgba(79, 131, 255, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                    color: mode === 'enforcement' ? 'var(--plasma-clinical-blue)' : 'var(--plasma-warning-amber)',
+                    textTransform: 'uppercase'
+                }}>
+                    Mode: {mode}
+                </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
+                <div style={{ padding: '20px', background: 'var(--plasma-surface-2)', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--plasma-border)' }}>
+                    <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase' }}>Stability Match</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--plasma-text-primary)' }}>{similarityPercent}%</div>
                 </div>
-                <div style={{ padding: '16px', background: '#e3f2fd', borderRadius: '8px', textAlign: 'center', border: '2px solid #2196f3' }}>
-                    <div style={{ fontSize: '12px', color: '#1976d2', marginBottom: '4px', fontWeight: 'bold' }}>Fingerprint Integrity Score</div>
-                    <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1565c0' }}>{integrityScore} / 100</div>
+                <div style={{ padding: '20px', background: 'rgba(79, 131, 255, 0.05)', borderRadius: '8px', textAlign: 'center', border: '2px solid var(--plasma-clinical-blue)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--plasma-clinical-blue)', marginBottom: '8px', fontWeight: 700, textTransform: 'uppercase' }}>Integrity Score</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--plasma-text-primary)' }}>{integrityScore}<span style={{ fontSize: '1rem', opacity: 0.5 }}> / 100</span></div>
                 </div>
             </div>
 
-            <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid #eee', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Behavioral Signals</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {signals.length > 0 ? (
-                        <div style={{ marginTop: '8px' }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {signals.map((signal: string, idx: number) => (
-                                    <span key={idx} style={{
-                                        fontSize: '11px',
-                                        background: '#e8f5e9',
-                                        color: '#2e7d32',
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        border: '1px solid #a5d6a7'
-                                    }}>
-                                        🛡️ {signal.replace(/_/g, ' ')}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                            <div style={{ fontSize: '11px', color: '#666' }}>No signals returned.</div>
+            <div style={{ marginBottom: '32px', padding: '20px', background: 'var(--plasma-surface-2)', border: '1px solid var(--plasma-border)', borderRadius: '8px' }}>
+                <h4 className="text-secondary" style={{ margin: '0 0 16px 0', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Behavioral Signals</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {signals.length > 0 ? signals.map((signal: string, idx: number) => (
+                        <span key={idx} className="status-pill" style={{
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            color: 'var(--plasma-integrity-green)',
+                            border: '1px solid rgba(16, 185, 129, 0.2)',
+                            fontSize: '0.7rem'
+                        }}>
+                            🛡️ {signal.replace(/_/g, ' ')}
+                        </span>
+                    )) : (
+                        <div className="text-muted" style={{ fontSize: '0.85rem' }}>No anomalies detected.</div>
                     )}
                 </div>
             </div>
 
             {gatewayResult.recommendations && gatewayResult.recommendations.length > 0 && (
-                <div style={{ padding: '12px', background: '#fff3e0', borderRadius: '8px', marginBottom: '24px', fontSize: '13px', border: '1px solid #ffe0b2' }}>
-                    <strong style={{ color: '#e65100' }}>Gateway Recommendation:</strong>
-                    <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: '#d84315' }}>
+                <div style={{ padding: '20px', background: 'rgba(245, 158, 11, 0.05)', borderRadius: '8px', marginBottom: '32px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                    <strong style={{ color: 'var(--plasma-warning-amber)', display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>🛡️ Clinical Recommendations:</strong>
+                    <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--plasma-text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
                         {gatewayResult.recommendations.map((rec: string, i: number) => (
                             <li key={i}>{rec}</li>
                         ))}
@@ -263,47 +236,23 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '16px' }}>
                 <button onClick={() => {
                     setGatewayResult(null);
                     setHashResult(null);
                     setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
-                    setBaselineResponses(null); // Clear the baseline as well to prevent state bleed
+                    setBaselineResponses(null);
                     setCurrentStep(0);
-                }} style={{
-                    flex: 1,
-                    padding: '12px',
-                    border: '1px solid #ccc',
-                    borderRadius: '6px',
-                    background: '#fff',
-                    color: '#333',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    Verify Again
+                }} className="secondary-btn" style={{ flex: 1, padding: '14px' }}>
+                    New Drift Audit
                 </button>
 
                 <button
                     onClick={handleDownloadCertificate}
-                    style={{
-                        flex: 1,
-                        padding: '12px',
-                        background: '#1976d2',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                    }}
+                    className="primary-btn"
+                    style={{ flex: 1, padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                 >
-                    <span>🛡️</span> Download C2PA Cert
+                    <span>🛡️</span> Export Audit Cert
                 </button>
             </div>
       </div>
@@ -311,182 +260,135 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
   }
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '5px' }}>
-      <h3>Behavioral Trait Verification</h3>
-      <p>Fingerprint: <code>{fingerprintHash}</code></p>
+    <div className="behavioral-audit-flow">
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--plasma-text-primary)', marginBottom: '8px' }}>
+            Behavioral Stability Audit
+        </h3>
+        <p className="text-secondary" style={{ fontSize: '0.9rem', marginBottom: '12px' }}>
+            Testing Version: <span className="tabular-nums" style={{ fontWeight: 600 }}>{REASONING_TEST_SUITE_V1.version}</span>
+        </p>
+        <p className="text-muted" style={{ fontSize: '0.85rem' }}>
+            Complete all {REASONING_TEST_SUITE_V1.prompts.length} prompts to verify behavioral consistency against baselines.
+        </p>
+      </div>
 
-      {!hashResult ? (
-        <>
-          <div style={{ marginBottom: '20px' }}>
-            <h4>Test Suite: {REASONING_TEST_SUITE_V1.version}</h4>
-            <p>Complete all {REASONING_TEST_SUITE_V1.prompts.length} prompts to verify behavioral traits.</p>
+      <div className="plasma-card" style={{ background: 'var(--plasma-surface-2)' }}>
+        <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="text-secondary" style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Prompt {currentStep + 1} of {REASONING_TEST_SUITE_V1.prompts.length}
           </div>
+          <span className="status-pill" style={{ background: 'var(--plasma-surface)', border: '1px solid var(--plasma-border)', color: 'var(--plasma-text-muted)' }}>
+            Category: {currentPrompt.category}
+          </span>
+        </div>
 
-          <div style={{ marginBottom: '20px', padding: '15px', background: '#f5f5f5', borderRadius: '5px' }}>
-            <div style={{ marginBottom: '10px' }}>
-              <strong>Prompt {currentStep + 1} of {REASONING_TEST_SUITE_V1.prompts.length}</strong>
-              <span style={{ float: 'right', fontSize: '12px', color: '#666' }}>
-                Category: {currentPrompt.category}
-              </span>
-            </div>
-            <p><strong>Question:</strong></p>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
-                          <p style={{ fontStyle: 'italic', margin: 0, flex: 1 }}>{currentPrompt.prompt}</p>
-                          <button
-                              onClick={() => copyToClipboard(currentPrompt.prompt, 'prompt')}
-                              style={{
-                                  background: 'none',
-                                  border: '1px solid #ddd',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  padding: '4px 8px',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  backgroundColor: copiedField === 'prompt' ? '#e8f5e9' : '#fff'
-                              }}
-                              title="Copy prompt"
-                          >
-                              {copiedField === 'prompt' ? '✓ Copied' : '📋 Copy'}
-                          </button>
-                      </div>
-
-            <textarea
-              value={responses[currentStep]}
-              onChange={(e) => handleResponseChange(e.target.value)}
-              placeholder="Enter your AI agent's response here..."
-              style={{
-                width: '100%',
-                minHeight: '150px',
-                padding: '10px',
-                fontSize: '14px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontFamily: 'inherit'
-              }}
-            />
-
-            <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'space-between' }}>
-              <button
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
-                style={{ padding: '8px 16px' }}
-              >
-                ← Previous
-              </button>
-
-              {!isLastPrompt ? (
-                <button
-                  onClick={handleNext}
-                  disabled={!responses[currentStep].trim()}
-                  style={{ padding: '8px 16px' }}
-                >
-                  Next →
-                </button>
-              ) : (
-                <button
-                  onClick={handleGenerateHash}
-                  disabled={!allResponsesComplete}
-                  style={{ padding: '8px 16px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px' }}
-                >
-                  Generate Hash for Verification
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            <p><strong>Progress:</strong> {responses.filter(r => r.trim()).length} / {REASONING_TEST_SUITE_V1.prompts.length} responses completed</p>
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{ marginBottom: '20px', padding: '15px', background: '#e3f2fd', borderRadius: '5px' }}>
-            <h4>Current Behavioral Hash Generated</h4>
-            <p><strong>Hash:</strong></p>
-            <code style={{ wordBreak: 'break-all', fontSize: '12px' }}>{hashResult.hash}</code>
-            <p style={{ marginTop: '10px' }}><strong>Version:</strong> {hashResult.traitVersion}</p>
-          </div>
-
-                      <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #bbdefb', borderRadius: '5px' }}>
-                          <h5 style={{ marginTop: 0 }}>Safety Configuration</h5>
-                          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                              <label>Mode:</label>
-                              <select
-                                  value={mode}
-                                  onChange={(e) => setMode(e.target.value as any)}
-                                  style={{ padding: '4px 8px', borderRadius: '4px' }}
-                              >
-                                  <option value="enforcement">Enforcement (Strict - 95%)</option>
-                                  <option value="triage">Triage (Loose - 80%)</option>
-                              </select>
-                          </div>
-                          <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
-                              <button
-                                  onClick={loadDemoBaseline}
-                                  style={{
-                                      fontSize: '12px',
-                                      padding: '6px 12px',
-                                      background: '#fff',
-                                      color: '#333',
-                                      border: '1px solid #007bff',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                                  }}
-                              >
-                                  📥 Load Reference Baseline (Demo)
-                              </button>
-                              <button
-                                  onClick={injectHomograph}
-                                  style={{
-                                      fontSize: '12px',
-                                      padding: '6px 12px',
-                                      background: '#fff',
-                                      color: '#333',
-                                      border: '1px solid #dc3545',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                                  }}
-                              >
-                                  🧬 Inject Homographs (Attack Demo)
-                              </button>
-                          </div>
-                      </div>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <label className="text-muted" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>Clinical Scenario</label>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', background: 'var(--plasma-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--plasma-border)' }}>
+            <p style={{ fontStyle: 'italic', margin: 0, flex: 1, lineHeight: '1.6', fontSize: '0.95rem', color: 'var(--plasma-text-secondary)' }}>{currentPrompt.prompt}</p>
             <button
-              onClick={() => {
-                setHashResult(null);
-                setCurrentStep(REASONING_TEST_SUITE_V1.prompts.length - 1);
-              }}
-              style={{ padding: '10px 20px' }}
+              onClick={() => copyToClipboard(currentPrompt.prompt, 'prompt')}
+              className="icon-btn"
+              title="Copy prompt"
             >
-              ← Back to Edit
+              {copiedField === 'prompt' ? '✓' : '📋'}
             </button>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>Agent Consensus Response</label>
+          <textarea
+            value={responses[currentStep]}
+            onChange={(e) => handleResponseChange(e.target.value)}
+            placeholder="Enter the AI agent's response for this scenario..."
+            className="form-input"
+            style={{ minHeight: '180px', lineHeight: '1.6' }}
+            disabled={isVerifying}
+          />
+        </div>
+
+        <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+          <button
+            onClick={handlePrevious}
+            disabled={currentStep === 0 || isVerifying}
+            className="secondary-btn"
+            style={{ padding: '10px 24px' }}
+          >
+            ← Previous
+          </button>
+
+          {!isLastPrompt ? (
+            <button
+              onClick={handleNext}
+              disabled={!responses[currentStep].trim() || isVerifying}
+              className="primary-btn"
+              style={{ padding: '10px 24px' }}
+            >
+              Next Prompt →
+            </button>
+          ) : (
+            <button
+              onClick={handleGenerateHash}
+              disabled={!allResponsesComplete || isVerifying}
+              className="primary-btn"
+              style={{ padding: '10px 32px', background: 'var(--plasma-integrity-green)' }}
+            >
+              Generate Audit Package
+            </button>
+          )}
+        </div>
+      </div>
+
+      {hashResult && !gatewayResult && (
+        <div className="plasma-card" style={{ marginTop: '24px', border: '1px solid var(--plasma-clinical-blue)' }}>
+            <h4 className="text-secondary" style={{ margin: '0 0 16px 0' }}>Audit Ready</h4>
+            
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+                <label className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>Security Mode</label>
+                <select
+                    value={mode}
+                    onChange={(e) => setMode(e.target.value as any)}
+                    className="form-input"
+                    style={{ background: 'var(--plasma-surface-2)' }}
+                >
+                    <option value="enforcement">Strict Enforcement (95%+)</option>
+                    <option value="triage">Triage Advisory (80%+)</option>
+                </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                <button
+                    onClick={loadDemoBaseline}
+                    className="secondary-btn"
+                    style={{ fontSize: '0.8rem', flex: 1 }}
+                >
+                    📥 Demo Baseline
+                </button>
+                <button
+                    onClick={injectHomograph}
+                    className="secondary-btn"
+                    style={{ fontSize: '0.8rem', flex: 1, border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                >
+                    🧬 Inject Attack
+                </button>
+            </div>
+
             <button
               onClick={handleVerify}
               disabled={isVerifying}
-              style={{
-                padding: '10px 20px',
-                background: '#2196f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                  flex: 1,
-                  fontWeight: 'bold'
-              }}
+              className="primary-btn"
+              style={{ width: '100%', padding: '16px', fontWeight: 700, fontSize: '1rem' }}
             >
-                              {isVerifying ? 'Analyzing Stability...' : 'Safety-Grade Verification'}
+                {isVerifying ? 'Analyzing Stability...' : 'Safety-Grade Audit'}
             </button>
-          </div>
-        </>
+        </div>
       )}
 
       {error && (
-        <div style={{ marginTop: '15px', padding: '10px', background: '#ffebee', border: '1px solid #f44336', borderRadius: '4px', color: '#c62828' }}>
-          {error}
+        <div className="plasma-card" style={{ marginTop: '24px', border: '1px solid var(--plasma-integrity-red)', background: 'rgba(239, 68, 68, 0.05)' }}>
+          <p className="text-error" style={{ margin: 0 }}>{error}</p>
         </div>
       )}
     </div>

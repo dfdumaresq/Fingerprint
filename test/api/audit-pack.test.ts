@@ -6,6 +6,8 @@ import { AnchorService } from '../../src/services/anchor.service';
 import { TRIAGE_AGENT } from '../../src/config/agents';
 import { generateEventHash, buildCanonicalPayload } from '../../src/utils/crypto.utils';
 
+const MOCK_FINGERPRINT = '0x28f2ed93f69f9f78460fe13bfcba66eb77018034146aa4a76c0a2d1630db4a97';
+
 describe('One-Click Audit Pack Export', () => {
   let pool: Pool;
   let triageService: TriageService;
@@ -20,6 +22,15 @@ describe('One-Click Audit Pack Export', () => {
     anchorService = new AnchorService(pool);
   });
 
+  beforeEach(async () => {
+    // Ensure an active agent exists for the slug in config
+    await pool.query('DELETE FROM agents WHERE agent_id = $1', [TRIAGE_AGENT.slug]);
+    await pool.query(`
+      INSERT INTO agents (fingerprint_hash, agent_id, name, provider, version, registered_by, created_at, is_revoked)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), false)
+    `, [MOCK_FINGERPRINT, TRIAGE_AGENT.slug, 'Test Triage Bot', 'ollama', '1.0.0', '0x123']);
+  });
+
   afterAll(async () => {
     await pool.end();
   });
@@ -29,7 +40,7 @@ describe('One-Click Audit Pack Export', () => {
     
     // 1. Create a chain of events (AI -> Accept -> Amend)
     const aiEvent = await eventService.ingestEvent({
-      agent_fingerprint_id: TRIAGE_AGENT.id,
+      agent_fingerprint_id: MOCK_FINGERPRINT,
       model_version: 'rules_test',
       workflow_type: 'triage_recommendation',
       session_id: sessionId,
@@ -81,7 +92,7 @@ describe('One-Click Audit Pack Export', () => {
     const sessionId = `tamper_audit_${Date.now()}`;
     
     const event = await eventService.ingestEvent({
-      agent_fingerprint_id: TRIAGE_AGENT.id,
+      agent_fingerprint_id: MOCK_FINGERPRINT,
       model_version: 'rules_test',
       workflow_type: 'triage_recommendation',
       session_id: sessionId,
@@ -114,7 +125,7 @@ describe('One-Click Audit Pack Export', () => {
     // Ingest event with NO clinician_action, NO session_id passed in payload
     // These will be null in the DB, and should be skipped by reconstructed logic
     const event = await eventService.ingestEvent({
-      agent_fingerprint_id: TRIAGE_AGENT.id,
+      agent_fingerprint_id: MOCK_FINGERPRINT,
       model_version: 'rules_test',
       workflow_type: 'triage_recommendation',
       session_id: sessionId + '_1',
@@ -129,7 +140,7 @@ describe('One-Click Audit Pack Export', () => {
 
     // Test 2: Field is EXPLICITLY null in the DB
     const event2 = await eventService.ingestEvent({
-      agent_fingerprint_id: TRIAGE_AGENT.id,
+      agent_fingerprint_id: MOCK_FINGERPRINT,
       model_version: 'rules_test',
       workflow_type: 'triage_recommendation',
       session_id: sessionId + '_2',
@@ -149,7 +160,7 @@ describe('One-Click Audit Pack Export', () => {
     // In our current hash logic, missing clinical_data is treated as null
     // But Phase 1 (Regulatory) fields ARE included as null to maintain v1 stability
     const payload = {
-      agent_fingerprint_id: TRIAGE_AGENT.id,
+      agent_fingerprint_id: MOCK_FINGERPRINT,
       model_version: 'rules_test',
       workflow_type: 'triage_recommendation',
       session_id: sessionId,

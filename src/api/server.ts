@@ -21,7 +21,7 @@ import {
 } from '../utils/behavioral.utils';
 import { EventService } from '../services/event.service';
 import { AnchorService } from '../services/anchor.service';
-import { TriageService } from '../services/triage.service';
+import { TriageService, AgentNotAvailableError } from '../services/triage.service';
 
 dotenv.config();
 
@@ -268,6 +268,40 @@ app.get('/v1/triage/encounters', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/triage/status
+ * Returns the currently active agent for the triage role.
+ */
+app.get('/v1/triage/status', async (req: Request, res: Response) => {
+  try {
+    const { TRIAGE_AGENT } = require('../config/agents');
+    const activeAgent = await triageService.getActiveAgent(TRIAGE_AGENT.slug);
+    
+    if (!activeAgent) {
+      res.json({ 
+        success: false, 
+        available: false, 
+        error: 'No active agent found for role: ' + TRIAGE_AGENT.slug 
+      });
+      return;
+    }
+
+    res.json({ 
+      success: true, 
+      available: true, 
+      agent: {
+        fingerprintHash: activeAgent.fingerprint_hash,
+        name: activeAgent.name,
+        provider: activeAgent.provider,
+        version: activeAgent.version
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching triage status:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
+/**
  * POST /v1/triage/encounters
  * Clinician-driven: create a new encounter, get AI triage recommendation, log to ledger.
  */
@@ -294,6 +328,16 @@ app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: encounter });
   } catch (error: any) {
+    if (error instanceof AgentNotAvailableError) {
+      res.status(503).json({ 
+        error: { 
+          code: 'agent_unavailable', 
+          message: 'Clinical AI triage is temporarily unavailable. No active non-revoked agent found for this role.',
+          details: { slug: error.slug }
+        } 
+      });
+      return;
+    }
     console.error('Error creating encounter:', error);
     res.status(500).json({ error: { code: 'internal_error', message: error.message } });
   }
@@ -323,6 +367,16 @@ app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: R
       previous_action: result.previous_action 
     });
   } catch (error: any) {
+    if (error instanceof AgentNotAvailableError) {
+      res.status(503).json({ 
+        error: { 
+          code: 'agent_unavailable', 
+          message: 'Unable to log action: The active system agent is missing or revoked.',
+          details: { slug: error.slug }
+        } 
+      });
+      return;
+    }
     console.error('Error logging clinician action:', error);
     res.status(500).json({ error: { code: 'internal_error', message: error.message } });
   }

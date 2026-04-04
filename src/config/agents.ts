@@ -8,8 +8,8 @@
 export type TriageAgentProvider = 'rules' | 'ollama' | 'anthropic' | 'openai';
 
 export interface TriageAgentConfig {
-  /** Matches the fingerprint_hash in the agents table */
-  id: string;
+  /** Stable logical identifier used for database resolution */
+  slug: string;
   name: string;
   provider: TriageAgentProvider;
   /** Model identifier, e.g. "llama3:8b" or "gpt-4.1-mini" */
@@ -20,7 +20,7 @@ export interface TriageAgentConfig {
 }
 
 export const TRIAGE_AGENT: TriageAgentConfig = {
-  id: "0x28f2ed93f69f9f78460fe13bfcba66eb77018034146aa4a76c0a2d1630db4a97",
+  slug: "ollama-llama3-8b",
   name: "TriageBot (Ollama · llama3:8b)",
   provider:
     (process.env.TRIAGE_AGENT_PROVIDER as TriageAgentProvider) || "ollama",

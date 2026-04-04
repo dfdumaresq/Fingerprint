@@ -1,0 +1,318 @@
+/* 
+  Unified Clinical AI Platform - Visual System Refresh 
+  Professional, Quiet, Credible Clinical Aesthetic
+  WCAG AA Compliant Contrast Layers
+*/
+
+:root {
+  /* Accessibility-Optimized Dark Palette */
+  --plasma-bg: #0f1320;
+  --plasma-sidebar: #151b2b;
+  --plasma-surface: #1a2030;
+  --plasma-surface-2: #232a3a;
+  
+  /* Contrast-Ready Typography (WCAG AA 4.5:1+) */
+  --plasma-text-primary: #f3f6fb;
+  --plasma-text-secondary: #c7d0e0;
+  --plasma-text-muted: #9aa6bd;
+  
+  /* Strengthened Borders & Focus States */
+  --plasma-border: #3a4458;
+  --plasma-border-strong: #4a5770;
+  
+  /* Semantic Colors (Confident Salience) */
+  --plasma-clinical-blue: #4f83ff; 
+  --plasma-integrity-green: #10b981;
+  --plasma-integrity-red: #ef4444;
+  --plasma-warning-amber: #f59e0b;
+  
+  /* Acuity Standards */
+  --acuity-1: #ef4444;
+  --acuity-2: #f97316;
+  --acuity-3: #eab308;
+  --acuity-4: #22c55e;
+  --acuity-5: #4f83ff;
+  
+  /* Layout Spacing */
+  --plasma-sidebar-width: 260px;
+  --plasma-radius: 8px;
+  --plasma-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--plasma-bg);
+  color: var(--plasma-text-primary);
+  font-family: 'Inter', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base Hierarchy */
+.platform-shell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Sidebar Styling */
+.sidebar {
+  width: var(--plasma-sidebar-width);
+  background-color: var(--plasma-sidebar);
+  border-right: 1px solid var(--plasma-border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0;
+}
+
+.sidebar-header {
+  padding: 0 24px 32px 24px;
+}
+
+.sidebar-logo {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--plasma-clinical-blue);
+  letter-spacing: -0.5px;
+}
+
+.nav-section-label {
+  padding: 0 24px 12px 24px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--plasma-text-muted);
+  letter-spacing: 0.1em;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  color: var(--plasma-text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+  color: var(--plasma-text-primary);
+}
+
+.nav-item.active {
+  background-color: rgba(79, 131, 255, 0.08);
+  color: var(--plasma-text-primary);
+  border-left: 3px solid var(--plasma-clinical-blue);
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content-viewport {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+}
+
+.platform-header {
+  height: 64px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--plasma-border);
+  background-color: var(--plasma-bg);
+}
+
+/* Generic Clinical Components */
+.plasma-card {
+  background-color: var(--plasma-surface);
+  border: 1px solid var(--plasma-border);
+  border-radius: var(--plasma-radius);
+  padding: 24px;
+  box-shadow: var(--plasma-shadow);
+}
+
+.plasma-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.plasma-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--plasma-text-muted);
+  border-bottom: 2px solid var(--plasma-border-strong);
+  font-weight: 700;
+}
+
+.plasma-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--plasma-border);
+  font-size: 0.95rem;
+  color: var(--plasma-text-secondary);
+}
+
+.plasma-table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02);
+  color: var(--plasma-text-primary);
+}
+
+/* Form Controls - Confident & Scanable */
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--plasma-text-secondary);
+  margin-bottom: 8px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: var(--plasma-surface-2);
+  border: 1px solid var(--plasma-border);
+  border-radius: 4px;
+  color: var(--plasma-text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.form-input::placeholder {
+  color: var(--plasma-text-muted);
+  opacity: 0.6;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--plasma-clinical-blue);
+  box-shadow: 0 0 0 2px rgba(79, 131, 255, 0.15);
+}
+
+.primary-btn {
+  background-color: var(--plasma-clinical-blue);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+.primary-btn:active {
+  transform: scale(0.98);
+}
+
+.primary-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Security Settings Refactor */
+.signature-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  color: var(--plasma-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.signature-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--plasma-clinical-blue);
+  cursor: pointer;
+}
+
+.signature-help {
+  margin-top: 8px;
+  color: var(--plasma-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.5;
+  padding-left: 30px;
+  max-width: 500px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  color: var(--plasma-text-muted);
+}
+
+.icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--plasma-clinical-blue);
+}
+
+.icon-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(79, 131, 255, 0.2);
+}
+
+.secondary-btn {
+  background: var(--plasma-surface-2);
+  border: 1px solid var(--plasma-border);
+  color: var(--plasma-text-secondary);
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.secondary-btn:hover {
+  border-color: var(--plasma-border-strong);
+  color: var(--plasma-text-primary);
+}
+
+/* Typography & Helpers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+.text-muted { color: var(--plasma-text-muted); }
+.text-secondary { color: var(--plasma-text-secondary); }
+.text-error { color: var(--plasma-integrity-red); font-weight: 600; }
+
+.status-pill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}

@@ -12,9 +12,9 @@
   --acuity-4: #2ed573; /* Less Urgent */
   --acuity-5: #1e90ff; /* Non Urgent */
   
-  --status-anchored: #2ed573;
-  --status-pending: #ffa502;
-  --status-tampered: #ff4757;
+  --status-anchored: #10b981;
+  --status-pending: #f59e0b;
+  --status-tampered: #ef4444;
 }
 
 .tabular-nums {
@@ -82,9 +82,8 @@
 }
 
 .triage-row:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--plasma-border-strong);
 }
 
 /* Tampered Row Highlight */
@@ -131,7 +130,7 @@
   box-shadow: 0 0 10px rgba(0,0,0,0.2);
 }
 
-.acuity-1 { background-color: var(--acuity-1); box-shadow: 0 0 12px var(--acuity-1); }
+.acuity-1 { background-color: var(--acuity-1); }
 .acuity-2 { background-color: var(--acuity-2); }
 .acuity-3 { background-color: var(--acuity-3); }
 .acuity-4 { background-color: var(--acuity-4); }

@@ -24,18 +24,11 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
-
         if (type === 'checkbox') {
-            if (name === 'useEIP712') {
-                setUseEIP712(checked);
-            }
+            if (name === 'useEIP712') setUseEIP712(checked);
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
-
-            // Reset generated hash state if any field other than fingerprintHash changes
-            if (name !== 'fingerprintHash' && generatedHash) {
-                setGeneratedHash(false);
-            }
+            if (name !== 'fingerprintHash' && generatedHash) setGeneratedHash(false);
         }
     };
 
@@ -47,7 +40,6 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
     };
 
     const generateFingerprint = () => {
-        // Validate required fields before generating fingerprint
         const { id, name, provider, version } = formData;
         if (!id.trim() || !name.trim() || !provider.trim() || !version.trim()) {
             setError('Please fill in all agent details before generating a fingerprint hash');
@@ -55,20 +47,13 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
         }
 
         try {
-            // Use the static method or make sure to update the blockchain service
-            const hash = service?.generateFingerprintHash({
-                id: formData.id,
-                name: formData.name,
-                provider: formData.provider,
-                version: formData.version
-            });
-
+            const hash = service?.generateFingerprintHash({ id, name, provider, version });
             if (hash) {
                 setFormData(prev => ({ ...prev, fingerprintHash: hash }));
                 setGeneratedHash(true);
                 setError(null);
             } else {
-                setError('Failed to generate fingerprint hash: Service not available')
+                setError('Failed to generate fingerprint hash: Service not available');
             }
         } catch (err) {
             setError('Error generating fingerprint hash: ' + (err instanceof Error ? err.message : String(err)));
@@ -77,13 +62,11 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!service) {
-            setError('Service not available')
+            setError('Service not available');
             return;
         }
 
-        // Validate form data
         for (const [key, value] of Object.entries(formData)) {
             if (typeof value === 'string' && !value.trim()) {
                 setError(`${key} is required`);
@@ -91,7 +74,6 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
             }
         }
 
-        // Validate fingerprint hash format
         if (!isValidFingerprintFormat(formData.fingerprintHash)) {
             setError('Fingerprint hash should be a valid keccak256 hash (0x followed by 64 hex characters)');
             return;
@@ -101,9 +83,7 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
         setError(null);
 
         try {
-            // Pass the useEIP712 flag to the blockchain service
             const success = await service?.registerFingerprint(formData, useEIP712);
-
             if (success) {
                 onSuccess(formData);
             } else {
@@ -118,99 +98,113 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
 
     return (
         <div className="fingerprint-form">
-            <h2>Register AI Agent Fingerprint</h2>
-            <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
-                Once registered, this agent's fingerprint can be continuously monitored in the <b>Clinical Audit Ledger</b> tab.
-            </p>
-
+            <h3 style={{ marginBottom: '24px', fontSize: '1.2rem', fontWeight: 600 }}>Identity Registration</h3>
+            
             <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label htmlFor="id">Agent ID</label>
-                    <input
-                        type="text"
-                        id="id"
-                        name="id"
-                        value={formData.id}
-                        onChange={handleChange}
-                        disabled={submitting}
-                    />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="form-group">
+                        <label htmlFor="id">Agent ID</label>
+                        <input
+                            type="text"
+                            id="id"
+                            name="id"
+                            className="form-input"
+                            value={formData.id}
+                            onChange={handleChange}
+                            disabled={submitting}
+                            placeholder="e.g. medical-triage-agent-01"
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="name">Friendly Name</label>
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            className="form-input"
+                            value={formData.name}
+                            onChange={handleChange}
+                            disabled={submitting}
+                            placeholder="e.g. TriageBot Beta"
+                        />
+                    </div>
                 </div>
 
-                <div className="form-group">
-                    <label htmlFor="name">Agent Name</label>
-                    <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        disabled={submitting}
-                    />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="form-group">
+                        <label htmlFor="provider">Provider / Model Family</label>
+                        <input
+                            type="text"
+                            id="provider"
+                            name="provider"
+                            className="form-input"
+                            value={formData.provider}
+                            onChange={handleChange}
+                            disabled={submitting}
+                            placeholder="e.g. Ollama (Llama3)"
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="version">Operational Version</label>
+                        <input
+                            type="text"
+                            id="version"
+                            name="version"
+                            className="form-input"
+                            value={formData.version}
+                            onChange={handleChange}
+                            disabled={submitting}
+                            placeholder="e.g. 1.4.2"
+                        />
+                    </div>
                 </div>
 
-                <div className="form-group">
-                    <label htmlFor="provider">Provider</label>
-                    <input
-                        type="text"
-                        id="provider"
-                        name="provider"
-                        value={formData.provider}
-                        onChange={handleChange}
-                        disabled={submitting}
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="version">Version</label>
-                    <input
-                        type="text"
-                        id="version"
-                        name="version"
-                        value={formData.version}
-                        onChange={handleChange}
-                        disabled={submitting}
-                    />
-                </div>
-
-                <div className="form-group fingerprint-group">
-                    <label htmlFor="fingerprintHash">Fingerprint Hash</label>
-                    <div className="fingerprint-input-container">
+                <div className="form-group" style={{ marginBottom: '24px' }}>
+                    <label htmlFor="fingerprintHash">Blockchain Fingerprint Hash</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
                         <input
                             type="text"
                             id="fingerprintHash"
                             name="fingerprintHash"
+                            className="form-input tabular-nums"
                             value={formData.fingerprintHash}
                             onChange={handleChange}
                             disabled={submitting}
-                            className={generatedHash ? 'generated valid-input' : isValidFingerprintFormat(formData.fingerprintHash) ? 'valid-input' : (formData.fingerprintHash.length > 0 ? 'invalid-input' : '')}
                             placeholder="0x..."
                         />
                         <button
                             type="button"
-                            className="generate-button"
+                            className="secondary-btn"
+                            style={{ whiteSpace: 'nowrap', padding: '10px 16px' }}
                             onClick={generateFingerprint}
                             disabled={submitting}
                         >
-                            Generate
+                            Auto-Generate
                         </button>
                         {formData.fingerprintHash && (
                             <button
                                 type="button"
-                                className={`copy-button ${copied ? 'success' : ''}`}
+                                className="icon-btn"
+                                style={{ 
+                                    border: '1px solid var(--plasma-border)', 
+                                    padding: '10px',
+                                    color: copied ? 'var(--plasma-integrity-green)' : 'inherit'
+                                }}
                                 onClick={handleCopy}
+                                aria-label="Copy fingerprint hash"
                                 title="Copy to clipboard"
                             >
                                 {copied ? '✓' : '📋'}
                             </button>
                         )}
                     </div>
-                    <div className="input-help">
-                        Format: 0x followed by 64 hexadecimal characters, or click "Generate" to create automatically
-                    </div>
+                    <p className="text-muted" style={{ fontSize: '0.7rem', marginTop: '8px' }}>
+                        Deterministic keccak256 hash of agent metadata.
+                    </p>
                 </div>
 
-                <div className="form-group checkbox-group">
-                    <label className="checkbox-label">
+                <div className="form-group">
+                    <label className="signature-toggle">
                         <input
                             type="checkbox"
                             name="useEIP712"
@@ -218,21 +212,24 @@ const FingerprintForm: React.FC<FingerprintFormProps> = ({ onSuccess }) => {
                             onChange={handleChange}
                             disabled={submitting}
                         />
-                        Use EIP-712 typed data signature (enhanced security)
+                        <span>Enable EIP-712 Typed Signature</span>
                     </label>
-                    <div className="input-help">
-                        EIP-712 provides better security with human-readable, structured data in signatures
-                    </div>
+                    <p className="signature-help">
+                        Enhances security by providing human-readable verification during the blockchain anchoring process.
+                    </p>
                 </div>
 
-                <button type="submit" disabled={submitting}>
-                    {submitting ? 'Registering...' : 'Register Fingerprint'}
-                </button>
+                <div style={{ marginTop: '32px' }}>
+                    <button type="submit" className="primary-btn" style={{ width: '100%', padding: '14px' }} disabled={submitting}>
+                        {submitting ? 'Anchoring to Blockchain...' : 'Confirm Identity Registration'}
+                    </button>
+                </div>
             </form>
 
-            {error && <p className="error-message">{error}</p>}
+            {error && <p className="text-error" style={{ marginTop: '16px', fontSize: '0.9rem' }}>{error}</p>}
         </div>
     );
 };
 
 export default FingerprintForm;
+

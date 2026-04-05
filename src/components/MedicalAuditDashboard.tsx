@@ -31,6 +31,7 @@ export const MedicalAuditDashboard: React.FC = () => {
   const [registeredAgents, setRegisteredAgents] = useState<RegisteredAgent[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  const [copyToast, setCopyToast] = useState(false);
   
   // Filters
   const [agentFilter, setAgentFilter] = useState('');
@@ -39,6 +40,7 @@ export const MedicalAuditDashboard: React.FC = () => {
   
   // Health
   const [auditResult, setAuditResult] = useState<any>(null);
+  const [activeAgentResolved, setActiveAgentResolved] = useState(false);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -69,6 +71,22 @@ export const MedicalAuditDashboard: React.FC = () => {
     setLoading(false);
   };
 
+  const fetchActiveAgent = async () => {
+    try {
+      const res = await fetch(`${REACT_APP_API_URL}/v1/triage/status`, {
+        headers: { 'Authorization': `Bearer ${REACT_APP_API_KEY}` }
+      });
+      const data = await res.json();
+      if (data.success && data.available && data.agent) {
+        setAgentFilter(data.agent.fingerprintHash);
+      }
+    } catch (err) {
+      console.error('Failed to resolve active agent', err);
+    } finally {
+      setActiveAgentResolved(true);
+    }
+  };
+
   const triggerAnchor = async () => {
     try {
       const res = await fetch(`${REACT_APP_API_URL}/v1/events/anchor/trigger`, { 
@@ -93,7 +111,22 @@ export const MedicalAuditDashboard: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchEvents(); }, [agentFilter, workflowFilter, anomalyOnly]);
+  const handleCopyHash = () => {
+    if (!agentFilter) return;
+    navigator.clipboard.writeText(agentFilter);
+    setCopyToast(true);
+    setTimeout(() => setCopyToast(false), 2000);
+  };
+
+  useEffect(() => {
+    fetchActiveAgent();
+  }, []);
+
+  useEffect(() => { 
+    if (activeAgentResolved) {
+      fetchEvents(); 
+    }
+  }, [agentFilter, workflowFilter, anomalyOnly, activeAgentResolved]);
 
   return (
     <div className="medical-dashboard">
@@ -109,8 +142,54 @@ export const MedicalAuditDashboard: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '24px', alignItems: 'start', marginBottom: '32px' }}>
         <div className="plasma-card" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 200px' }}>
-              <label className="text-muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Executing Agent</label>
+            <div style={{ flex: '1 1 200px', position: 'relative' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label className="text-muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', margin: 0, display: 'block' }}>Executing Agent</label>
+                {agentFilter && (
+                  <button 
+                    onClick={handleCopyHash}
+                    className="copy-hash-btn"
+                    title="Copy active agent hash"
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      padding: 0, 
+                      cursor: 'pointer', 
+                      color: 'var(--plasma-clinical-blue)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      opacity: 0.7,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.opacity = '1')}
+                    onMouseOut={(e) => (e.currentTarget.style.opacity = '0.7')}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {copyToast && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '-35px', 
+                  right: '0', 
+                  background: '#10b981', 
+                  color: '#fff', 
+                  fontSize: '0.7rem', 
+                  padding: '4px 10px', 
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  zIndex: 100,
+                  animation: 'fadeOut 2s forwards'
+                }}>
+                  Active agent hash copied
+                </div>
+              )}
               <select 
                 value={agentFilter} 
                 onChange={(e) => setAgentFilter(e.target.value)}
@@ -228,7 +307,11 @@ export const MedicalAuditDashboard: React.FC = () => {
                         </div>
                       </td>
                       <td style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>
-                        <span className={`status-pill status-${ev.clinician_action === 'accepted' ? 'completed' : ev.clinician_action === 'overridden' ? 'waiting' : 'waiting'}`} style={{ fontSize: '0.7rem' }}>
+                        <span className={`status-pill status-${
+                          ev.clinician_action === 'accepted' ? 'completed' : 
+                          ev.clinician_action === 'escalated' ? 'critical' : 
+                          'neutral'
+                        }`} style={{ fontSize: '0.7rem' }}>
                           {ev.clinician_action || 'AI Recommendation'}
                         </span>
                       </td>

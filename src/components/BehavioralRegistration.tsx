@@ -12,6 +12,9 @@ import { downloadC2PAManifest, getIdentityFilename } from '../utils/c2paExport.u
 
 const c2paService = new C2PAService();
 
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
+
 interface BehavioralRegistrationProps {
   fingerprintHash: string;
 }
@@ -107,6 +110,23 @@ export const BehavioralRegistration: React.FC<BehavioralRegistrationProps> = ({ 
         if (result.success) {
             setRegistrationSuccess(true);
             localStorage.setItem(`sidecar_${fingerprintHash}`, JSON.stringify(hashResult.responseSet));
+            
+            // Sync to off-chain verification cache (Redis)
+            try {
+                await fetch(`${REACT_APP_API_URL}/v1/internal/traits/seed`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${REACT_APP_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        fingerprintHash,
+                        responseSet: hashResult.responseSet
+                    })
+                });
+            } catch (err) {
+                console.warn("Failed to sync baseline to off-chain cache (Redis). Drift audits may be unavailable until synced.", err);
+            }
         }
     } catch (err: any) {
         setError(`Registration failed: ${err.message}`);

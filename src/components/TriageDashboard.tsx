@@ -129,6 +129,17 @@ const AMENDMENT_REASONS = [
 const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
 
+const getAcuityColor = (lvl: number) => {
+  switch (lvl) {
+    case 1: return 'var(--acuity-1)';
+    case 2: return 'var(--acuity-2)';
+    case 3: return 'var(--acuity-3)';
+    case 4: return 'var(--acuity-4)';
+    case 5: return 'var(--acuity-5)';
+    default: return 'var(--text-secondary)';
+  }
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const TriageDashboard: React.FC = () => {
@@ -569,15 +580,24 @@ export const TriageDashboard: React.FC = () => {
               className={`triage-row${enc.integrity.tamper_status === 'tampered' ? ' row-tampered' : ''}`}
               onClick={() => { setSelectedEncounter(enc); setSecurityExpanded(false); }}>
               <td>
-                {enc.clinical?.clinician_acuity ? (
-                  <span className={`acuity-badge acuity-${enc.clinical.clinician_acuity}`} style={{ border: '2px solid #555' }}>
-                    {enc.clinical.clinician_acuity} <span style={{fontSize: '0.6em'}}>OVR</span>
-                  </span>
-                ) : (
-                  <span className={`acuity-badge acuity-${enc.clinical?.ai_recommendation?.acuity || enc.clinical?.acuity || 0}`}>
-                    {enc.clinical?.ai_recommendation?.acuity || enc.clinical?.acuity || '-'}
-                  </span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ 
+                    width: '10px', 
+                    height: '10px', 
+                    borderRadius: '50%', 
+                    background: getAcuityColor(enc.clinical?.clinician_acuity || enc.clinical?.ai_recommendation?.acuity || enc.clinical?.acuity || 0) 
+                  }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                      Level {enc.clinical?.clinician_acuity || enc.clinical?.ai_recommendation?.acuity || enc.clinical?.acuity || '-'}
+                    </span>
+                    {enc.clinical?.clinician_acuity && (
+                      <span className="status-pill status-critical" style={{ fontSize: '0.6rem', marginTop: '4px', padding: '2px 8px' }}>
+                        Clinician Override
+                      </span>
+                    )}
+                  </div>
+                </div>
               </td>
               <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
                 {enc.source === 'live'
@@ -632,15 +652,34 @@ export const TriageDashboard: React.FC = () => {
             <div className="drawer-content">
               {/* Acuity badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
-                <div className={`acuity-badge acuity-${selectedEncounter.clinical?.clinician_acuity || selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 0}`} style={{ width: 40, height: 40, fontSize: '1.2rem', border: selectedEncounter.clinical?.clinician_acuity ? '2px solid #555' : 'none' }}>
+                <div style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '50%', 
+                  background: getAcuityColor(selectedEncounter.clinical?.clinician_acuity || selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 0),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '1.1rem',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                }}>
                   {selectedEncounter.clinical?.clinician_acuity || selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || '-'}
                 </div>
                 <div>
-                  <div style={{ color: '#8c9bb4', fontSize: '0.85rem', textTransform: 'uppercase' }}>
-                    {selectedEncounter.clinical?.clinician_acuity ? 'Assigned Acuity' : 'AI Triage Level'}
+                  <div style={{ color: '#8c9bb4', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                    {selectedEncounter.clinical?.clinician_acuity ? 'Manual Assigned Acuity' : 'AI Predicted Triage'}
                   </div>
-                  <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                    {ACUITY_LABELS[selectedEncounter.clinical?.clinician_acuity as number || selectedEncounter.clinical?.ai_recommendation?.acuity as number || selectedEncounter.clinical?.acuity as number] || 'Unknown'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '1.2rem' }}>
+                      Level {selectedEncounter.clinical?.clinician_acuity || selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || '-'}
+                    </div>
+                    {selectedEncounter.clinical?.clinician_acuity && (
+                      <span className="status-pill status-critical" style={{ fontSize: '0.65rem', padding: '2px 10px' }}>
+                        Clinician Override
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

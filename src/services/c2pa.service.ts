@@ -8,6 +8,7 @@ import { LocalStorageKeyStore } from './keystore.service';
 import { C2PAAssertion, ProvenanceManifest } from '../types/c2pa';
 import { Agent } from '../types';
 import { VerificationResult } from '../utils/behavioral.utils';
+import { MANIFEST_GENERATORS, buildClaimGenerator, buildBehavioralAuditDescription } from '../config/manifestMetadata';
 
 export class C2PAService {
   private signer: ProvenanceSigner;
@@ -37,7 +38,13 @@ export class C2PAService {
       }
     ];
 
-    return this.signer.signManifest(agent.id, 'org.fingerprint.agent_identity', assertions);
+    const meta = MANIFEST_GENERATORS.agentIdentity;
+    return this.signer.signManifest(agent.id, 'org.fingerprint.agent_identity', assertions, {
+        claim_generator: meta.name,
+        generator_version: meta.version,
+        vendor: meta.vendor,
+        subject: `Identity Manifest for ${agent.name} (${agent.id})`
+    });
   }
 
   /**
@@ -62,7 +69,14 @@ export class C2PAService {
       }
     ];
 
-    return this.signer.signManifest(agentId, 'org.fingerprint.verification_cert', assertions);
+    const meta = MANIFEST_GENERATORS.behavioralAudit;
+    return this.signer.signManifest(agentId, 'org.fingerprint.verification_cert', assertions, {
+        claim_generator: meta.name,
+        generator_version: meta.version,
+        vendor: meta.vendor,
+        subject: `Behavioral Drift Audit for fingerprint ${agentId}`,
+        description: buildBehavioralAuditDescription(result.mode || 'monitoring')
+    });
   }
 
   /**

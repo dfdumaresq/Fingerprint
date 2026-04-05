@@ -315,4 +315,27 @@ body {
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 700;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Success / Accepted */
+.status-completed {
+  background-color: #064e3b;
+  color: #ecfdf5;
+  border: 1px solid #065f46;
+}
+
+/* Warning / Alert / Escalated */
+.status-critical {
+  background-color: #78350f;
+  color: #fffbeb;
+  border: 1px solid #92400e;
+}
+
+/* Neutral / AI Recommendation / Overridden */
+.status-neutral {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border: 1px solid #334155;
 }

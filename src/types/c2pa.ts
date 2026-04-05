@@ -15,6 +15,11 @@ export interface KeyStore {
 
 export interface ProvenanceManifest {
   label: string;
+  claim_generator?: string;
+  generator_version?: string;
+  vendor?: string;
+  subject?: string;
+  description?: string;
   assertions: C2PAAssertion[];
   signature?: string;
   signerPublicKey: string;

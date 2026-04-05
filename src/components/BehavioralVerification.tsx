@@ -12,6 +12,9 @@ import { downloadC2PAManifest, getVerificationFilename } from '../utils/c2paExpo
 
 const c2paService = new C2PAService();
 
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
+
 interface BehavioralVerificationProps {
   fingerprintHash: string;
 }
@@ -25,9 +28,11 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
   const [hashResult, setHashResult] = useState<BehavioralHashResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
     const [gatewayResult, setGatewayResult] = useState<any | null>(null);
+    const [lastAuditedHash, setLastAuditedHash] = useState<string | null>(null);
     const [baselineResponses, setBaselineResponses] = useState<ResponseSet | null>(null);
     const [mode, setMode] = useState<'enforcement' | 'triage'>('enforcement');
-  const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [exportStatus, setExportStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const currentPrompt = REASONING_TEST_SUITE_V1.prompts[currentStep];
@@ -63,6 +68,33 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
     }
   };
 
+  const calculateInputHash = () => {
+      // Deterministic stringification for stable hashing
+      return JSON.stringify({
+          mode,
+          responses: responses.map(r => r.trim())
+      });
+  };
+
+  const mapGatewayToVerificationResult = (agentId: string, data: any): any => {
+      // Adapter layer: map backend-specific JSON to C2PA-compatible manifest-definition
+      return {
+          match: data.decision === 'accept',
+          similarity: data.verification_details?.similarity_score || 0,
+          confidence: (data.trust_score || 0) / 100,
+          mode: mode,
+          perturbation: {
+              perturbationScore: data.verification_details?.perturbation_score || 0,
+              suspicious: data.signals?.includes('suspicious_perturbations_detected') || false
+          },
+          decision: {
+              reason: data.recommendations?.[0] || 'Verification completed',
+              threshold: mode === 'enforcement' ? 0.95 : 0.80
+          },
+          traitVersion: REASONING_TEST_SUITE_V1.version
+      };
+  };
+
   const handleVerify = async () => {
     if (!service || !hashResult) return;
 
@@ -88,16 +120,11 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
     setError(null);
 
     try {
-        const gatewayUrl = process.env.REACT_APP_API_GATEWAY_URL;
-
-        if (!gatewayUrl) {
-            throw new Error("REACT_APP_API_GATEWAY_URL is not defined in the environment.");
-        }
-
-        const res = await fetch(`${gatewayUrl}/v1/agents/verify`, {
+        const res = await fetch(`${REACT_APP_API_URL}/v1/agents/verify`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${REACT_APP_API_KEY}`
             },
             body: JSON.stringify({
                 fingerprintHash,
@@ -111,6 +138,7 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
 
         const data = await res.json();
         setGatewayResult(data);
+        setLastAuditedHash(calculateInputHash());
 
     } catch (err: any) {
         setError(`Verification failed: ${err.message}`);
@@ -121,11 +149,20 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
 
     const handleDownloadCertificate = async () => {
         if (!gatewayResult) return;
+        setExportStatus(null);
+        
         try {
-            const manifest = await c2paService.generateVerificationManifest(fingerprintHash, gatewayResult);
+            // Map the gateway output to a standard VerificationResult for the C2PA service
+            const verificationResult = mapGatewayToVerificationResult(fingerprintHash, gatewayResult);
+            
+            const manifest = await c2paService.generateVerificationManifest(fingerprintHash, verificationResult);
             downloadC2PAManifest(manifest, getVerificationFilename(fingerprintHash));
+            
+            setExportStatus({ type: 'success', message: 'Audit Certificate exported successfully.' });
+            setTimeout(() => setExportStatus(null), 3000);
         } catch (err: any) {
-            setError(`Failed to export certificate: ${err.message}`);
+            console.error("Export failure:", err);
+            setExportStatus({ type: 'error', message: `Export failed: ${err.message}` });
         }
     };
 
@@ -236,9 +273,10 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
                 <button onClick={() => {
                     setGatewayResult(null);
+                    setLastAuditedHash(null);
                     setHashResult(null);
                     setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
                     setBaselineResponses(null);
@@ -254,6 +292,22 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                 >
                     <span>🛡️</span> Export Audit Cert
                 </button>
+                
+                {exportStatus && (
+                    <div style={{ 
+                        width: '100%', 
+                        marginTop: '12px', 
+                        padding: '10px', 
+                        borderRadius: '6px', 
+                        fontSize: '0.85rem',
+                        textAlign: 'center',
+                        background: exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: exportStatus.type === 'success' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)',
+                        border: `1px solid ${exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                    }}>
+                        {exportStatus.type === 'success' ? '✅' : '❌'} {exportStatus.message}
+                    </div>
+                )}
             </div>
       </div>
     );
@@ -375,14 +429,32 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                 </button>
             </div>
 
-            <button
-              onClick={handleVerify}
-              disabled={isVerifying}
-              className="primary-btn"
-              style={{ width: '100%', padding: '16px', fontWeight: 700, fontSize: '1rem' }}
-            >
-                {isVerifying ? 'Analyzing Stability...' : 'Safety-Grade Audit'}
-            </button>
+            {(() => {
+                const currentHash = calculateInputHash();
+                const isAlreadyAudited = gatewayResult && currentHash === lastAuditedHash;
+                
+                let label = isVerifying ? 'Analyzing Stability...' : 'Safety-Grade Audit';
+                if (isAlreadyAudited) label = 'Audit Completed';
+
+                return (
+                    <button
+                      onClick={handleVerify}
+                      disabled={isVerifying || isAlreadyAudited}
+                      className="primary-btn"
+                      style={{ 
+                          width: '100%', 
+                          padding: '16px', 
+                          fontWeight: 700, 
+                          fontSize: '1rem',
+                          background: isAlreadyAudited ? 'var(--plasma-surface-2)' : undefined,
+                          color: isAlreadyAudited ? 'var(--plasma-text-muted)' : undefined,
+                          cursor: isAlreadyAudited ? 'default' : 'pointer'
+                      }}
+                    >
+                      {label}
+                    </button>
+                );
+            })()}
         </div>
       )}
 

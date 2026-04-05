@@ -44,6 +44,10 @@ const ABI = [
   "function updateBehavioralTrait(string fingerprintHash, string newTraitHash, string traitVersion) external",
   "function getBehavioralTraitData(string fingerprintHash) external view returns (bool exists, string traitHash, string traitVersion, uint256 registeredAt, uint256 lastUpdatedAt)",
   "function verifyBehavioralMatch(string fingerprintHash, string currentTraitHash) external view returns (bool matches)",
+  "event FingerprintRegistered(string fingerprintHash, string id, string name, string provider, string version, address registeredBy, uint256 createdAt)",
+  "event FingerprintRevoked(string fingerprintHash, address revokedBy, uint256 revokedAt)",
+  "event BehavioralTraitRegistered(string fingerprintHash, string traitHash, string traitVersion, address registeredBy, uint256 registeredAt)",
+  "event BehavioralTraitUpdated(string fingerprintHash, string oldTraitHash, string newTraitHash, string traitVersion, address updatedBy, uint256 updatedAt)",
 ];
 
 // Add Ethereum window type

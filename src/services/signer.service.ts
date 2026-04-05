@@ -76,7 +76,14 @@ export class ProvenanceSigner {
   async signManifest(
     identityId: string, 
     label: string, 
-    assertions: C2PAAssertion[]
+    assertions: C2PAAssertion[],
+    metadata?: {
+        claim_generator?: string;
+        generator_version?: string;
+        vendor?: string;
+        subject?: string;
+        description?: string;
+    }
   ): Promise<ProvenanceManifest> {
     const keyPair = await this.keyStore.getKey(identityId);
     if (!keyPair) {
@@ -103,6 +110,7 @@ export class ProvenanceSigner {
 
     return {
       label,
+      ...metadata,
       assertions,
       signature: this.toBase64(signature),
       signerPublicKey: this.toBase64(publicKeySpki)

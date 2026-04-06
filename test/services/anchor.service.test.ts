@@ -138,8 +138,8 @@ describe('AnchorService', () => {
 
       const health = await anchorService.verifyDatabaseIntegrity();
       
-      expect(health.reason).toBe('broken_chain');
       expect(health.is_healthy).toBe(false);
+      expect(health.impactedEventIds).toContain(2);
     });
 
     it('should detect a broken cryptographic chain (temporal violation)', async () => {
@@ -168,7 +168,7 @@ describe('AnchorService', () => {
 
       const health = await anchorService.verifyDatabaseIntegrity();
       expect(health.is_healthy).toBe(false);
-      expect(health.reason).toBe('temporal_violation');
+      expect(health.failingEventIds).toContain(2);
     });
   });
 });

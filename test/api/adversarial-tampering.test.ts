@@ -86,8 +86,7 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     const health = await anchorService.verifyDatabaseIntegrity();
     
     expect(health.is_healthy).toBe(false);
-    expect(health.first_bad_id).toBe(tamperedId);
-    expect(health.reason).toBe('hash_mismatch');
+    expect(health.failingEventIds).toContain(tamperedId);
   });
 
   it('Tamper Test 2: Chain Deletion', async () => {
@@ -104,8 +103,7 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     const health = await anchorService.verifyDatabaseIntegrity();
     
     expect(health.is_healthy).toBe(false);
-    expect(health.first_bad_id).toBe(nextId);
-    expect(health.reason).toBe('broken_chain');
+    expect(health.impactedEventIds).toContain(nextId);
   });
 
   it('Tamper Test 3: Temporal Forgery', async () => {
@@ -133,6 +131,6 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     const health = await anchorService.verifyDatabaseIntegrity();
     
     expect(health.is_healthy).toBe(false);
-    expect(['temporal_violation', 'broken_chain']).toContain(health.reason);
+    expect(health.failingEventIds.length).toBeGreaterThan(0);
   });
 });

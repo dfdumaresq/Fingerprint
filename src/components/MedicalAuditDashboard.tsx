@@ -23,7 +23,7 @@ interface RegisteredAgent {
   hasBehavioralTrait: boolean;
 }
 
-const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || '';
 const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
 
 export const MedicalAuditDashboard: React.FC = () => {
@@ -41,6 +41,7 @@ export const MedicalAuditDashboard: React.FC = () => {
   // Health
   const [auditResult, setAuditResult] = useState<any>(null);
   const [activeAgentResolved, setActiveAgentResolved] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -102,12 +103,15 @@ export const MedicalAuditDashboard: React.FC = () => {
   };
 
   const checkHealth = async () => {
+    setVerifying(true);
     try {
       const res = await fetch(`${REACT_APP_API_URL}/health/audit`);
       const data = await res.json();
       setAuditResult(data);
     } catch (err) {
       console.error(err);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -228,22 +232,73 @@ export const MedicalAuditDashboard: React.FC = () => {
         </div>
 
         <div className="plasma-card" style={{ padding: '20px' }}>
-          <label className="text-muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Ledger Stability</label>
+          <label className="text-muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', display: 'block', marginBottom: '8px', letterSpacing: '0.05em' }}>Ledger Stability</label>
+          
           {auditResult ? (
-            <div style={{ marginTop: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: auditResult.is_healthy ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)' }}></div>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{auditResult.is_healthy ? 'Synchronized' : 'Desynchronized'}</span>
+            <div style={{ marginTop: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ 
+                  width: '10px', 
+                  height: '10px', 
+                  borderRadius: '50%', 
+                  background: auditResult.is_healthy ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)',
+                  boxShadow: auditResult.is_healthy ? '0 0 10px rgba(16, 185, 129, 0.4)' : '0 0 10px rgba(239, 68, 68, 0.4)'
+                }}></div>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--plasma-text-primary)' }}>
+                  {auditResult.is_healthy ? 'Synchronized' : 'Desynchronized'}
+                </span>
               </div>
-              <p className="text-muted" style={{ fontSize: '0.75rem', margin: 0 }}>Checked {auditResult.total_events_checked} events.</p>
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '16px', lineHeight: '1.4' }}>
+                {auditResult.is_healthy 
+                  ? `Cryptographic integrity verified across ${auditResult.total_events_checked} anchored events.`
+                  : `Integrity fault detected! ${auditResult.faults_detected} record(s) fail verification.`
+                }
+              </p>
+              <button 
+                onClick={checkHealth} 
+                disabled={verifying}
+                style={{ 
+                  width: '100%', 
+                  padding: '10px', 
+                  border: '1px solid var(--plasma-border)', 
+                  background: 'var(--plasma-surface-2)', 
+                  color: 'var(--plasma-clinical-blue)', 
+                  cursor: verifying ? 'default' : 'pointer', 
+                  fontSize: '0.8rem', 
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  opacity: verifying ? 0.6 : 1
+                }}
+              >
+                {verifying ? '✨ Verifying Ledger...' : '🔄 Refresh Audit Status'}
+              </button>
             </div>
           ) : (
-            <button 
-              onClick={checkHealth} 
-              style={{ padding: 0, marginTop: '8px', border: 'none', background: 'none', color: 'var(--plasma-clinical-blue)', cursor: 'pointer', fontSize: '0.85rem' }}
-            >
-              🩺 Run Health Check
-            </button>
+            <div style={{ marginTop: '12px' }}>
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '16px', lineHeight: '1.4' }}>
+                The ledger has not been audited in this session. Run a health check to verify the cryptographic chain.
+              </p>
+              <button 
+                onClick={checkHealth} 
+                disabled={verifying}
+                style={{ 
+                  width: '100%', 
+                  padding: '14px', 
+                  border: '2px solid var(--plasma-clinical-blue)', 
+                  background: 'rgba(79, 131, 255, 0.05)', 
+                  color: 'var(--plasma-clinical-blue)', 
+                  cursor: verifying ? 'default' : 'pointer', 
+                  fontSize: '0.9rem', 
+                  borderRadius: '6px', 
+                  fontWeight: 700,
+                  transition: 'all 0.2s ease',
+                  opacity: verifying ? 0.6 : 1
+                }}
+              >
+                {verifying ? '✨ Verifying Ledger...' : '🩺 Run Health Check'}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -271,60 +326,71 @@ export const MedicalAuditDashboard: React.FC = () => {
             ) : events.length === 0 ? (
               <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px' }} className="text-secondary">No audit logs found.</td></tr>
             ) : (
-              events.map((ev) => {
-                const isAnomaly = auditResult && !auditResult.is_healthy && ev.id >= auditResult.first_bad_id;
-                return (
-                  <React.Fragment key={ev.id}>
-                    <tr 
-                      onClick={() => setExpandedRow(expandedRow === ev.id ? null : ev.id)} 
-                      style={{ cursor: 'pointer', opacity: isAnomaly ? 1 : 0.9 }}
-                      className={isAnomaly ? 'row-anomaly' : ''}
-                    >
-                      <td className="tabular-nums" style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>{new Date(ev.timestamp).toLocaleString()}</td>
-                      <td style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>{ev.workflow_type.replace('_', ' ')}</td>
-                      <td className="tabular-nums" style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)', position: 'relative' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
-                            {registeredAgents.find(a => a.fingerprintHash === ev.agent_fingerprint_id)?.name || 'Unknown Agent'}
-                          </span>
-                          <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>
-                            {ev.agent_fingerprint_id.substring(0, 10)}...
-                          </span>
-                          {registeredAgents.find(a => a.fingerprintHash === ev.agent_fingerprint_id)?.isRevoked && (
-                            <span style={{ 
-                              fontSize: '0.6rem', 
-                              color: '#ff4d4f', 
-                              border: '1px solid #ff4d4f', 
-                              padding: '1px 4px', 
-                              borderRadius: '3px',
-                              width: 'fit-content',
-                              marginTop: '4px',
-                              fontWeight: 700
-                            }}>
-                              REVOKED
+              events
+                .filter(ev => {
+                  if (!anomalyOnly) return true;
+                  if (!auditResult) return false;
+                  const isFailing = auditResult.failingEventIds?.includes(ev.id);
+                  const isImpacted = auditResult.impactedEventIds?.includes(ev.id);
+                  return isFailing || isImpacted;
+                })
+                .map((ev) => {
+                  const isFailing = auditResult?.failingEventIds?.includes(ev.id);
+                  const isImpacted = auditResult?.impactedEventIds?.includes(ev.id);
+                  const isAnomaly = isFailing || isImpacted;
+
+                  return (
+                    <React.Fragment key={ev.id}>
+                      <tr 
+                        onClick={() => setExpandedRow(expandedRow === ev.id ? null : ev.id)} 
+                        style={{ cursor: 'pointer', opacity: isAnomaly ? 1 : 0.9 }}
+                        className={isAnomaly ? (isFailing ? 'row-anomaly' : 'row-impacted') : ''}
+                      >
+                        <td className="tabular-nums" style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>{new Date(ev.timestamp).toLocaleString()}</td>
+                        <td style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>{ev.workflow_type.replace('_', ' ')}</td>
+                        <td className="tabular-nums" style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)', position: 'relative' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                              {registeredAgents.find(a => a.fingerprintHash === ev.agent_fingerprint_id)?.name || 'Unknown Agent'}
                             </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>
-                        <span className={`status-pill status-${
-                          ev.clinician_action === 'accepted' ? 'completed' : 
-                          ev.clinician_action === 'escalated' ? 'critical' : 
-                          'neutral'
-                        }`} style={{ fontSize: '0.7rem' }}>
-                          {ev.clinician_action || 'AI Recommendation'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)', textAlign: 'right' }}>
-                        <span style={{ 
-                          fontSize: '0.8rem', 
-                          fontWeight: 700, 
-                          color: isAnomaly ? 'var(--plasma-integrity-red)' : ev.anchored_to_chain ? 'var(--plasma-integrity-green)' : 'var(--plasma-warning-amber)' 
-                        }}>
-                          {isAnomaly ? '🚩 TAMPER FAULT' : ev.anchored_to_chain ? '🔗 ANCHORED' : '⏳ PENDING'}
-                        </span>
-                      </td>
-                    </tr>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>
+                              {ev.agent_fingerprint_id.substring(0, 10)}...
+                            </span>
+                            {registeredAgents.find(a => a.fingerprintHash === ev.agent_fingerprint_id)?.isRevoked && (
+                              <span style={{ 
+                                fontSize: '0.6rem', 
+                                color: '#ff4d4f', 
+                                border: '1px solid #ff4d4f', 
+                                padding: '1px 4px', 
+                                borderRadius: '3px',
+                                width: 'fit-content',
+                                marginTop: '4px',
+                                fontWeight: 700
+                              }}>
+                                REVOKED
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>
+                          <span className={`status-pill status-${
+                            ev.clinician_action === 'accepted' ? 'completed' : 
+                            ev.clinician_action === 'escalated' ? 'critical' : 
+                            'neutral'
+                          }`} style={{ fontSize: '0.7rem' }}>
+                            {ev.clinician_action || 'AI Recommendation'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)', textAlign: 'right' }}>
+                          <span style={{ 
+                            fontSize: '0.8rem', 
+                            fontWeight: 700, 
+                            color: isFailing ? 'var(--plasma-integrity-red)' : isImpacted ? 'var(--plasma-warning-amber)' : ev.anchored_to_chain ? 'var(--plasma-integrity-green)' : 'var(--plasma-warning-amber)' 
+                          }}>
+                            {isFailing ? '🚩 TAMPER FAULT' : isImpacted ? '⛓️ CHAIN IMPACTED' : ev.anchored_to_chain ? '🔗 ANCHORED' : '⏳ PENDING'}
+                          </span>
+                        </td>
+                      </tr>
                     {expandedRow === ev.id && (
                       <tr style={{ background: 'rgba(0,0,0,0.15)' }}>
                         <td colSpan={5} style={{ padding: '24px' }}>

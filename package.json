@@ -21,6 +21,9 @@
     "seed:agents": "ts-node scripts/seed-demo-agents.ts",
     "dev:medical": "node scripts/init-medical-db.js && ts-node src/api/server.ts",
     "simulate:medical": "ts-node scripts/simulate-clinical-events.ts",
+    "demo:tamper": "ts-node scripts/tamper-demo.ts tamper",
+    "demo:revert": "ts-node scripts/tamper-demo.ts revert",
+    "audit-health": "curl -s ${REACT_APP_API_URL:-http://localhost:3000}/health/audit | jq .",
     "test:audit": "npm run _test:init && jest test/api/adversarial-tampering.test.ts",
     "_test:init": "node scripts/init-medical-db.js test"
   },

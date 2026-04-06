@@ -12,7 +12,7 @@ import { downloadC2PAManifest, getVerificationFilename } from '../utils/c2paExpo
 
 const c2paService = new C2PAService();
 
-const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || '';
 const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
 
 interface BehavioralVerificationProps {
@@ -395,17 +395,24 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
         </div>
       </div>
 
-      {hashResult && !gatewayResult && (
-        <div className="plasma-card" style={{ marginTop: '24px', border: '1px solid var(--plasma-clinical-blue)' }}>
-            <h4 className="text-secondary" style={{ margin: '0 0 16px 0' }}>Audit Ready</h4>
+      {hashResult && (
+        <div className="plasma-card" style={{ 
+            marginTop: '24px', 
+            border: '1px solid var(--plasma-clinical-blue)',
+            opacity: isVerifying ? 0.7 : 1
+        }}>
+            <h4 className="text-secondary" style={{ margin: '0 0 16px 0', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>
+              Audit Configuration
+            </h4>
             
             <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>Security Mode</label>
+                <label className="text-muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Security Mode</label>
                 <select
                     value={mode}
                     onChange={(e) => setMode(e.target.value as any)}
                     className="form-input"
                     style={{ background: 'var(--plasma-surface-2)' }}
+                    disabled={isVerifying}
                 >
                     <option value="enforcement">Strict Enforcement (95%+)</option>
                     <option value="triage">Triage Advisory (80%+)</option>
@@ -417,6 +424,7 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                     onClick={loadDemoBaseline}
                     className="secondary-btn"
                     style={{ fontSize: '0.8rem', flex: 1 }}
+                    disabled={isVerifying}
                 >
                     📥 Demo Baseline
                 </button>
@@ -424,6 +432,7 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                     onClick={injectHomograph}
                     className="secondary-btn"
                     style={{ fontSize: '0.8rem', flex: 1, border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                    disabled={isVerifying}
                 >
                     🧬 Inject Attack
                 </button>
@@ -431,10 +440,15 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
 
             {(() => {
                 const currentHash = calculateInputHash();
-                const isAlreadyAudited = gatewayResult && currentHash === lastAuditedHash;
+                const hasResult = !!gatewayResult;
+                const isAlreadyAudited = hasResult && currentHash === lastAuditedHash;
                 
                 let label = isVerifying ? 'Analyzing Stability...' : 'Safety-Grade Audit';
-                if (isAlreadyAudited) label = 'Audit Completed';
+                if (isAlreadyAudited) {
+                  label = 'Audit Completed';
+                } else if (hasResult) {
+                  label = 'Regenerate Audit Package';
+                }
 
                 return (
                     <button
@@ -446,12 +460,12 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                           padding: '16px', 
                           fontWeight: 700, 
                           fontSize: '1rem',
-                          background: isAlreadyAudited ? 'var(--plasma-surface-2)' : undefined,
-                          color: isAlreadyAudited ? 'var(--plasma-text-muted)' : undefined,
-                          cursor: isAlreadyAudited ? 'default' : 'pointer'
+                          background: isAlreadyAudited ? 'var(--plasma-surface-2)' : (hasResult ? 'var(--plasma-warning-amber)' : undefined),
+                          color: isAlreadyAudited ? 'var(--plasma-text-muted)' : (hasResult ? 'black' : undefined),
+                          cursor: (isAlreadyAudited) ? 'default' : 'pointer'
                       }}
                     >
-                      {label}
+                      {isAlreadyAudited ? '✓ ' : ''}{label}
                     </button>
                 );
             })()}

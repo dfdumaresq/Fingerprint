@@ -126,7 +126,7 @@ const AMENDMENT_REASONS = [
   { id: 'other', label: 'Other' },
 ];
 
-const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || '';
 const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
 
 const getAcuityColor = (lvl: number) => {

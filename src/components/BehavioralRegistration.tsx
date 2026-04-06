@@ -12,7 +12,7 @@ import { downloadC2PAManifest, getIdentityFilename } from '../utils/c2paExport.u
 
 const c2paService = new C2PAService();
 
-const REACT_APP_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || '';
 const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || '';
 
 interface BehavioralRegistrationProps {

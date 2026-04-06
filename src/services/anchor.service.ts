@@ -120,10 +120,10 @@ export class AnchorService {
    */
   async verifyDatabaseIntegrity(): Promise<{ 
     is_healthy: boolean, 
-    first_bad_id?: number, 
-    reason?: 'hash_mismatch' | 'broken_chain' | 'temporal_violation', 
     total_events_checked: number,
-    faults_detected: number
+    faults_detected: number,
+    failingEventIds: number[],
+    impactedEventIds: number[]
   }> {
     const isPool = (this.db as any).connect && typeof (this.db as any).release !== 'function';
     const client = isPool ? await (this.db as any).connect() : this.db;
@@ -133,55 +133,62 @@ export class AnchorService {
       const res = await client.query('SELECT * FROM agent_events ORDER BY id ASC');
       const events = res.rows;
       
-      const chains: Record<string, string> = {}; // track latest hash per agent
-      const lastDates: Record<string, Date> = {}; // track latest temporal clock
+      const chains: Record<string, string> = {}; 
+      const lastDates: Record<string, Date> = {}; 
       
+      const failingEventIds: number[] = [];
+      const impactedEventIds: number[] = [];
+      const agentChainBroken: Record<string, boolean> = {};
+
       for (const event of events) {
         const agentId = event.agent_fingerprint_id;
         const expectedPrev = chains[agentId] || null;
+        let isDirectFailure = false;
         
         // Check 1: Temporal monotonicity
         const eventTime = new Date(event.timestamp);
+        
         if (lastDates[agentId] && eventTime < lastDates[agentId]) {
-          return { 
-            is_healthy: false, 
-            first_bad_id: event.id, 
-            reason: 'temporal_violation', 
-            total_events_checked: events.length,
-            faults_detected: 1 
-          };
+          isDirectFailure = true;
+          failingEventIds.push(event.id);
         }
         lastDates[agentId] = eventTime;
 
-        // Check 2: Broken Chain Check
-        if (event.previous_event_hash !== expectedPrev) {
-          return { 
-            is_healthy: false, 
-            first_bad_id: event.id, 
-            reason: 'broken_chain', 
-            total_events_checked: events.length,
-            faults_detected: 1 
-          };
-        }
-        
         // Check 3: Recompute Content Hash (Hash Mismatch)
         const reconstructedPayload = buildCanonicalPayload(event);
-        
         const trueHash = generateEventHash(reconstructedPayload, expectedPrev, eventTime.toISOString());
+        
         if (trueHash !== event.event_hash) {
-           return { 
-             is_healthy: false, 
-             first_bad_id: event.id, 
-             reason: 'hash_mismatch', 
-             total_events_checked: events.length,
-             faults_detected: 1 
-           };
+          if (!isDirectFailure) {
+            isDirectFailure = true;
+            failingEventIds.push(event.id);
+          }
+        }
+
+        // Check 4: Broken Chain / Propagation Check
+        if (!isDirectFailure) {
+          if (event.previous_event_hash !== expectedPrev) {
+            impactedEventIds.push(event.id);
+            agentChainBroken[agentId] = true;
+          } else if (agentChainBroken[agentId]) {
+            impactedEventIds.push(event.id);
+          }
+        } else {
+          // If this row was a direct failure (temporal or hash), it also breaks the chain for followers
+          agentChainBroken[agentId] = true;
         }
 
         chains[agentId] = event.event_hash;
       }
 
-      return { is_healthy: true, total_events_checked: events.length, faults_detected: 0 };
+      const totalFaults = failingEventIds.length + impactedEventIds.length;
+      return { 
+        is_healthy: totalFaults === 0, 
+        total_events_checked: events.length, 
+        faults_detected: totalFaults,
+        failingEventIds,
+        impactedEventIds
+      };
     } finally {
       if (shouldRelease) client.release();
     }

@@ -9,7 +9,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_BASE = process.env.API_URL || 'http://localhost:3000';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 const API_URL = `${API_BASE}/v1/events`;
 const API_KEY = process.env.API_KEY || 'sk_test_123';
 

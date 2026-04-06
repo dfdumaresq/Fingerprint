@@ -8,7 +8,7 @@ import * as path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 const API_KEY = process.env.API_KEY || 'sk_test_123'; // Default for testing if not in .env
 
 // Axios instance with auth

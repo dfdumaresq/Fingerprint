@@ -197,121 +197,7 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
     );
   }
 
-  if (gatewayResult) {
-    const isSuccess = gatewayResult.decision === 'accept';
-    const similarityPercent = gatewayResult.verification_details?.similarity_score ? (gatewayResult.verification_details.similarity_score * 100).toFixed(1) : "N/A";
-    const integrityScore = gatewayResult.trust_score || 0;
-    const signals = gatewayResult.signals || [];
-
-    return (
-      <div className="plasma-card" style={{ 
-            border: isSuccess ? '2px solid var(--plasma-integrity-green)' : '2px solid var(--plasma-warning-amber)',
-      }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h3 style={{ margin: 0, color: isSuccess ? 'var(--plasma-integrity-green)' : 'var(--plasma-warning-amber)' }}>
-                    {isSuccess ? '✅ Audit Passed: Baseline Consistent' : '⚠️ Audit Warning: Behavioral Drift Detected'}
-                </h3>
-                <div className="text-muted" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    Agent: <span className="tabular-nums">{fingerprintHash.substring(0, 10)}...</span>
-                    <button
-                        onClick={() => copyToClipboard(fingerprintHash, 'fingerprint')}
-                        className="icon-btn"
-                        title="Copy Fingerprint Hash"
-                    >
-                        {copiedField === 'fingerprint' ? '✓' : '📋'}
-                    </button>
-                </div>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-                <span className="status-pill" style={{
-                    background: mode === 'enforcement' ? 'rgba(79, 131, 255, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                    color: mode === 'enforcement' ? 'var(--plasma-clinical-blue)' : 'var(--plasma-warning-amber)',
-                    textTransform: 'uppercase'
-                }}>
-                    Mode: {mode}
-                </span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
-                <div style={{ padding: '20px', background: 'var(--plasma-surface-2)', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--plasma-border)' }}>
-                    <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase' }}>Stability Match</div>
-                    <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--plasma-text-primary)' }}>{similarityPercent}%</div>
-                </div>
-                <div style={{ padding: '20px', background: 'rgba(79, 131, 255, 0.05)', borderRadius: '8px', textAlign: 'center', border: '2px solid var(--plasma-clinical-blue)' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--plasma-clinical-blue)', marginBottom: '8px', fontWeight: 700, textTransform: 'uppercase' }}>Integrity Score</div>
-                    <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--plasma-text-primary)' }}>{integrityScore}<span style={{ fontSize: '1rem', opacity: 0.5 }}> / 100</span></div>
-                </div>
-            </div>
-
-            <div style={{ marginBottom: '32px', padding: '20px', background: 'var(--plasma-surface-2)', border: '1px solid var(--plasma-border)', borderRadius: '8px' }}>
-                <h4 className="text-secondary" style={{ margin: '0 0 16px 0', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Behavioral Signals</h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {signals.length > 0 ? signals.map((signal: string, idx: number) => (
-                        <span key={idx} className="status-pill" style={{
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            color: 'var(--plasma-integrity-green)',
-                            border: '1px solid rgba(16, 185, 129, 0.2)',
-                            fontSize: '0.7rem'
-                        }}>
-                            🛡️ {signal.replace(/_/g, ' ')}
-                        </span>
-                    )) : (
-                        <div className="text-muted" style={{ fontSize: '0.85rem' }}>No anomalies detected.</div>
-                    )}
-                </div>
-            </div>
-
-            {gatewayResult.recommendations && gatewayResult.recommendations.length > 0 && (
-                <div style={{ padding: '20px', background: 'rgba(245, 158, 11, 0.05)', borderRadius: '8px', marginBottom: '32px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                    <strong style={{ color: 'var(--plasma-warning-amber)', display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>🛡️ Clinical Recommendations:</strong>
-                    <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--plasma-text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                        {gatewayResult.recommendations.map((rec: string, i: number) => (
-                            <li key={i}>{rec}</li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-                <button onClick={() => {
-                    setGatewayResult(null);
-                    setLastAuditedHash(null);
-                    setHashResult(null);
-                    setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
-                    setBaselineResponses(null);
-                    setCurrentStep(0);
-                }} className="secondary-btn" style={{ flex: 1, padding: '14px' }}>
-                    New Drift Audit
-                </button>
-
-                <button
-                    onClick={handleDownloadCertificate}
-                    className="primary-btn"
-                    style={{ flex: 1, padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                >
-                    <span>🛡️</span> Export Audit Cert
-                </button>
-                
-                {exportStatus && (
-                    <div style={{ 
-                        width: '100%', 
-                        marginTop: '12px', 
-                        padding: '10px', 
-                        borderRadius: '6px', 
-                        fontSize: '0.85rem',
-                        textAlign: 'center',
-                        background: exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        color: exportStatus.type === 'success' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)',
-                        border: `1px solid ${exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
-                    }}>
-                        {exportStatus.type === 'success' ? '✅' : '❌'} {exportStatus.message}
-                    </div>
-                )}
-            </div>
-      </div>
-    );
-  }
+  const isStale = !!gatewayResult && calculateInputHash() !== lastAuditedHash;
 
   return (
     <div className="behavioral-audit-flow">
@@ -446,7 +332,7 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                 let label = isVerifying ? 'Analyzing Stability...' : 'Safety-Grade Audit';
                 if (isAlreadyAudited) {
                   label = 'Audit Completed';
-                } else if (hasResult) {
+                } else if (hasResult || isStale) {
                   label = 'Regenerate Audit Package';
                 }
 
@@ -460,8 +346,8 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                           padding: '16px', 
                           fontWeight: 700, 
                           fontSize: '1rem',
-                          background: isAlreadyAudited ? 'var(--plasma-surface-2)' : (hasResult ? 'var(--plasma-warning-amber)' : undefined),
-                          color: isAlreadyAudited ? 'var(--plasma-text-muted)' : (hasResult ? 'black' : undefined),
+                          background: isAlreadyAudited ? 'var(--plasma-surface-2)' : (hasResult || isStale ? 'var(--plasma-warning-amber)' : undefined),
+                          color: isAlreadyAudited ? 'var(--plasma-text-muted)' : (hasResult || isStale ? 'black' : undefined),
                           cursor: (isAlreadyAudited) ? 'default' : 'pointer'
                       }}
                     >
@@ -469,6 +355,141 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                     </button>
                 );
             })()}
+        </div>
+      )}
+
+      {gatewayResult && (
+        <div className="behavioral-audit-result-view" style={{ marginTop: '24px' }}>
+          {isStale && (
+            <div style={{ 
+              background: 'var(--plasma-warning-amber)', 
+              color: 'black', 
+              padding: '12px', 
+              borderRadius: '8px 8px 0 0', 
+              textAlign: 'center',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}>
+              <span>⚠️</span> Results out of date – inputs changed; run audit again
+            </div>
+          )}
+          
+          <div className="plasma-card" style={{ 
+                border: gatewayResult.decision === 'accept' ? '2px solid var(--plasma-integrity-green)' : '2px solid var(--plasma-warning-amber)',
+                opacity: isStale ? 0.6 : 1,
+                transition: 'opacity 0.2s ease',
+                borderRadius: isStale ? '0 0 8px 8px' : '8px'
+          }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <h3 style={{ margin: 0, color: gatewayResult.decision === 'accept' ? 'var(--plasma-integrity-green)' : 'var(--plasma-warning-amber)' }}>
+                        {gatewayResult.decision === 'accept' ? '✅ Audit Passed: Baseline Consistent' : '⚠️ Audit Warning: Behavioral Drift Detected'}
+                    </h3>
+                    <div className="text-muted" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        Agent: <span className="tabular-nums">{fingerprintHash.substring(0, 10)}...</span>
+                        <button
+                            onClick={() => copyToClipboard(fingerprintHash, 'fingerprint')}
+                            className="icon-btn"
+                            title="Copy Fingerprint Hash"
+                        >
+                            {copiedField === 'fingerprint' ? '✓' : '📋'}
+                        </button>
+                    </div>
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                    <span className="status-pill" style={{
+                        background: mode === 'enforcement' ? 'rgba(79, 131, 255, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                        color: mode === 'enforcement' ? 'var(--plasma-clinical-blue)' : 'var(--plasma-warning-amber)',
+                        textTransform: 'uppercase'
+                    }}>
+                        Mode: {mode}
+                    </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
+                    <div style={{ padding: '20px', background: 'var(--plasma-surface-2)', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--plasma-border)' }}>
+                        <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase' }}>Stability Match</div>
+                        <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--plasma-text-primary)' }}>
+                            {(gatewayResult.verification_details?.similarity_score * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                    <div style={{ padding: '20px', background: 'rgba(79, 131, 255, 0.05)', borderRadius: '8px', textAlign: 'center', border: '2px solid var(--plasma-clinical-blue)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--plasma-clinical-blue)', marginBottom: '8px', fontWeight: 700, textTransform: 'uppercase' }}>Integrity Score</div>
+                        <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--plasma-text-primary)' }}>{gatewayResult.trust_score}<span style={{ fontSize: '0.8rem', opacity: 0.5 }}> / 100</span></div>
+                    </div>
+                </div>
+
+                <div style={{ marginBottom: '32px', padding: '20px', background: 'var(--plasma-surface-2)', border: '1px solid var(--plasma-border)', borderRadius: '8px' }}>
+                    <h4 className="text-secondary" style={{ margin: '0 0 16px 0', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Behavioral Signals</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                        {gatewayResult.signals?.length > 0 ? gatewayResult.signals.map((signal: string, idx: number) => (
+                            <span key={idx} className="status-pill" style={{
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                color: 'var(--plasma-integrity-green)',
+                                border: '1px solid rgba(16, 185, 129, 0.2)',
+                                fontSize: '0.7rem'
+                            }}>
+                                🛡️ {signal.replace(/_/g, ' ')}
+                            </span>
+                        )) : (
+                            <div className="text-muted" style={{ fontSize: '0.85rem' }}>No anomalies detected.</div>
+                        )}
+                    </div>
+                </div>
+
+                {gatewayResult.recommendations && gatewayResult.recommendations.length > 0 && (
+                    <div style={{ padding: '20px', background: 'rgba(245, 158, 11, 0.05)', borderRadius: '8px', marginBottom: '32px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                        <strong style={{ color: 'var(--plasma-warning-amber)', display: 'block', marginBottom: '8px', fontSize: '0.9rem' }}>🛡️ Clinical Recommendations:</strong>
+                        <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--plasma-text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                            {gatewayResult.recommendations.map((rec: string, i: number) => (
+                                <li key={i}>{rec}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                    <button onClick={() => {
+                        setGatewayResult(null);
+                        setLastAuditedHash(null);
+                        setHashResult(null);
+                        setResponses(new Array(REASONING_TEST_SUITE_V1.prompts.length).fill(''));
+                        setBaselineResponses(null);
+                        setCurrentStep(0);
+                    }} className="secondary-btn" style={{ flex: 1, padding: '14px' }}>
+                         Clear All Responses
+                    </button>
+
+                    <button
+                        onClick={handleDownloadCertificate}
+                        className="primary-btn"
+                        style={{ flex: 1, padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                        disabled={isStale}
+                    >
+                        <span>🛡️</span> Export Audit Cert
+                    </button>
+                    
+                    {exportStatus && (
+                        <div style={{ 
+                            width: '100%', 
+                            marginTop: '12px', 
+                            padding: '10px', 
+                            borderRadius: '6px', 
+                            fontSize: '0.85rem',
+                            textAlign: 'center',
+                            background: exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            color: exportStatus.type === 'success' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)',
+                            border: `1px solid ${exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                        }}>
+                            {exportStatus.type === 'success' ? '✅' : '❌'} {exportStatus.message}
+                        </div>
+                    )}
+                </div>
+          </div>
         </div>
       )}
 

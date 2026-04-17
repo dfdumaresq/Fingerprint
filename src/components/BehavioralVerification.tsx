@@ -98,24 +98,6 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
   const handleVerify = async () => {
     if (!service || !hashResult) return;
 
-      let referenceResponses = baselineResponses;
-
-      if (!referenceResponses) {
-          const storedStr = localStorage.getItem(`sidecar_${fingerprintHash}`);
-          if (storedStr) {
-              try {
-                  referenceResponses = JSON.parse(storedStr);
-              } catch (e) {
-                  console.error("Failed to parse sidecar baseline", e);
-              }
-          }
-      }
-
-      if (!referenceResponses) {
-          setError("No baseline found in sidecar database for this fingerprint. Please register a baseline first or use the 'Load Reference Baseline (Demo)' button.");
-          return;
-      }
-
     setIsVerifying(true);
     setError(null);
 
@@ -128,6 +110,7 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
             },
             body: JSON.stringify({
                 fingerprintHash,
+                mode, // Pass the selected audit mode (enforcement or triage)
                 currentResponseSet: hashResult.responseSet
             })
         });

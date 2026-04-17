@@ -58,7 +58,7 @@ const authenticate = (req: Request, res: Response, next: NextFunction) => {
     return;
   }
   
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(/\s+/)[1];
   if (token !== API_KEY) {
     res.status(401).json({ error: { code: 'unauthorized', message: 'Invalid API key' } });
     return;
@@ -452,7 +452,8 @@ app.get('/health/audit', async (req: Request, res: Response) => {
 app.post('/v1/agents/verify', async (req: Request, res: Response) => {
   try {
     // Phase 1.5 Update: We now expect a full ResponseSet instead of a single string hash
-    const { fingerprintHash, currentResponseSet, context } = req.body;
+    const { fingerprintHash, currentResponseSet, context, mode } = req.body;
+    const verificationMode = (mode === 'enforcement' || mode === 'triage') ? mode : 'triage';
 
     if (!fingerprintHash) {
       res.status(400).json({
@@ -553,7 +554,7 @@ app.post('/v1/agents/verify', async (req: Request, res: Response) => {
       const verification: VerificationResult = verifyBehavioralSignature(
         baselineResponses,
         currentResponseSet,
-        "triage", // Use loose matching for standard web verification
+        verificationMode, 
       );
 
       verification_details = { similarity_score: verification.similarity };

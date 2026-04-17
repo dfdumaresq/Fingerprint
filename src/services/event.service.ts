@@ -120,7 +120,7 @@ export class EventService {
     
     if (filters.days_back) {
       params.push(filters.days_back);
-      query += ` AND timestamp >= NOW() - INTERVAL '${filters.days_back} days'`;
+      query += ` AND timestamp >= NOW() - ($${params.length} * INTERVAL '1 day')`;
     }
     
     query += ' ORDER BY timestamp DESC LIMIT 100';

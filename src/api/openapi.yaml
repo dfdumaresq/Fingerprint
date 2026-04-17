@@ -1,69 +1,132 @@
-openapi: 3.0.0
+openapi: 3.0.3
 info:
-  title: AI Fingerprint Web3 Gateway
-  version: 0.2.1
+  title: Fingerprint.AI Gateway API
+  version: 1.0.0
+  description: >-
+    Web2.5 Gateway API for the AI Agent Fingerprinting System. Provides agent
+    registry lookups, behavioral drift verification, clinical audit event
+    logging, triage encounter management, Merkle-tree anchoring to
+    Ethereum/Sepolia, and cryptographic integrity health checks.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Agents
+    description: AI agent registry and profile lookups
+  - name: Verification
+    description: Behavioral drift verification and trust scoring
+  - name: Events
+    description: Immutable clinical audit event log
+  - name: Triage
+    description: Clinician-facing triage encounter management
+  - name: Anchoring
+    description: Merkle-tree anchoring to blockchain
+  - name: Health
+    description: System health and integrity checks
+  - name: Internal
+    description: Internal endpoints for development and tooling
+
 paths:
-  /v1/agents/{fingerprintHash}:
-    get:
-      summary: Get on-chain agent profile (indexed)
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: fingerprintHash
-          required: true
-          schema:
-            type: string
-            pattern: "^0x[a-fA-F0-9]{64}$"
-      responses:
-        '200':
-          description: Agent Profile Data
   /v1/agents:
     get:
-      summary: List agents with optional filters
+      tags:
+        - Agents
+      summary: List registered AI agents
+      description: >-
+        Returns a paginated list of all globally registered agents. Supports a
+        limit parameter; cursor-based pagination is reserved for future use.
+      operationId: listAgents
       security:
         - BearerAuth: []
       parameters:
-        - in: query
-          name: provider
-          schema:
-            type: string
-        - in: query
-          name: owner
-          schema:
-            type: string
-            description: Ethereum address of the owner
-        - in: query
-          name: status
-          schema:
-            type: string
-            enum: [active, revoked, all]
-          description: Filter by revocation status
-        - in: query
-          name: limit
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of agents to return.
           schema:
             type: integer
             minimum: 1
             maximum: 100
             default: 20
-          description: Max items per page
-        - in: query
-          name: cursor
-          schema:
-            type: string
-          description: Opaque pagination cursor
       responses:
         '200':
-          description: List of agents
-        '400':
-          description: Bad request
+          description: Paginated list of agents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentListResponse'
         '401':
-          description: Unauthorized
-        '503':
-          description: Indexer unavailable
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/agents/{fingerprintHash}:
+    get:
+      tags:
+        - Agents
+      summary: Get agent profile by fingerprint hash
+      description: >-
+        Fetches a detailed agent profile. Results are cached in Redis for
+        low-latency responses; cache misses fall through to PostgreSQL.
+      operationId: getAgentProfile
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: fingerprintHash
+          in: path
+          required: true
+          description: The keccak256 fingerprint hash of the registered agent.
+          schema:
+            type: string
+            pattern: '^0x[a-fA-F0-9]{64}$'
+      responses:
+        '200':
+          description: Detailed agent profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentProfile'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: No agent found for the provided fingerprint hash
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
   /v1/agents/verify:
     post:
-      summary: Verify an AI agent fingerprint using off-chain Keccak256
+      tags:
+        - Verification
+      summary: Verify an AI agent's behavioral fingerprint
+      description: >-
+        The core verification endpoint for relying parties. Accepts a fingerprint
+        hash and an optional current ResponseSet (behavioral trait payload), then
+        runs a multi-signal trust evaluation including revocation checks,
+        Jaccard similarity scoring, perturbation analysis, and contextual rules.
+        Returns a trust decision of accept, challenge, or deny.
+      operationId: verifyAgentFingerprint
       security:
         - BearerAuth: []
       requestBody:
@@ -71,26 +134,1476 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [fingerprintHash]
-              properties:
-                fingerprintHash:
-                  type: string
-                  pattern: "^0x[a-fA-F0-9]{64}$"
-                currentTraitPayload:
-                  type: string
-                context:
-                  type: object
-                  properties:
-                    ip_address:
-                      type: string
-                    user_agent:
-                      type: string
+              $ref: '#/components/schemas/VerifyAgentRequest'
       responses:
         '200':
-          description: Verification result with Trust Score
+          description: Verification result with trust score and decision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyAgentResponse'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: No agent found for the provided fingerprint hash
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Baseline responses not synced to off-chain cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/internal/traits/seed:
+    post:
+      tags:
+        - Internal
+      summary: Seed behavioral trait baseline into off-chain cache
+      description: >-
+        Internal development endpoint. Stores a raw behavioral ResponseSet in
+        Redis keyed by fingerprint hash, mimicking IPFS sidecar delivery used
+        during agent registration. The endpoint verifies that the ResponseSet
+        produces the expected trait hash before persisting.
+      operationId: seedBehavioralTraits
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeedTraitsRequest'
+      responses:
+        '200':
+          description: Traits successfully seeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedTraitsResponse'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/events:
+    post:
+      tags:
+        - Events
+      summary: Append an immutable clinical event to the audit log
+      description: >-
+        Ingests a new clinical interaction into the append-only audit ledger.
+        Validates that reference pointers conform to hash or URI formats (PHI
+        guardrail). Each event is hash-chained to its predecessor for
+        cryptographic integrity.
+      operationId: createClinicalEvent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventRequest'
+      responses:
+        '201':
+          description: Event successfully appended to the ledger
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateEventResponse'
+        '400':
+          description: Missing required fields or PHI violation risk
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    get:
+      tags:
+        - Events
+      summary: Fetch clinical audit events
+      description: >-
+        Retrieves the immutable clinical audit log with optional filters by
+        agent and time range. Returns the most recent 100 events.
+      operationId: listClinicalEvents
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: agent_fingerprint_id
+          in: query
+          required: false
+          description: Filter events by agent fingerprint hash.
+          schema:
+            type: string
+        - name: days_back
+          in: query
+          required: false
+          description: Number of days to look back from now.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: List of clinical audit events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/events/anchor/trigger:
+    post:
+      tags:
+        - Anchoring
+      summary: Trigger Merkle-tree anchoring of pending events
+      description: >-
+        Development trigger that forces the background anchoring job to run
+        immediately. Builds a Merkle tree from all unanchored event hashes,
+        simulates a Sepolia smart contract call, and marks the events as
+        anchored. Events with invalid hashes are quarantined.
+      operationId: triggerEventAnchoring
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Anchoring result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnchorResult'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/triage/encounters:
+    get:
+      tags:
+        - Triage
+      summary: List triage encounters for the clinician queue
+      description: >-
+        Returns a hydrated triage queue with clinical data, AI recommendations,
+        decision history, and per-row cryptographic integrity status. Supports
+        filters by state, acuity level, and encounter source.
+      operationId: listTriageEncounters
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          required: false
+          description: Filter by clinical state.
+          schema:
+            type: string
+            enum:
+              - waiting
+              - in_progress
+              - completed
+        - name: acuity
+          in: query
+          required: false
+          description: Filter by AI-recommended acuity level.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: source
+          in: query
+          required: false
+          description: Filter by encounter source.
+          schema:
+            type: string
+            enum:
+              - live
+              - scenario
+      responses:
+        '200':
+          description: List of hydrated triage encounters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriageEncounterListResponse'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      tags:
+        - Triage
+      summary: Create a new triage encounter with AI recommendation
+      description: >-
+        Clinician-driven endpoint that creates a new clinical encounter, runs the
+        AI triage agent (Ollama LLM or deterministic rule engine fallback), and
+        logs the interaction to the immutable audit ledger.
+      operationId: createTriageEncounter
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTriageEncounterRequest'
+      responses:
+        '201':
+          description: Encounter created with AI triage recommendation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTriageEncounterResponse'
+        '400':
+          description: Missing required clinical fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Active triage agent is missing or revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/triage/encounters/{session_id}/action:
+    post:
+      tags:
+        - Triage
+      summary: Log a clinician decision on an encounter
+      description: >-
+        Records a clinician's accept, override, downgrade, or escalation
+        decision against an existing triage encounter. If a decision already
+        exists for the encounter, the new entry is treated as an amendment
+        with provenance linkage.
+      operationId: logClinicianAction
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: The session identifier for the encounter.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClinicianActionRequest'
+      responses:
+        '200':
+          description: Clinician action logged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClinicianActionResponse'
+        '400':
+          description: Invalid or missing action value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Active triage agent is missing or revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/triage/encounters/{session_id}/history:
+    get:
+      tags:
+        - Triage
+      summary: Fetch the full decision chain for an encounter
+      description: >-
+        Returns the complete decision history for a single encounter session,
+        including AI recommendations, clinician actions, amendments, and
+        provenance edges linking amending events to their predecessors.
+      operationId: getEncounterHistory
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: The session identifier for the encounter.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Full encounter decision lineage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EncounterHistoryResponse'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/triage/encounters/{session_id}/audit-pack:
+    get:
+      tags:
+        - Triage
+      summary: Export a regulatory-grade audit pack for an encounter
+      description: >-
+        Generates and downloads a regulatory-grade inspection bundle for a
+        single clinical encounter. Includes all evidence nodes with
+        hash-verified integrity, provenance edges, and a verification
+        certificate. Served as a JSON file attachment.
+      operationId: getEncounterAuditPack
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          description: The session identifier for the encounter.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Regulatory-grade audit pack (JSON file download)
+          headers:
+            Content-Disposition:
+              description: File attachment header
+              schema:
+                type: string
+                example: 'attachment; filename="audit-pack-abc12345.json"'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditPack'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /v1/triage/status:
+    get:
+      tags:
+        - Triage
+      summary: Get the active triage agent status
+      description: >-
+        Returns the currently active AI agent assigned to the triage role.
+        If no active, non-revoked agent is found, returns a failure indicator.
+      operationId: getTriageAgentStatus
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current triage agent status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriageStatusResponse'
+        '401':
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /health/audit:
+    get:
+      tags:
+        - Health
+      summary: Verify cryptographic integrity of the audit ledger
+      description: >-
+        Performs a full integrity sweep of all events in the agent_events table.
+        For each event, recomputes the content hash and validates the hash
+        chain. Returns discrete lists of directly failing and
+        chain-impacted event IDs. This endpoint does not require authentication.
+      operationId: verifyLedgerIntegrity
+      responses:
+        '200':
+          description: Integrity verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrityCheckResult'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
+      description: >-
+        API key-based authentication. Include the API key as a Bearer token
+        in the Authorization header.
+
+  schemas:
+    # ── Error ──────────────────────────────────────────────────────────────
+
+    ApiError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+              example: internal_error
+            message:
+              type: string
+              description: Human-readable error description.
+              example: An internal error occurred
+            details:
+              type: object
+              description: Additional context for the error.
+              additionalProperties: true
+
+    # ── Agents ─────────────────────────────────────────────────────────────
+
+    AgentListItem:
+      type: object
+      properties:
+        fingerprintHash:
+          type: string
+          description: Keccak256 fingerprint hash of the agent.
+          example: '0xabc123...'
+        name:
+          type: string
+          description: Human-readable agent name.
+          example: TriageBot (Ollama · llama3:8b)
+        provider:
+          type: string
+          description: AI model provider.
+          example: ollama
+        isRevoked:
+          type: boolean
+          description: Whether the agent has been revoked on-chain.
+        hasBehavioralTrait:
+          type: boolean
+          description: Whether the agent has a registered behavioral trait hash.
+
+    AgentListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentListItem'
+        has_more:
+          type: boolean
+          description: Whether more results are available beyond the current page.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for fetching the next page (reserved for future use).
+
+    BehavioralTraitInfo:
+      type: object
+      properties:
+        hasTrait:
+          type: boolean
+        latestTraitHash:
+          type: string
+          description: Keccak256 hash of the latest behavioral trait payload.
+        traitVersion:
+          type: string
+          description: Version identifier for the test suite used.
+        lastUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    IndexerHealth:
+      type: object
+      properties:
+        isStale:
+          type: boolean
+          description: Whether the indexer is behind the chain head.
+        lagBlocks:
+          type: integer
+          description: Number of blocks the indexer is behind.
+
+    AgentProfile:
+      type: object
+      properties:
+        fingerprintHash:
+          type: string
+        agent_id:
+          type: string
+          description: Logical slug identifier used for role resolution.
+        name:
+          type: string
+        provider:
+          type: string
+        version:
+          type: string
+        registeredBy:
+          type: string
+          description: Ethereum address of the registrant.
+        createdAt:
+          type: string
+          format: date-time
+        isRevoked:
+          type: boolean
+        behavioralTrait:
+          $ref: '#/components/schemas/BehavioralTraitInfo'
+        indexer:
+          $ref: '#/components/schemas/IndexerHealth'
+
+    # ── Verification ───────────────────────────────────────────────────────
+
+    PromptResponse:
+      type: object
+      required:
+        - promptId
+        - prompt
+        - response
+        - timestamp
+      properties:
+        promptId:
+          type: string
+        prompt:
+          type: string
+        response:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds.
+
+    ResponseSet:
+      type: object
+      required:
+        - testSuiteVersion
+        - responses
+        - generatedAt
+      properties:
+        testSuiteVersion:
+          type: string
+          description: Version of the behavioral test suite.
+          example: reasoning-v1.0
+        responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromptResponse'
+        generatedAt:
+          type: integer
+          format: int64
+
+    VerifyAgentRequest:
+      type: object
+      required:
+        - fingerprintHash
+      properties:
+        fingerprintHash:
+          type: string
+          description: Keccak256 fingerprint hash of the agent to verify.
+          pattern: '^0x[a-fA-F0-9]{64}$'
+        currentResponseSet:
+          $ref: '#/components/schemas/ResponseSet'
+        context:
+          type: object
+          properties:
+            ip_address:
+              type: string
+              description: IP address of the requesting party.
+            user_agent:
+              type: string
+              description: User-Agent header of the requesting party.
+
+    VerifyAgentResponse:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+            - accept
+            - challenge
+            - deny
+          description: Trust decision outcome.
+        trust_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Composite trust score (0–100).
+        agent:
+          type: object
+          properties:
+            fingerprintHash:
+              type: string
+            name:
+              type: string
+            provider:
+              type: string
+            isRevoked:
+              type: boolean
+        signals:
+          type: array
+          items:
+            type: string
+          description: List of trust signals detected during verification.
+          example:
+            - contract_status_active
+            - behavioral_match_success
+        indexer:
+          $ref: '#/components/schemas/IndexerHealth'
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Actionable recommendations based on the verification result.
+        verification_details:
+          type: object
+          nullable: true
+          properties:
+            similarity_score:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 1
+              description: Jaccard similarity score between baseline and current responses.
+
+    # ── Internal / Traits ──────────────────────────────────────────────────
+
+    SeedTraitsRequest:
+      type: object
+      required:
+        - fingerprintHash
+        - responseSet
+      properties:
+        fingerprintHash:
+          type: string
+          description: Keccak256 fingerprint hash of the agent.
+        responseSet:
+          $ref: '#/components/schemas/ResponseSet'
+
+    SeedTraitsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        fingerprintHash:
+          type: string
+        generatedTraitHash:
+          type: string
+          description: Keccak256 hash generated from the seeded ResponseSet.
+        traitVersion:
+          type: string
+        message:
+          type: string
+
+    # ── Events ─────────────────────────────────────────────────────────────
+
+    CreateEventRequest:
+      type: object
+      required:
+        - agent_fingerprint_id
+        - input_ref
+        - output_ref
+      properties:
+        agent_fingerprint_id:
+          type: string
+          description: Fingerprint hash of the agent that produced the event.
+        model_version:
+          type: string
+          description: Version of the AI model used.
+          default: unknown
+        workflow_type:
+          type: string
+          description: Type of clinical workflow.
+          example: triage_recommendation
+        policy_id:
+          type: string
+          description: Policy or scenario identifier.
+        session_id:
+          type: string
+          description: Session identifier linking related events.
+        clinician_action:
+          type: string
+          description: Clinician decision if applicable.
+        input_ref:
+          type: string
+          description: >-
+            Hash or URI pointer to the input data (must not contain raw PHI).
+          example: sha256:abc123...
+        output_ref:
+          type: string
+          description: Hash or URI pointer to the output data.
+          example: sha256:def456...
+        amends_event_id:
+          type: string
+          format: uuid
+          description: Event ID that this event amends.
+        reason_code:
+          type: string
+          description: Machine-readable reason code for the action.
+        reason_text:
+          type: string
+          description: Human-readable reason description.
+        clinical_data:
+          type: object
+          description: Structured clinical payload (Zero-PHI).
+          additionalProperties: true
+
+    EventRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Auto-incrementing database row ID.
+        event_id:
+          type: string
+          format: uuid
+          description: Globally unique event identifier.
+        event_hash:
+          type: string
+          description: Keccak256 hash of the canonical event payload.
+        timestamp:
+          type: string
+          format: date-time
+        previous_event_hash:
+          type: string
+          nullable: true
+          description: Hash of the preceding event in the agent's chain.
+
+    CreateEventResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/EventRecord'
+
+    AgentEvent:
+      type: object
+      description: Full agent event row from the audit ledger.
+      properties:
+        id:
+          type: integer
+        event_id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        agent_fingerprint_id:
+          type: string
+        model_version:
+          type: string
+        workflow_type:
+          type: string
+        policy_id:
+          type: string
+          nullable: true
+        clinician_action:
+          type: string
+          nullable: true
+        input_ref:
+          type: string
+        output_ref:
+          type: string
+        previous_event_hash:
+          type: string
+          nullable: true
+        event_hash:
+          type: string
+        amends_event_id:
+          type: string
+          nullable: true
+        reason_code:
+          type: string
+          nullable: true
+        reason_text:
+          type: string
+          nullable: true
+        clinical_data:
+          type: object
+          nullable: true
+          additionalProperties: true
+        anchored_to_chain:
+          type: boolean
+        merkle_root_id:
+          type: integer
+          nullable: true
+
+    EventListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentEvent'
+
+    # ── Triage ─────────────────────────────────────────────────────────────
+
+    Vitals:
+      type: object
+      required:
+        - hr
+        - bp_sys
+        - bp_dia
+        - rr
+        - spo2
+        - temp
+        - pain_score
+      properties:
+        hr:
+          type: integer
+          description: Heart rate in BPM.
+        bp_sys:
+          type: integer
+          description: Systolic blood pressure in mmHg.
+        bp_dia:
+          type: integer
+          description: Diastolic blood pressure in mmHg.
+        rr:
+          type: integer
+          description: Respiratory rate in breaths per minute.
+        spo2:
+          type: integer
+          description: Oxygen saturation percentage.
+        spo2_support:
+          type: string
+          enum:
+            - room_air
+            - supplemental
+        temp:
+          type: number
+          format: double
+          description: Body temperature in Celsius.
+        temp_method:
+          type: string
+          enum:
+            - oral
+            - tympanic
+            - axillary
+            - rectal
+        pain_score:
+          type: integer
+          minimum: 0
+          maximum: 10
+        weight_kg:
+          type: number
+          format: double
+        height_cm:
+          type: number
+          format: double
+        glucose_mmol:
+          type: number
+          format: double
+        map:
+          type: integer
+          description: Mean arterial pressure.
+        avpu:
+          type: string
+          description: AVPU consciousness scale.
+          enum:
+            - A
+            - V
+            - P
+            - U
+
+    PatientHistory:
+      type: object
+      properties:
+        allergies:
+          type: array
+          items:
+            type: string
+        medications:
+          type: array
+          items:
+            type: string
+        pmh:
+          type: array
+          items:
+            type: string
+          description: Past medical history.
+        notes:
+          type: string
+
+    CreateTriageEncounterRequest:
+      type: object
+      required:
+        - chief_complaint
+        - vitals
+      properties:
+        chief_complaint:
+          type: string
+          description: Primary reason for the encounter.
+          example: Chest Pain
+        vitals:
+          $ref: '#/components/schemas/Vitals'
+        age:
+          type: integer
+          description: Patient age in years.
+          default: 0
+        sex:
+          type: string
+          enum:
+            - M
+            - F
+          default: F
+        red_flags:
+          type: array
+          items:
+            type: string
+          description: Clinical red flags present.
+          example:
+            - chest_pain
+            - altered_loc
+        history:
+          $ref: '#/components/schemas/PatientHistory'
+        clinician_name:
+          type: string
+          description: Name of the clinician creating the encounter.
+          default: clinician
+
+    TriageResult:
+      type: object
+      properties:
+        acuity:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: 'Triage acuity level: 1 (Critical) to 5 (Non-Urgent).'
+        reasons:
+          type: array
+          items:
+            type: string
+          description: Clinical reasoning for the acuity assignment.
+
+    ClinicalData:
+      type: object
+      properties:
+        schemaVersion:
+          type: integer
+        chief_complaint:
+          type: string
+        age:
+          type: integer
+        gender:
+          type: string
+        vitals:
+          $ref: '#/components/schemas/Vitals'
+        history:
+          $ref: '#/components/schemas/PatientHistory'
+        red_flags:
+          type: array
+          items:
+            type: string
+        ai_recommendation:
+          $ref: '#/components/schemas/TriageResult'
+        clinician_acuity:
+          type: integer
+          nullable: true
+        ai_provider:
+          type: string
+          description: Provider that generated the recommendation (ollama or rules).
+        state:
+          type: string
+          enum:
+            - waiting
+            - in_progress
+            - completed
+
+    EncounterIntegrity:
+      type: object
+      properties:
+        event_hash:
+          type: string
+          description: Keccak256 hash of the encounter event.
+        merkle_root_id:
+          type: integer
+          nullable: true
+        anchored_to_chain:
+          type: boolean
+        tamper_status:
+          type: string
+          enum:
+            - pending
+            - anchored
+            - tampered
+
+    DecisionHistoryEntry:
+      type: object
+      properties:
+        action:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        anchored:
+          type: boolean
+        event_hash:
+          type: string
+        reason_code:
+          type: string
+        reason_text:
+          type: string
+        amends_event_id:
+          type: string
+        clinician_acuity:
+          type: integer
+
+    TriageEncounter:
+      type: object
+      properties:
+        encounter_id:
+          type: string
+          description: Session-scoped encounter identifier.
+        db_row_id:
+          type: integer
+        arrival_time:
+          type: string
+          format: date-time
+        clinician_action:
+          type: string
+          nullable: true
+        agent_id:
+          type: string
+          description: Fingerprint hash of the AI agent that triaged this encounter.
+        source:
+          type: string
+          enum:
+            - live
+            - scenario
+        clinical:
+          $ref: '#/components/schemas/ClinicalData'
+        integrity:
+          $ref: '#/components/schemas/EncounterIntegrity'
+        decision_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionHistoryEntry'
+
+    TriageEncounterListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TriageEncounter'
+
+    CreateTriageEncounterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/TriageEncounter'
+
+    ClinicianActionRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - accepted
+            - overridden
+            - downgraded
+            - escalated
+          description: The clinician's decision on the AI triage recommendation.
+        reason_code:
+          type: string
+          description: Machine-readable reason code for the decision.
+        reason_text:
+          type: string
+          description: Human-readable explanation for the decision.
+        assigned_acuity:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Clinician-assigned acuity (used when overriding).
+
+    ClinicianActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        action:
+          type: string
+        session_id:
+          type: string
+        is_amendment:
+          type: boolean
+          description: Whether this action amends a previous decision.
+        previous_action:
+          type: string
+          nullable: true
+          description: The previous clinician action, if this is an amendment.
+
+    LineageNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Event ID.
+        type:
+          type: string
+          enum:
+            - ai_recommendation
+            - clinician_action
+        action:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        anchored:
+          type: boolean
+        hash:
+          type: string
+          description: Event hash.
+        reason:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        workflow:
+          type: string
+
+    LineageEdge:
+      type: object
+      properties:
+        from:
+          type: string
+          format: uuid
+        to:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - amends
+
+    EncounterHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        session_id:
+          type: string
+        lineage:
+          type: object
+          properties:
+            session_id:
+              type: string
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/LineageNode'
+            edges:
+              type: array
+              items:
+                $ref: '#/components/schemas/LineageEdge'
+
+    # ── Audit Pack ─────────────────────────────────────────────────────────
+
+    AuditPackEvidenceNode:
+      type: object
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        workflow:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        event_hash:
+          type: string
+        provenance:
+          type: object
+          properties:
+            amends:
+              type: string
+              nullable: true
+            reason:
+              type: string
+              nullable: true
+            note:
+              type: string
+              nullable: true
+        anchoring:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+                - anchored
+                - pending
+            chain:
+              type: string
+              description: Blockchain network name.
+              example: sepolia
+            merkle_root:
+              type: string
+              description: Merkle root hash anchored on-chain.
+            tx_hash:
+              type: string
+              description: Transaction hash of the anchoring transaction.
+
+    AuditPackVerificationCertificate:
+      type: object
+      properties:
+        audit_status:
+          type: string
+          enum:
+            - verified
+            - failed
+        faults:
+          type: array
+          items:
+            type: string
+          description: List of integrity faults detected during verification.
+        attestation:
+          type: string
+        explanation:
+          type: string
+
+    AuditPack:
+      type: object
+      properties:
+        pack_version:
+          type: string
+          example: 1.0.0-regulatory
+        generated_at:
+          type: string
+          format: date-time
+        session:
+          type: object
+          properties:
+            id:
+              type: string
+            environment:
+              type: string
+            clinician_ref:
+              type: string
+            effective_state:
+              type: string
+        evidence:
+          type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditPackEvidenceNode'
+            edges:
+              type: array
+              items:
+                $ref: '#/components/schemas/LineageEdge'
+        verification_certificate:
+          $ref: '#/components/schemas/AuditPackVerificationCertificate'
+
+    # ── Anchoring ──────────────────────────────────────────────────────────
+
+    AnchorResult:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Human-readable status message.
+          example: Anchored successfully.
+        count:
+          type: integer
+          description: Number of events anchored in this batch.
+        quarantined:
+          type: integer
+          description: Number of events quarantined due to invalid hashes.
+        merkleRoot:
+          type: string
+          description: Computed Merkle root hash for the anchored batch.
+        txHash:
+          type: string
+          description: Simulated on-chain transaction hash.
+
+    # ── Health ─────────────────────────────────────────────────────────────
+
+    IntegrityCheckResult:
+      type: object
+      properties:
+        is_healthy:
+          type: boolean
+          description: Whether the entire ledger passed integrity verification.
+        total_events_checked:
+          type: integer
+          description: Total number of events scanned.
+        faults_detected:
+          type: integer
+          description: Combined count of direct failures and chain-impacted events.
+        failingEventIds:
+          type: array
+          items:
+            type: integer
+          description: >-
+            Database row IDs of events that directly fail hash or temporal
+            verification.
+        impactedEventIds:
+          type: array
+          items:
+            type: integer
+          description: >-
+            Database row IDs of events that are downstream of a direct failure
+            (chain-impacted).
+
+    # ── Triage Status ──────────────────────────────────────────────────────
+
+    TriageStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        available:
+          type: boolean
+          description: Whether an active triage agent is available.
+        agent:
+          type: object
+          description: Present only when an active agent is found.
+          properties:
+            fingerprintHash:
+              type: string
+            name:
+              type: string
+            provider:
+              type: string
+            version:
+              type: string
+        error:
+          type: string
+          description: Error message when no active agent is found.

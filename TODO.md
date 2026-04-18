@@ -23,23 +23,26 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
    - Develop a visual timeline for clinicians to trace the "Chain of Evidence." This surfaces underlying Merkle-chain connectivity as intuitive trust signals without requiring deep technical knowledge.
 3. **PHI Masking & Guardrail Engine**
    - Implement automated detection and masking of Protected Health Information (PHI) to ensure that high-integrity audit logs focus on system behavior and decisions rather than patient-specific data.
-4. **Unified "Baseline-then-Audit" Workflow**
+4. **Automatic Lexical Drift Monitoring (v1)**
+   - Use existing Jaccard-based trait computation to periodically compare current responses to baseline probes.
+   - Compute a per-agent drift score over time (1 − mean Jaccard) and surface trends in Triage vs. Enforcement modes.
+5. **Unified "Baseline-then-Audit" Workflow**
    - Consolidate the Registration and Verification views into a single, cohesive audit flow. **Goal**: Avoid forcing clinicians to think in terms of "Blockchain Registration" vs. "Verification" steps.
 
 ## Medium Priority: Scale & Compliance
 
-5. **Regulatory Export Service (C2PA-signed PDF Logs)**
+6. **Semantic Drift Monitoring (v2, Embeddings)**
+   - Introduce embedding-based similarity (Cosine distance) for the same probe suite to improve resilience against paraphrases and style shifts.
+   - Combine lexical and semantic drift into a unified behavioral drift score for advanced enforcement decisions.
+7. **Regulatory Export Service (C2PA-signed PDF Logs)**
    - Create a service to generate non-binding PDF audit certificates proving system integrity for internal or experimental compliance review.
-6. **Integrity Observability (Prometheus/Grafana)**
+8. **Integrity Observability (Prometheus/Grafana)**
    - Establish monitoring for ledger health, automated integrity fault detection, and cross-agent behavioral drift metrics at scale.
-7. **Multi-Agent Comparative Triage (V2)**
+9. **Multi-Agent Comparative Triage (V2)**
    - Enable side-by-side auditing of different AI models or versions against the same clinical case to streamline model-switchover risk assessments.
 
 ## Lower Priority / Deferred
 
-8. **Generic Blockchain UI Components**
-   - Defer work on universal network selectors, wallet-specific UX, and L2 switchers unless a concrete anchoring scenario requires it.
-9. **Environmental Impact Tracking**
    - Defer environmental carbon-footprint mapping for blockchain operations until the core clinical integrity MVP is finalized.
 
 ## Next Immediate Actions

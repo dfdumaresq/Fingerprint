@@ -56,7 +56,7 @@ Key interfaces include:
 The behavioral verification layer is used to register and validate expected traits of an AI agent or workflow.
 
 - **Establishing Baselines**: Create a behavioral signature for a known-good model.
-- **Drift Detection**: Detect changes in system persona or logic during auditing.
+- **Drift Detection**: Detect changes in system persona or logic during auditing. (Note: Drift detection currently relies on lexical similarity via Jaccard-based “trait hashes” over a fixed probe suite; automatic semantic drift monitoring via embeddings is a planned extension.)
 - **Audit Modes**: Supports loose “Triage” matching (high sensitivity) and strict “Enforcement” matching (identity verification).
 
 ### Tamper Demonstration

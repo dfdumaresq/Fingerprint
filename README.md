@@ -1,190 +1,131 @@
-# AI Agent Fingerprinting System
+# Medical AI Audit Ledger & Behavioral Verification Platform
 
-A blockchain-based system for registering and verifying the identity of AI agents using unique fingerprints.
+A medical AI integrity platform designed to make triage and clinical review work easier to trust, easier to audit, and easier to act on.
+
+This project began as an AI agent fingerprinting system and has evolved into a broader audit-and-integrity platform for healthcare-adjacent AI. Today, the emphasis is not just on proving that an AI system is identifiable, but on helping nurses, clinicians, reviewers, and operations teams understand what the system did, why it did it, whether it can be trusted, and when its output should be escalated or questioned.
 
 ## Overview
 
-This application allows users to:
+The platform now supports three closely related capabilities:
 
-1. **Register AI Agent Fingerprints**: Generate and store unique identifiers for AI agents on the blockchain
-2. **Verify AI Agent Fingerprints**: Confirm the authenticity of an AI agent by checking its fingerprint against the blockchain record
+1. **Clinical Audit & Triage**: Surfaces AI-assisted workflow activity through dashboards built for triage review, operational monitoring, and medical audit workflows.
+2. **Behavioral Verification**: Registers, compares, and verifies agent traits and behavioral signatures to detect drift, impersonation, or unexpected changes in system behavior.
+3. **Tamper-Evident Integrity**: Preserves verifiable records, provenance signals, and integrity metadata so developers and reviewers can detect altered outputs, broken evidence chains, or compromised execution flows.
+
+In practice, the project functions less like a simple fingerprint registry and more like a medical AI audit ledger backed by behavioral verification and trust primitives.
+
+## Clinical UX Goals
+
+This system is being shaped for environments where clarity, speed, and confidence matter.
+
+The product direction is intended to support work such as:
+
+- Reducing the cognitive overhead of reviewing AI-assisted triage outputs.
+- Making handoffs between systems, reviewers, and clinicians easier to understand.
+- Surfacing confidence, provenance, and integrity signals without forcing users to dig through technical logs.
+- Helping operators know when to trust, verify, escalate, or override AI-generated recommendations.
+- Preserving auditability without turning the experience into a compliance-first interface.
+
+For designers and developers with healthcare experience, this means the opportunity is not only to improve interface polish, but to shape how trust, reviewability, and workload reduction appear inside real clinical workflows.
+
+## Current Project State
+
+The repository should be understood as a **Medical AI Audit & Integrity** application with an underlying AI fingerprint and verification layer.
+
+The original blockchain-centric fingerprinting model is still relevant, but it is now one part of a larger product surface that includes:
+
+- Clinical workflow dashboards (`TriageDashboard`, `MedicalAuditDashboard`).
+- Behavioral verification logic (Triage vs. Enforcement modes).
+- Tamper demonstration scripts.
+- API documentation and OpenAPI definitions.
+- Security and provenance controls (C2PA).
+
+## Core Capabilities
+
+### Clinical Audit & Triage
+
+The clinical side of the platform is focused on operational transparency and reviewability.
+
+Key interfaces include:
+
+- **TriageDashboard**: A workflow-oriented view for reviewing AI-assisted triage outputs, monitoring case flow, and surfacing decision-support context.
+- **MedicalAuditDashboard**: A review surface for tracing system actions, validating evidence, and inspecting medical AI activity over time.
+
+### Behavioral Audit
+
+The behavioral verification layer is used to register and validate expected traits of an AI agent or workflow.
+
+- **Establishing Baselines**: Create a behavioral signature for a known-good model.
+- **Drift Detection**: Detect changes in system persona or logic during auditing.
+- **Audit Modes**: Supports loose “Triage” matching (high sensitivity) and strict “Enforcement” matching (identity verification).
+
+### Tamper Demonstration
+
+The repository includes a tamper demonstration workflow to help developers and reviewers understand how integrity protections behave under manipulation.
+
+```bash
+npm run demo:tamper
+```
+
+This demonstration shows how clinical evidence can be altered, how tamper signals are surfaced, and how the platform distinguishes trusted records from compromised ones.
+
+### OpenAPI Specification
+
+The project exposes API documentation for integration, testing, and onboarding.
+
+- **Swagger UI**: Access at `http://localhost:3000/api-docs` when the server is running.
+- **OpenAPI definition**: Located at `src/api/openapi.yaml`.
 
 ## Technologies Used
 
-- React with TypeScript for the frontend
-- Ethers.js for blockchain integration
-- Solidity for smart contracts
-- OpenZeppelin contracts for security and access control
-- Hardhat for contract deployment and testing
-- Webpack for bundling
-
-## Prerequisites
-
-- Node.js (v16+)
-- npm or yarn
-- MetaMask or another Ethereum wallet browser extension
-
-## Installation
-
-Clone the repository and install dependencies:
-
-```bash
-git clone <repository-url>
-cd Fingerprint
-npm install
-```
-
-## Configuration
-
-1. Copy the example environment file and update it with your values:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Edit the `.env` file with your:
-   - Ethereum wallet private key for deployment
-   - Alchemy API key for accessing the Ethereum network
-
-   ```
-   PRIVATE_KEY=your_wallet_private_key_here
-   SEPOLIA_URL=https://eth-sepolia.g.alchemy.com/v2/your-alchemy-api-key
-   ```
-
-3. After deploying the contract, update the `blockchainConfig` in `src/App.tsx` with your:
-   - Alchemy API URL
-   - Deployed contract address
-
-## Smart Contract Deployment
-
-1. Compile the contract:
-   ```bash
-   npm run compile
-   ```
-
-2. Deploy to Sepolia testnet:
-   ```bash
-   npm run deploy:sepolia
-   ```
-
-3. Deploy to a local Hardhat network (for development):
-   ```bash
-   npm run deploy:local
-   ```
+- **Frontend**: React 19, TypeScript, Vanilla CSS (Glassmorphism).
+- **Backend**: Node.js, Express 5.
+- **Database**: PostgreSQL (Audit records), Redis (Caching/Ephemeral state).
+- **Integrity**: C2PA (`@trustnxt/c2pa-ts`), EIP-712 Typed Signatures.
+- **Blockchain**: Solidity, Ethers.js 6, Hardhat (Foundational layer).
 
 ## Running the Application
 
-Start the development server:
+### 1. Initialize Supporting Services
+
+Ensure PostgreSQL and Redis are running locally or accessible via your `.env` configuration.
+
+### 2. Start the Platform
+
+To run the full Medical AI Audit environment:
 
 ```bash
+# Initialize the database and start the API server
+npm run dev:medical
+
+# (Optional) Start the frontend development server
 npm start
 ```
-The application will automatically open and be available at http://localhost:3000.
 
-## Usage
+### 3. Generate Sample Data
 
-1. **Connect Your Wallet**:
-   - Click "Connect Wallet" and approve the connection in your wallet extension
+To populate the dashboards with simulated clinical events:
 
-2. **Register an AI Agent Fingerprint**:
-   - Fill in the agent details (ID, name, provider, version)
-   - Click "Generate" to create a unique fingerprint hash based on the agent details, or manually input a hash
-   - Optionally enable EIP-712 typed data signatures for enhanced security
-   - Submit the form to register on the blockchain
-   - [View Registration Example](docs/Register%20Agent%20Fingerprint.pdf)
+```bash
+npm run simulate:medical
+```
 
-3. **Verify an AI Agent Fingerprint**:
-   - Enter a fingerprint hash
-   - Click "Verify" to check if it exists on the blockchain
-   - View the registration details if verified
-   - Check revocation status to ensure the fingerprint is still valid
-   - [View Verification Example](docs/Verify%20Agent%20Fingerprint.pdf)
+## Developer Workflow
 
-4. **Revoke an AI Agent Fingerprint**:
-   - Enter the fingerprint hash you wish to revoke
-   - Only the original registrant (wallet address) can revoke their fingerprints
-   - Once revoked, a fingerprint will be permanently marked as invalid
+For a second developer joining the project, this is the recommended mental model:
 
-5. **Administrative Functions** (Contract Owner Only):
-   - **Emergency Pause**: Pause all contract operations in case of security incidents
-   - **Admin Revocation**: Revoke any fingerprint regardless of original registrant
-   - **Ownership Transfer**: Transfer fingerprint ownership between addresses
-   - **Contract Management**: Transfer contract ownership to another address
+1. **Explore the Dashboards**: Understand the triage and medical audit views first.
+2. **Review the API Contract**: Inspect `http://localhost:3000/api-docs`.
+3. **Understand the Integrity Model**: Trace how behavioral verification and C2PA provenance work together.
+4. **Run the Tamper Demonstration**: Use `npm run demo:tamper` to see detection paths in action.
 
-The fingerprint hash is generated using the keccak256 algorithm, combining the agent's ID, name, provider, version, and a timestamp to ensure uniqueness.
+## Security
 
-### EIP-712 Typed Data Signatures
+Security emphasizes **audit integrity** and **tamper-evident evidence handling**:
 
-This project also supports EIP-712 typed data signatures for enhanced security and structure:
-
-- **Structured Data**: EIP-712 provides a structured format with explicit typing for all fields
-- **Human-Readable Format**: Makes signatures more interpretable and prevents signature replay attacks
-- **Domain Separation**: Includes domain information to prevent cross-application signature reuse
-- **Optional Feature**: Can be enabled via a checkbox during agent registration
-
-### Security and Access Control
-
-The smart contract implements robust security mechanisms using OpenZeppelin libraries:
-
-- **Access Control**: Uses OpenZeppelin's Ownable pattern for secure, standardized role management
-- **Emergency Controls**: Implements Pausable mechanism to halt all contract operations in case of security incidents
-- **Administrative Functions**: Provides owner-only functions for contract management and issue resolution
-- **Standards Compliance**: Follows industry best practices for smart contract security
-
-### Revocation System
-
-The fingerprinting system includes a revocation mechanism to invalidate fingerprints:
-
-- **Dual Revocation Paths**:
-  - **Self-Revocation**: Original registrants can revoke their own fingerprints
-  - **Administrative Revocation**: Contract owners can revoke any fingerprint to handle compromised accounts
-- **Permanence**: Once revoked, a fingerprint cannot be un-revoked
-- **Transparency**: Revocation information is stored on-chain with timestamp and revoker address
-- **Verification Integration**: All verification operations automatically check revocation status
-- **Backward Compatibility**: Works with both new and legacy contract deployments
-
-### Ownership Management
-
-The contract includes features for managing fingerprint ownership:
-
-- **Ownership Transfer**: Contract owner can transfer fingerprint ownership between addresses
-- **Dispute Resolution**: Provides mechanisms to resolve ownership disputes or recover from compromised accounts
-- **Audit Trail**: All ownership transfers are recorded on-chain with complete history
-
-## Blockchain Networks
-
-This application can be configured to work with:
-
-- Ethereum Mainnet
-- Ethereum Testnets (Sepolia, Goerli)
-- Layer 2 solutions (Arbitrum, Optimism)
-- Other EVM-compatible chains
-
-## AI Assistance Attribution
-
-This project was built with assistance from Claude AI (Anthropic). The AI contribution has been fingerprinted and registered on the Sepolia testnet blockchain with the following details:
-
-- **ID**: AI Agent Fingerprinting System Code Assistant
-- **AI**: Claude (Anthropic)
-- **Version**: Claude-3-7-Sonnet-20250219
-- **Fingerprint Hash**: `0x59bba0ed5a7d4a5ba2c3ecad48fa376f9383b834ad28b581a5ea97e11f3d1385`
-
-### Verifying the Fingerprint
-
-To verify this fingerprint:
-
-1. Ensure you have MetaMask connected to the Sepolia testnet
-2. Go to the "Verify Fingerprint" tab in the application
-3. Enter the hash: `0x59bba0ed5a7d4a5ba2c3ecad48fa376f9383b834ad28b581a5ea97e11f3d1385`
-4. Click "Verify" to see the registration details
-
-Alternatively, you can verify using Etherscan:
-
-1. Visit the [Sepolia Etherscan](https://sepolia.etherscan.io/)
-2. Navigate to the contract address: `0x92eF65Ba802b38F3A87a3Ae292a4624FA3040930`
-3. Go to the "Read Contract" tab
-4. Call the `verifyFingerprint` function with the hash above
-
-This verification process ensures the authenticity of the AI assistance used in this project, regardless of any UI modifications in forks.
+- **Tamper Evidence**: All ledger entries are cryptographically linked; breaking the chain triggers visual alerts.
+- **Provenance**: C2PA metadata establishes source and transformation history for all clinical evidence.
+- **Behavioral Verification**: Identity is verified not just by keys, but by consistent behavioral signatures.
 
 ## License
 

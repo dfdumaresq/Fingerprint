@@ -1,94 +1,51 @@
-Based on your decision to close the PR with the A2A python-based project and focus on React/TypeScript projects, it makes sense to adjust the priorities in your TODO list. Let me revise the list to better align with a React/TypeScript-focused approach:
+# Medical AI Audit Ledger & Integrity Platform Roadmap
 
-# Revised TODO List for AI Agent Fingerprinting System (React/TypeScript Focus)
+This roadmap tracks the evolution of the Fingerprint project from a foundational trust layer into a specialized clinical audit and integrity product.
 
 ## Completed Items ✅
-1. **Fix RevokeFingerprint Component to Use Feature Detection**
-   - ✅ Improved compatibility with different contract versions
-   - ✅ Implemented proper feature detection instead of hardcoded contract addresses
-   - ✅ Added graceful degradation for contracts without revocation support
 
-2. **Implement Secure Key Management Following OWASP Guidelines**
-   - ✅ Created KeyProvider interface with multiple implementations
-   - ✅ Implemented EnvKeyProvider, EncryptedFileKeyProvider, and VaultKeyProvider
-   - ✅ Added KeyManager facade for convenient access to keys
-   - ✅ Created AuditLogger for comprehensive security audit logging
-   - ✅ Developed SecureBlockchainService that integrates with key management
-   - ✅ Added tests for all components to ensure security and reliability
-   - ✅ Updated deployment scripts to use secure key storage
-   - ✅ Added script for key management CLI operations
+1. **OpenAPI 3.0.3 Specification**
+   - ✅ Canonical API contract implemented in `src/api/openapi.yaml` and accessible via the `/api-docs` endpoint.
+2. **Tamper Demonstration Suite**
+   - ✅ Proof-of-integrity workflow implemented in `scripts/tamper-demo.ts` (`npm run demo:tamper`) to visualize detection paths.
+3. **Behavioral Verification Engine**
+   - ✅ Foundation for behavioral signatures and dual audit modes (Triage/Enforcement) implemented in `src/api/server.ts` and `src/components/BehavioralVerification.tsx`.
+4. **Platform Documentation & Product Framing**
+   - ✅ README overhaul establishing "Clinical UX Goals" and the pivot to a high-integrity medical audit narrative.
+5. **Secure Key Management & Audit Logging**
+   - ✅ Implemented OWASP-aligned key management and comprehensive security auditing for blockchain interactions.
 
-## Adjusted High Priority (React/TypeScript Focus)
-1. **Enhance EIP-712 Implementation in React/TypeScript**
-   - Improve the TypeScript implementation for better type safety
-   - Create React hooks for EIP-712 signature creation and verification 
-   - Develop a more user-friendly signature UI with clear security indicators
-   - Add comprehensive TypeScript typings for all EIP-712 operations
+## High Priority: Clinical Trust & Workflow
 
-2. **Blockchain Network Abstraction with React Context**
-   - Create a React context for blockchain network configuration
-   - Implement a network selector component for the UI
-   - Support multiple networks through an abstracted provider pattern
-   - Add network-specific configuration options in the UI settings
+1. **Clinician Decision Ledger (Immutable History)**
+   - Implement "Clinician Decision" events to track how human reviewers accept, modify, or override AI recommendations. These must be logged as cryptographically anchored amendments to the original record.
+2. **Interactive Audit Timeline (Evidence Chain Visualization)**
+   - Develop a visual timeline for clinicians to trace the "Chain of Evidence." This surfaces underlying Merkle-chain connectivity as intuitive trust signals without requiring deep technical knowledge.
+3. **PHI Masking & Guardrail Engine**
+   - Implement automated detection and masking of Protected Health Information (PHI) to ensure that high-integrity audit logs focus on system behavior and decisions rather than patient-specific data.
+4. **Unified "Baseline-then-Audit" Workflow**
+   - Consolidate the Registration and Verification views into a single, cohesive audit flow. **Goal**: Avoid forcing clinicians to think in terms of "Blockchain Registration" vs. "Verification" steps.
 
-3. **Complete React Component Library for Fingerprinting**
-   - Create a dedicated npm package for fingerprinting React components
-   - Implement composable components for different fingerprinting operations
-   - Add theming support for better integration with host applications
-   - Create storybook documentation for component usage
+## Medium Priority: Scale & Compliance
 
-## Medium Priority
-4. **Improve Developer Experience**
-   - Add comprehensive TypeScript typings for all components
-   - Create better error handling with user-friendly messages
-   - Improve loading states and progress indicators
-   - Implement React hooks for common fingerprinting operations
+5. **Regulatory Export Service (C2PA-signed PDF Logs)**
+   - Create a service to generate non-binding PDF audit certificates proving system integrity for internal or experimental compliance review.
+6. **Integrity Observability (Prometheus/Grafana)**
+   - Establish monitoring for ledger health, automated integrity fault detection, and cross-agent behavioral drift metrics at scale.
+7. **Multi-Agent Comparative Triage (V2)**
+   - Enable side-by-side auditing of different AI models or versions against the same clinical case to streamline model-switchover risk assessments.
 
-5. **UI/UX Enhancements**
-   - Redesign the fingerprint verification process for better user understanding
-   - Add visualization components for fingerprint status and history
-   - Implement dark mode and accessibility improvements
-   - Create mobile-responsive versions of all components
+## Lower Priority / Deferred
 
-6. **Performance Optimization**
-   - Implement React.memo and useMemo for expensive operations
-   - Add client-side caching for verification results
-   - Optimize blockchain interactions to reduce wait times
-   - Create a background verification service for bulk operations
-
-7. **Integration Examples for Popular Frameworks**
-   - Add integration examples for Next.js
-   - Create sample implementations for React Native
-   - Provide documentation for integration with popular state management libraries
-   - Build example projects showing fingerprinting in real-world applications
-
-## Lower Priority
-8. **Advanced Features**
-   - Implement multi-signature support for organizations
-   - Add batch operations for fingerprinting multiple agents
-   - Create an admin dashboard for fingerprint management
-   - Develop analytics components for monitoring fingerprint usage
-
-9. **Documentation and Examples**
-   - Create comprehensive TypeScript documentation
-   - Add more code examples for common use cases
-   - Improve README with clear getting started guide
-   - Add sustainability section documenting environmental impact
-
-10. **Testing Improvements**
-    - Increase test coverage to ≥90%
-    - Add end-to-end tests for main user flows
-    - Implement visual regression testing for UI components
-    - Create performance benchmarking tests
-
-11. **Environmental Impact**
-    - Add carbon footprint calculation for blockchain operations
-    - Create UI components showing environmental impact
-    - Implement preferences for eco-friendly blockchain options
-    - Document best practices for minimizing environmental impact
+8. **Generic Blockchain UI Components**
+   - Defer work on universal network selectors, wallet-specific UX, and L2 switchers unless a concrete anchoring scenario requires it.
+9. **Environmental Impact Tracking**
+   - Defer environmental carbon-footprint mapping for blockchain operations until the core clinical integrity MVP is finalized.
 
 ## Next Immediate Actions
-1. **Enhance EIP-712 Implementation in React/TypeScript** - Focus on improving the type safety and creating reusable React hooks for signature creation and verification.
-2. **Create a Blockchain Network Context Provider** - Develop a React context to manage blockchain network configurations.
 
-This revised plan focuses more heavily on React/TypeScript development and creating reusable components that can be integrated into various projects, which aligns better with your shift away from the Python-based A2A project.
+1. **Unified Audit Workflow**: Merge `BehavioralRegistration` and `BehavioralVerification` components into a single "Establish Baseline & Audit" interface.
+2. **PHI Masking Engine**: Audit the current event logging structure (`EventService`) to identify where masking guardrails are most critical.
+
+## Design Considerations
+- **Regulatory Frameworks**: While not yet promising formal compliance, designs should consider **HIPAA** logging expectations and **EU AI Act** transparency obligations regarding auditability.

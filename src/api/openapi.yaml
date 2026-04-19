@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Fingerprint.AI Gateway API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Web2.5 Gateway API for the AI Agent Fingerprinting System. Provides agent
     registry lookups, behavioral drift verification, clinical audit event
@@ -1132,6 +1132,70 @@ components:
             - P
             - U
 
+    PatientContext:
+      type: object
+      description: >-
+        Structured patient context for risk stratification and audit.
+        DO NOT include highly identifying PII here.
+      required:
+        - demographics
+      properties:
+        demographics:
+          type: object
+          required:
+            - age_years
+            - sex_at_birth
+          properties:
+            age_years:
+              type: integer
+              example: 45
+            sex_at_birth:
+              type: string
+              enum: [male, female, intersex, unknown]
+              example: male
+            gender_identity:
+              type: string
+              description: Free-text gender identity.
+              example: non-binary
+            language_primary:
+              type: string
+              example: en
+            country_region:
+              type: string
+              example: CA-BC
+        clinical:
+          type: object
+          properties:
+            comorbidities:
+              type: array
+              items:
+                type: object
+                properties:
+                  code: { type: string }
+                  description: { type: string }
+            medications:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  dose: { type: string }
+            allergies:
+              type: array
+              items:
+                type: object
+                properties:
+                  substance: { type: string }
+                  reaction: { type: string }
+        risk_factors:
+          type: object
+          properties:
+            smoking_status:
+              type: string
+              enum: [never, former, current, unknown]
+            family_history_cvd:
+              type: boolean
+
     PatientHistory:
       type: object
       properties:
@@ -1156,6 +1220,7 @@ components:
       required:
         - chief_complaint
         - vitals
+        - patient_context
       properties:
         chief_complaint:
           type: string
@@ -1163,16 +1228,8 @@ components:
           example: Chest Pain
         vitals:
           $ref: '#/components/schemas/Vitals'
-        age:
-          type: integer
-          description: Patient age in years.
-          default: 0
-        sex:
-          type: string
-          enum:
-            - M
-            - F
-          default: F
+        patient_context:
+          $ref: '#/components/schemas/PatientContext'
         red_flags:
           type: array
           items:
@@ -1181,8 +1238,6 @@ components:
           example:
             - chest_pain
             - altered_loc
-        history:
-          $ref: '#/components/schemas/PatientHistory'
         clinician_name:
           type: string
           description: Name of the clinician creating the encounter.
@@ -1209,10 +1264,8 @@ components:
           type: integer
         chief_complaint:
           type: string
-        age:
-          type: integer
-        gender:
-          type: string
+        patient_context:
+          $ref: '#/components/schemas/PatientContext'
         vitals:
           $ref: '#/components/schemas/Vitals'
         history:

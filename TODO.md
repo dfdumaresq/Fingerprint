@@ -28,6 +28,8 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
    - Compute a per-agent drift score over time (1 − mean Jaccard) and surface trends in Triage vs. Enforcement modes.
 5. **Unified "Baseline-then-Audit" Workflow**
    - Consolidate the Registration and Verification views into a single, cohesive audit flow. **Goal**: Avoid forcing clinicians to think in terms of "Blockchain Registration" vs. "Verification" steps.
+6. **Demographic & Identity Model Refresh**
+   - 🏗️ Implement structured `PatientContext` to support non-binary identities and coarse-granularity regional attributes.
 
 ## Medium Priority: Scale & Compliance
 

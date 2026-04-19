@@ -7,6 +7,32 @@ import { TRIAGE_AGENT, TriageAgentConfig } from '../config/agents';
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
 
+/**
+ * Structured patient context for risk stratification and audit.
+ * 
+ * NOTE: This object flows directly into immutable audit logs and packs.
+ * DO NOT include highly identifying PII (e.g. Full Name, DOB, MRN) here.
+ * Only include risk-relevant, coarse-granularity demographic and clinical attributes.
+ */
+export interface PatientContext {
+  demographics: {
+    age_years: number;
+    sex_at_birth: 'male' | 'female' | 'intersex' | 'unknown';
+    gender_identity?: string;          // Free-text for inclusivity
+    language_primary?: string;         // e.g. 'en', 'fr'
+    country_region?: string;           // e.g. 'CA-BC'
+  };
+  clinical?: {
+    comorbidities?: { code: string; description: string }[];
+    medications?: { name: string; dose?: string }[];
+    allergies?: { substance: string; reaction?: string }[];
+  };
+  risk_factors?: {
+    smoking_status?: 'never' | 'former' | 'current' | 'unknown';
+    family_history_cvd?: boolean;
+  };
+}
+
 export interface ClinicalInput {
   chief_complaint: string;
   vitals: { 
@@ -25,14 +51,7 @@ export interface ClinicalInput {
     map?: number;
     avpu?: 'A' | 'V' | 'P' | 'U';
   };
-  age: number;
-  sex: 'M' | 'F';
-  history: {
-    allergies: string[];
-    medications: string[];
-    pmh: string[];
-    notes?: string;
-  };
+  patient_context: PatientContext;
   red_flags?: string[];
 }
 
@@ -61,8 +80,9 @@ export interface ClinicalData {
     notes?: string;
   };
   chief_complaint: string;
-  age: number;
-  gender: string;
+  patient_context: PatientContext;
+  age?: number;     // legacy fallback
+  gender?: string;  // legacy fallback
   red_flags?: string[];
   ai_recommendation?: TriageResult;
   clinician_acuity?: number;
@@ -116,6 +136,7 @@ export class AgentNotAvailableError extends Error {
 function runRuleEngine(input: ClinicalInput): TriageResult {
   let acuity = 3;
   const reasons: string[] = [];
+  const { age_years, sex_at_birth } = input.patient_context.demographics;
 
   if (input.vitals.hr > 120) { acuity = Math.min(acuity, 2); reasons.push(`Tachycardia (HR ${input.vitals.hr})`); }
   if (input.vitals.spo2 < 92) { acuity = Math.min(acuity, 2); reasons.push(`Hypoxia (SpO₂ ${input.vitals.spo2}%)`); }
@@ -123,9 +144,17 @@ function runRuleEngine(input: ClinicalInput): TriageResult {
   if (input.vitals.glucose_mmol && input.vitals.glucose_mmol < 4.0) { acuity = Math.min(acuity, 2); reasons.push(`Hypoglycemia (Glucose ${input.vitals.glucose_mmol})`); }
   if (input.vitals.pain_score >= 8) { acuity = Math.min(acuity, 3); reasons.push(`Severe Pain (${input.vitals.pain_score}/10)`); }
   
-  if (input.red_flags?.includes('chest_pain') && input.sex === 'M' && (input.age ?? 0) > 40) {
-    acuity = Math.min(acuity, 2); reasons.push('ACS risk profile (chest pain, male >40)');
+  if (input.red_flags?.includes('chest_pain')) {
+    // Failsafe: If sex is unknown, err on the side of caution for age-based ACS risk
+    const isHighRiskSex = sex_at_birth === 'male' || sex_at_birth === 'unknown';
+    const ageThreshold = isHighRiskSex ? 40 : 50;
+    
+    if (age_years > ageThreshold) {
+      acuity = Math.min(acuity, 2); 
+      reasons.push(`High ACS risk profile (chest pain, ${sex_at_birth === 'unknown' ? 'unknown' : sex_at_birth} >${ageThreshold})`);
+    }
   }
+
   if (input.red_flags?.includes('altered_loc') || input.vitals.avpu === 'U') { acuity = 1; reasons.push('Critical neurologic status'); }
 
   if (reasons.length === 0) reasons.push(`Stable presentation — ${input.chief_complaint}`);
@@ -154,11 +183,12 @@ async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageRes
 }
 
 function buildTriagePrompt(input: ClinicalInput): string {
-  return `You are a clinical triage AI. Respond with ONLY valid JSON matching this exact schema: {"acuity": <1-5>, "reasons": ["<reason1>", "<reason2>"]}.
+  const demographics = input.patient_context.demographics;
+  return `You are a clinical triage AI. Respond with ONLY valid JSON matching this exact schema: {"acuity": \u003c1-5\u003e, "reasons": ["\u003creason1\u003e", "\u003creason2\u003e"]}.
 Acuity scale: 1=Resuscitation, 2=Emergent, 3=Urgent, 4=Less Urgent, 5=Non-Urgent.
-Patient: ${input.chief_complaint}. Age: ${input.age}, Sex: ${input.sex}.
+Patient: ${input.chief_complaint}. Age: ${demographics.age_years}, Sex (at birth): ${demographics.sex_at_birth}${demographics.gender_identity ? `, Gender Identity: ${demographics.gender_identity}` : ''}.
 Vitals: HR ${input.vitals.hr}, BP ${input.vitals.bp_sys}/${input.vitals.bp_dia}, RR ${input.vitals.rr}, SpO2 ${input.vitals.spo2}% (${input.vitals.spo2_support || 'room air'}), Temp ${input.vitals.temp}°C (${input.vitals.temp_method || 'oral'}), Pain ${input.vitals.pain_score}/10.
-History: Allergies: ${input.history.allergies.join(', ') || 'NKDA'}, Meds: ${input.history.medications.join(', ') || 'none'}, PMH: ${input.history.pmh.join(', ') || 'none'}.
+History: Allergies: ${input.patient_context.clinical?.allergies?.map(a => a.substance).join(', ') || 'NKDA'}, Meds: ${input.patient_context.clinical?.medications?.map(m => m.name).join(', ') || 'none'}, PMH: ${input.patient_context.clinical?.comorbidities?.map(c => c.description).join(', ') || 'none'}.
 Red flags: ${input.red_flags?.join(', ') || 'none'}.
 Respond ONLY with JSON. No explanation, no markdown.`;
 }
@@ -188,11 +218,25 @@ function getMockClinicalData(sessionId: string): ClinicalData {
   const spo2 = 94 + (seedNum % 6);
   const age = 18 + (seedNum % 75);
 
+  const sexOptions: ('male' | 'female' | 'intersex' | 'unknown')[] = ['male', 'female', 'intersex', 'unknown'];
+  const sexAtBirth = sexOptions[seedNum % sexOptions.length];
+  const genderIdentity = (seedNum % 7 === 0) ? 'non-binary' : undefined;
+
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     chief_complaint: COMPLAINTS[seedNum % COMPLAINTS.length],
-    age,
-    gender: (seedNum % 2 === 0) ? 'Male' : 'Female',
+    patient_context: {
+      demographics: {
+        age_years: age,
+        sex_at_birth: sexAtBirth,
+        gender_identity: genderIdentity
+      },
+      clinical: {
+        allergies: [{ substance: 'NKDA' }],
+        medications: [],
+        comorbidities: []
+      }
+    },
     vitals: { 
       hr, 
       bp_sys: sys,
@@ -261,6 +305,23 @@ export class TriageService {
     // 2. Run AI triage
     const { result: recommendation, provider } = await runTriageAgent(input);
 
+    const clinicalData: ClinicalData = {
+      schemaVersion: 2,
+      chief_complaint: input.chief_complaint,
+      patient_context: input.patient_context,
+      vitals: input.vitals,
+      history: {
+        allergies: input.patient_context.clinical?.allergies?.map(a => a.substance) || [],
+        medications: input.patient_context.clinical?.medications?.map(m => m.name) || [],
+        pmh: input.patient_context.clinical?.comorbidities?.map(c => c.description) || [],
+        notes: ''
+      },
+      red_flags: input.red_flags,
+      ai_recommendation: recommendation,
+      ai_provider: provider,
+      state: 'waiting'
+    };
+
     // 3. Write the event referencing pointers (never raw PHI)
     const event = await this.eventService.ingestEvent({
        agent_fingerprint_id: activeFingerprint,
@@ -269,37 +330,19 @@ export class TriageService {
        session_id: sessionId,
        input_ref: 'clinical_admission_form', 
        output_ref: 'ai_triage_audit',
-       policy_id: `live::${input.chief_complaint}::${input.vitals.hr}::${input.vitals.bp_sys}/${input.vitals.bp_sys}::${recommendation.acuity}::${recommendation.reasons.join('|')}`,
-       clinical_data: {
-          schemaVersion: 1,
-          chief_complaint: input.chief_complaint,
-          age: input.age,
-          gender: input.sex === 'M' ? 'Male' : 'Female',
-          vitals: input.vitals,
-          history: input.history,
-          red_flags: input.red_flags,
-          ai_recommendation: recommendation,
-          ai_provider: provider,
-          state: 'waiting'
-       } as ClinicalData,
+       policy_id: `live::${input.chief_complaint}::${input.vitals.hr}::${input.vitals.bp_sys}/${input.vitals.bp_dia}::${recommendation.acuity}::${recommendation.reasons.join('|')}`,
+       clinical_data: clinicalData,
        reason_code: 'initial_decision'
     });
 
     return {
        encounter_id: sessionId,
        db_row_id: event.id,
-       arrival_time: event.timestamp,
+       arrival_time: event.timestamp as string,
        clinician_action: null,
        agent_id: activeFingerprint,
        source: 'live',
-       clinical: {
-         ...input,
-         gender: input.sex === 'M' ? 'Male' : 'Female',
-         ai_recommendation: recommendation,
-         ai_provider: provider,
-         state: 'waiting',
-         schemaVersion: 1
-       } as any,
+       clinical: clinicalData,
        integrity: {
          event_hash: event.event_hash,
          merkle_root_id: null,
@@ -410,11 +453,20 @@ export class TriageService {
           const reasons = parts[5] ? parts[5].split('|') : [];
           const [sys, dia] = (parts[3] || '120/80').split('/').map((n: string) => parseInt(n) || 120);
 
+          const age = 22 + (event.id % 60);
+          const gender = (event.id % 2 === 0) ? 'male' : 'female';
+
           clinicalData = {
             schemaVersion: 0,
             chief_complaint: parts[1] || 'Unknown',
-            age: 22 + (event.id % 60),
-            gender: (event.id % 2 === 0) ? 'Male' : 'Female',
+            patient_context: {
+              demographics: {
+                age_years: age,
+                sex_at_birth: gender as any,
+              }
+            },
+            age,
+            gender: gender === 'male' ? 'Male' : 'Female',
             vitals: { hr: parseInt(parts[2]) || 70, bp_sys: sys, bp_dia: dia, rr: 12 + (event.id % 8), spo2: 95 + (event.id % 5), map: Math.round((sys + 2 * dia) / 3), temp: 37.0, pain_score: 0, avpu: 'A' },
             history: { allergies: [], medications: [], pmh: [] },
             state: event.clinician_action ? 'completed' : 'in_progress',

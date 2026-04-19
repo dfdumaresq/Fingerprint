@@ -27,8 +27,35 @@ function generateMockHash() {
   return hashMessage(uuidv4());
 }
 
+function generateMockPatientContext() {
+  const age = Math.floor(Math.random() * 80) + 18;
+  const sexOptions: ('male' | 'female' | 'intersex' | 'unknown')[] = ['male', 'female', 'intersex', 'unknown'];
+  const sex_at_birth = randomChoice(sexOptions);
+  let gender_identity: string | undefined = undefined;
+  
+  if (Math.random() > 0.8) {
+    gender_identity = randomChoice(['non-binary', 'transgender', 'gender-fluid', 'prefer not to say']);
+  }
+
+  return {
+    demographics: {
+      age_years: age,
+      sex_at_birth,
+      gender_identity,
+      language_primary: randomChoice(['en', 'fr', 'es', 'zh']),
+      country_region: randomChoice(['CA-BC', 'CA-ON', 'US-NY', 'GB-LON'])
+    },
+    clinical: {
+      comorbidities: Math.random() > 0.5 ? [{ code: 'HTN', description: 'Hypertension' }] : [],
+      medications: Math.random() > 0.5 ? [{ name: 'Ametoprolol', dose: '25mg' }] : [],
+      allergies: Math.random() > 0.8 ? [{ substance: 'Penicillin', reaction: 'Hives' }] : []
+    }
+  };
+}
+
 async function simulateEvent() {
   const agent = randomChoice(AGENTS);
+  const patient_context = generateMockPatientContext();
   
   const payload = {
     agent_fingerprint_id: agent.id,
@@ -38,7 +65,22 @@ async function simulateEvent() {
     session_id: `enc_${Math.floor(Math.random() * 10000)}`,
     clinician_action: randomChoice(CLINICIAN_ACTIONS),
     input_ref: `sha256:${generateMockHash().substring(2)}`,
-    output_ref: `sha256:${generateMockHash().substring(2)}`
+    output_ref: `sha256:${generateMockHash().substring(2)}`,
+    clinical_data: {
+      schemaVersion: 2,
+      chief_complaint: 'Simulated Encounter',
+      patient_context,
+      vitals: {
+        hr: 70 + Math.floor(Math.random() * 40),
+        bp_sys: 110 + Math.floor(Math.random() * 30),
+        bp_dia: 70 + Math.floor(Math.random() * 20),
+        rr: 14 + Math.floor(Math.random() * 6),
+        spo2: 95 + Math.floor(Math.random() * 5),
+        temp: 36.5 + (Math.random() * 1.5),
+        pain_score: Math.floor(Math.random() * 10)
+      },
+      state: 'completed'
+    }
   };
 
   try {

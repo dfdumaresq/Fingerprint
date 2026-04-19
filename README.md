@@ -51,12 +51,15 @@ Key interfaces include:
 - **TriageDashboard**: A workflow-oriented view for reviewing AI-assisted triage outputs, monitoring case flow, and surfacing decision-support context.
 - **MedicalAuditDashboard**: A review surface for tracing system actions, validating evidence, and inspecting medical AI activity over time.
 
-### Behavioral Audit
+### Behavioral Audit & Accountability
+The platform provides a strict "Register-then-Audit" workflow. AI interactions are hash-chained and Merkle-anchored to the blockchain, ensuring that neither the model provider nor the infrastructure operator can retroactively alter clinical suggestions or decisions.
 
-The behavioral verification layer is used to register and validate expected traits of an AI agent or workflow.
+> [!NOTE]
+> **Demographic & Privacy Note**: The current demo implementation **still uses** a simplified demographic model (age and binary sex) for initial risk stratification examples. This is a prototype constraint; the platform is designed for extensibility and we are transitioning to a more nuanced demographic and identity model to support non-binary gender identities and broader clinical factors while maintaining strict PHI guardrails.
 
-- **Establishing Baselines**: Create a behavioral signature for a known-good model.
-- **Drift Detection**: Detect changes in system persona or logic during auditing. (Note: Drift detection currently relies on lexical similarity via Jaccard-based “trait hashes” over a fixed probe suite; automatic semantic drift monitoring via embeddings is a planned extension.)
+*Current Behavioral Monitoring:* v1 (Lexical Drift Check based on Jaccard similarity).
+*Planned:* v2 (Semantic Drift Check based on Embedding Cosine Similarity).
+
 - **Audit Modes**: Supports loose “Triage” matching (high sensitivity) and strict “Enforcement” matching (identity verification).
 
 ### Tamper Demonstration

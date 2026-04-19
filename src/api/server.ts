@@ -307,10 +307,10 @@ app.get('/v1/triage/status', async (req: Request, res: Response) => {
  */
 app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
   try {
-    const { chief_complaint, vitals, age, sex, red_flags, clinician_name } = req.body;
+    const { chief_complaint, vitals, patient_context, red_flags, clinician_name } = req.body;
 
-    if (!chief_complaint || !vitals?.hr || !vitals?.bp_sys || !vitals?.bp_dia) {
-      res.status(400).json({ error: { code: 'bad_request', message: 'chief_complaint, vitals.hr, vitals.bp_sys, and vitals.bp_dia are required' } });
+    if (!chief_complaint || !vitals?.hr || !vitals?.bp_sys || !vitals?.bp_dia || !patient_context?.demographics) {
+      res.status(400).json({ error: { code: 'bad_request', message: 'chief_complaint, vitals(hr,bp_sys,bp_dia), and patient_context.demographics are required' } });
       return;
     }
 
@@ -318,10 +318,8 @@ app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
       { 
         chief_complaint, 
         vitals, 
-        age: age || 0, 
-        sex: sex || 'F', 
-        red_flags,
-        history: req.body.history || { allergies: [], medications: [], pmh: [] }
+        patient_context,
+        red_flags
       },
       clinician_name || 'clinician'
     );

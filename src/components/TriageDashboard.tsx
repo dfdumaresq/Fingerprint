@@ -30,8 +30,22 @@ interface ClinicalData {
   acuity?: number; // legacy
   clinician_acuity?: number;
   chief_complaint: string;
-  age: number;
-  gender: string;
+  patient_context: {
+    demographics: {
+      age_years: number;
+      sex_at_birth: 'male' | 'female' | 'intersex' | 'unknown';
+      gender_identity?: string;
+      language_primary?: string;
+      country_region?: string;
+    };
+    clinical?: {
+      comorbidities?: { code: string; description: string }[];
+      medications?: { name: string; dose?: string }[];
+      allergies?: { substance: string; reaction?: string }[];
+    };
+  };
+  age?: number;     // legacy fallback
+  gender?: string;  // legacy fallback
   red_flags?: string[];
   ai_recommendation?: { acuity: number; reasons: string[] };
   ai_provider?: string;
@@ -67,25 +81,17 @@ interface NewEncounterForm {
   chief_complaint: string;
   custom_complaint: string;
   
-  // Vitals Row 1 (Core)
-  hr: string;
-  bp_sys: string;
-  bp_dia: string;
-  rr: string;
-  spo2: string;
+  // Vitals
+  hr: string; bp_sys: string; bp_dia: string; rr: string; spo2: string;
   spo2_support: 'room_air' | 'supplemental';
-  
-  // Vitals Row 2 (Extended)
-  temp: string;
-  temp_method: 'oral' | 'tympanic' | 'axillary' | 'rectal';
-  pain_score: string;
-  weight_kg: string;
-  height_cm: string;
-  glucose_mmol: string;
+  temp: string; temp_method: 'oral' | 'tympanic' | 'axillary' | 'rectal';
+  pain_score: string; weight_kg: string; height_cm: string; glucose_mmol: string;
   avpu: 'A' | 'V' | 'P' | 'U' | '';
   
-  age: string;
-  sex: 'M' | 'F' | '';
+  // Patient Context
+  age_years: string;
+  sex_at_birth: 'male' | 'female' | 'intersex' | 'unknown' | '';
+  gender_identity: string;
   
   // SAMPLE History
   history: {
@@ -168,7 +174,8 @@ export const TriageDashboard: React.FC = () => {
     temp: '', temp_method: 'oral',
     pain_score: '', weight_kg: '', height_cm: '', glucose_mmol: '',
     avpu: '',
-    age: '', sex: '',
+    age_years: '', sex_at_birth: '',
+    gender_identity: '',
     history: {
       allergies: '', medications: '', pmh: '', notes: ''
     },
@@ -249,13 +256,17 @@ export const TriageDashboard: React.FC = () => {
           glucose_mmol: form.glucose_mmol ? Number(form.glucose_mmol) : undefined,
           avpu: form.avpu || 'A'
         },
-        age: Number(form.age || 0),
-        sex: form.sex || 'F',
-        history: {
-          allergies: form.history.allergies.split(',').map(s => s.trim()).filter(Boolean),
-          medications: form.history.medications.split(',').map(s => s.trim()).filter(Boolean),
-          pmh: form.history.pmh.split(',').map(s => s.trim()).filter(Boolean),
-          notes: form.history.notes
+        patient_context: {
+          demographics: {
+            age_years: Number(form.age_years || 0),
+            sex_at_birth: form.sex_at_birth || 'unknown',
+            gender_identity: form.gender_identity || undefined,
+          },
+          clinical: {
+            allergies: form.history.allergies.split(',').map(s => ({ substance: s.trim() })).filter(a => a.substance),
+            medications: form.history.medications.split(',').map(s => ({ name: s.trim() })).filter(m => m.name),
+            comorbidities: form.history.pmh.split(',').map(s => ({ description: s.trim(), code: '' })).filter(c => c.description),
+          }
         },
         red_flags: form.red_flags,
         clinician_name: form.clinician_name || 'clinician',
@@ -519,17 +530,21 @@ export const TriageDashboard: React.FC = () => {
           </div>
 
           <div className="form-section">
-            <label className="form-label">Patient</label>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <input className="form-input" type="number" placeholder="Age" style={{ width: 80 }}
-                value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
-              <div className="sex-toggle">
-                {(['M', 'F'] as const).map(s => (
-                  <button key={s} className={`sex-btn${form.sex === s ? ' active' : ''}`}
-                    onClick={() => setForm(f => ({ ...f, sex: f.sex === s ? '' : s }))}>{s}</button>
-                ))}
-              </div>
+            <label className="form-label">Patient Demographics *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '12px', marginBottom: '10px' }}>
+              <input className="form-input" type="number" placeholder="Age"
+                value={form.age_years} onChange={e => setForm(f => ({ ...f, age_years: e.target.value }))} />
+              <select className="form-select" value={form.sex_at_birth}
+                onChange={e => setForm(f => ({ ...f, sex_at_birth: e.target.value as any }))}>
+                <option value="">Sex at Birth…</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="intersex">Intersex</option>
+                <option value="unknown">Unknown</option>
+              </select>
             </div>
+            <input className="form-input" placeholder="Gender Identity (Optional e.g. non-binary)"
+              value={form.gender_identity} onChange={e => setForm(f => ({ ...f, gender_identity: e.target.value }))} />
           </div>
 
           <div className="form-section">
@@ -686,16 +701,24 @@ export const TriageDashboard: React.FC = () => {
 
               {/* Vitals */}
               <h3>Current Vitals</h3>
-              {/* Patient Context Block (Age/Gender) */}
-              <div className="patient-context-grid">
+              {/* Patient Context Block */}
+              <div className="patient-context-grid-v2">
                 <div className="context-item">
                   <span className="context-label">Age</span>
-                  <span className="context-value">{selectedEncounter.clinical?.age}</span>
+                  <span className="context-value">{selectedEncounter.clinical?.patient_context?.demographics?.age_years ?? selectedEncounter.clinical?.age}</span>
                 </div>
                 <div className="context-item">
-                  <span className="context-label">Sex</span>
-                  <span className="context-value">{selectedEncounter.clinical?.gender}</span>
+                  <span className="context-label">Sex at Birth</span>
+                  <span className="context-value" style={{ textTransform: 'capitalize' }}>
+                    {selectedEncounter.clinical?.patient_context?.demographics?.sex_at_birth ?? selectedEncounter.clinical?.gender}
+                  </span>
                 </div>
+                {selectedEncounter.clinical?.patient_context?.demographics?.gender_identity && (
+                  <div className="context-item">
+                    <span className="context-label">Gender Identity</span>
+                    <span className="context-value">{selectedEncounter.clinical?.patient_context?.demographics?.gender_identity}</span>
+                  </div>
+                )}
               </div>
 
               <div className="vitals-grid">

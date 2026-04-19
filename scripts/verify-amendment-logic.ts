@@ -13,9 +13,9 @@ async function verify() {
   const encounter = await service.createEncounterWithAI({
     chief_complaint: "Testing Immutability",
     vitals: { hr: 80, bp_sys: 120, bp_dia: 80, rr: 16, spo2: 98, temp: 37.0, pain_score: 0 },
-    age: 45,
-    sex: 'M',
-    history: { allergies: [], medications: [], pmh: [] }
+    patient_context: {
+      demographics: { age_years: 45, sex_at_birth: 'male' }
+    }
   }, "Dr. Verifier");
   
   const sid = encounter.encounter_id;

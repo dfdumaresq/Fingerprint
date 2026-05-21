@@ -1,7 +1,10 @@
 import { Pool } from 'pg';
 import { EventService } from '../../src/services/event.service';
 import { TriageService } from '../../src/services/triage.service';
+import { TRIAGE_AGENT } from '../../src/config/agents';
 import { generateEventHash, buildCanonicalPayload } from '../../src/utils/crypto.utils';
+
+const MOCK_FINGERPRINT = '0x28f2ed93f69f9f78460fe13bfcba66eb77018034146aa4a76c0a2d1630db4a97';
 
 describe('Regulatory-Grade Provenance Integration', () => {
   let pool: Pool;
@@ -13,6 +16,15 @@ describe('Regulatory-Grade Provenance Integration', () => {
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
     eventService = new EventService(pool);
     triageService = new TriageService(pool);
+  });
+
+  beforeEach(async () => {
+    // Ensure an active agent exists for the slug in config
+    await pool.query('DELETE FROM agents WHERE agent_id = $1 OR fingerprint_hash = $2', [TRIAGE_AGENT.slug, MOCK_FINGERPRINT]);
+    await pool.query(`
+      INSERT INTO agents (fingerprint_hash, agent_id, name, provider, version, registered_by, created_at, is_revoked)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), false)
+    `, [MOCK_FINGERPRINT, TRIAGE_AGENT.slug, 'Test Triage Bot', 'ollama', '1.0.0', '0x123']);
   });
 
   afterAll(async () => {

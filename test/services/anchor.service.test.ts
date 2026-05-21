@@ -125,14 +125,21 @@ describe('AnchorService', () => {
       };
       const h1 = generateEventHash(buildCanonicalPayload(e1), null, e1.timestamp.toISOString());
 
+      const e2 = {
+        agent_fingerprint_id: 'agentX',
+        model_version: '1.0',
+        workflow_type: 'triage_recommendation',
+        input_ref: 'in2',
+        output_ref: 'out2',
+        timestamp: new Date('2025-01-01T10:01:00Z'),
+        previous_event_hash: 'TAMPERED_HASH'
+      };
+      const h2 = generateEventHash(buildCanonicalPayload(e2), 'TAMPERED_HASH', e2.timestamp.toISOString());
+
       client.query.mockResolvedValueOnce({
         rows: [
           { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp },
-          { 
-            id: 2, agent_fingerprint_id: 'agentX', model_version: '1.0', workflow_type: 'triage_recommendation',
-            input_ref: 'in2', output_ref: 'out2',
-            timestamp: new Date('2025-01-01T10:01:00Z'), previous_event_hash: 'TAMPERED_HASH', event_hash: 'hash2' 
-          }, 
+          { ...e2, id: 2, event_hash: h2, timestamp: e2.timestamp }
         ]
       } as never);
 

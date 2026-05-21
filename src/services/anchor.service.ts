@@ -156,7 +156,7 @@ export class AnchorService {
 
         // Check 3: Recompute Content Hash (Hash Mismatch)
         const reconstructedPayload = buildCanonicalPayload(event);
-        const trueHash = generateEventHash(reconstructedPayload, expectedPrev, eventTime.toISOString());
+        const trueHash = generateEventHash(reconstructedPayload, event.previous_event_hash, eventTime.toISOString());
         
         if (trueHash !== event.event_hash) {
           if (!isDirectFailure) {

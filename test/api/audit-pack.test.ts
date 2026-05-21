@@ -24,7 +24,7 @@ describe('One-Click Audit Pack Export', () => {
 
   beforeEach(async () => {
     // Ensure an active agent exists for the slug in config
-    await pool.query('DELETE FROM agents WHERE agent_id = $1', [TRIAGE_AGENT.slug]);
+    await pool.query('DELETE FROM agents WHERE agent_id = $1 OR fingerprint_hash = $2', [TRIAGE_AGENT.slug, MOCK_FINGERPRINT]);
     await pool.query(`
       INSERT INTO agents (fingerprint_hash, agent_id, name, provider, version, registered_by, created_at, is_revoked)
       VALUES ($1, $2, $3, $4, $5, $6, NOW(), false)

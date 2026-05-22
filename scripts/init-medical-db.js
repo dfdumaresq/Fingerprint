@@ -145,8 +145,14 @@ async function initDb() {
     console.log("Initializing non-destructive database schema...");
     await pool.query(schemaSql);
     console.log("Database initialized successfully!");
+    
+    // Automatically seed scenarios
+    const { execSync } = require('child_process');
+    console.log("Seeding clinical scenarios...");
+    const cmd = isTest ? 'npx ts-node scripts/seed-scenarios.ts test' : 'npx ts-node scripts/seed-scenarios.ts';
+    execSync(cmd, { stdio: 'inherit' });
   } catch (error) {
-    console.error("Error creating tables:", error);
+    console.error("Error creating tables or seeding:", error);
   } finally {
     pool.end();
   }

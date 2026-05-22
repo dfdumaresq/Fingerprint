@@ -42,6 +42,8 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
    - Establish monitoring for ledger health, automated integrity fault detection, and cross-agent behavioral drift metrics at scale.
 9. **Multi-Agent Comparative Triage (V2)**
    - Enable side-by-side auditing of different AI models or versions against the same clinical case to streamline model-switchover risk assessments.
+10. **UI Version Tag Management**
+    - Refactor the hardcoded `v1.2.0-stabilized` footer tag in [Sidebar.tsx](file:///Users/dfdumaresq/Projects/Fingerprint/src/components/Sidebar.tsx#L58) to be dynamically managed via the package version, platform config, or environment variables instead of a static string.
 
 ## Lower Priority / Deferred
 

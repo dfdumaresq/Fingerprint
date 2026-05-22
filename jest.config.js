@@ -1,6 +1,7 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
   preset: 'ts-jest',
+  maxWorkers: 1,
   // Use node environment for the security and service tests
   testEnvironment: process.env.TEST_ENV === 'dom' ? 'jsdom' : 'node',
   transform: {

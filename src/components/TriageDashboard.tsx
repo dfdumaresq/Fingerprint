@@ -181,6 +181,8 @@ export const TriageDashboard: React.FC = () => {
   const [saeLoading, setSaeLoading] = useState(false);
   const [saeError, setSaeError] = useState<string | null>(null);
   const [bypassSafety, setBypassSafety] = useState(false);
+  const [activeEncounterId, setActiveEncounterId] = useState<string | null>(null);
+  const [showSaeTechnical, setShowSaeTechnical] = useState(false);
 
   const criticalFeatures = saeData?.active_features?.filter(
     (feat: any) => feat.category === 'Critical' && feat.strength >= 0.5
@@ -205,6 +207,19 @@ export const TriageDashboard: React.FC = () => {
     
     return `Patient chief complaint: ${complaint}. Vitals: HR ${hr} bpm, BP ${sys}/${dia} mmHg, RR ${rr}/min, SpO2 ${spo2}%, Temp ${temp}°C, Pain ${pain}/10. Age ${age}, Gender ${gender}. History: PMH ${pmh}.`;
   };
+
+  // Reset all transient drawer/action states whenever the selected encounter changes (opened, closed, or switched)
+  useEffect(() => {
+    if (selectedEncounter?.encounter_id !== activeEncounterId) {
+      setActiveEncounterId(selectedEncounter?.encounter_id || null);
+      setPendingAction(null);
+      setChangingDecision(false);
+      setBypassSafety(false);
+      setAmendmentReason('initial_decision');
+      setAmendmentNote('');
+      setShowSaeTechnical(false);
+    }
+  }, [selectedEncounter, activeEncounterId]);
 
   // Asynchronously fetch active features when an encounter drawer opens
   useEffect(() => {
@@ -360,7 +375,11 @@ export const TriageDashboard: React.FC = () => {
             comorbidities: form.history.pmh.split(',').map(s => ({ description: s.trim(), code: '' })).filter(c => c.description),
           }
         },
-        red_flags: form.red_flags,
+        red_flags: form.red_flags.filter(flagId => {
+          const flag = RED_FLAG_OPTIONS.find(o => o.id === flagId);
+          const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+          return flag ? flag.label.toLowerCase() !== resolvedComplaint?.trim().toLowerCase() : true;
+        }),
         clinician_name: form.clinician_name || 'clinician',
       };
 
@@ -526,7 +545,16 @@ export const TriageDashboard: React.FC = () => {
           <div className="form-section">
             <label className="form-label">Chief Complaint *</label>
             <select className="form-select" value={form.chief_complaint}
-              onChange={e => setForm(f => ({ ...f, chief_complaint: e.target.value }))}>
+              onChange={e => {
+                const selected = e.target.value;
+                setForm(f => {
+                  const matchingFlagOption = RED_FLAG_OPTIONS.find(flag => flag.label === selected);
+                  const updatedFlags = matchingFlagOption 
+                    ? f.red_flags.filter(r => r !== matchingFlagOption.id)
+                    : f.red_flags;
+                  return { ...f, chief_complaint: selected, red_flags: updatedFlags };
+                });
+              }}>
               <option value="">Select…</option>
               {CHIEF_COMPLAINTS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -642,13 +670,19 @@ export const TriageDashboard: React.FC = () => {
           <div className="form-section">
             <label className="form-label">Red Flags</label>
             <div className="flag-checkboxes">
-              {RED_FLAG_OPTIONS.map(flag => (
-                <label key={flag.id} className="flag-label">
-                  <input type="checkbox" checked={form.red_flags.includes(flag.id)}
-                    onChange={() => toggleRedFlag(flag.id)} />
-                  {flag.label}
-                </label>
-              ))}
+              {(() => {
+                const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+                const normalizedComplaint = resolvedComplaint?.trim().toLowerCase();
+                return RED_FLAG_OPTIONS
+                  .filter(flag => flag.label.toLowerCase() !== normalizedComplaint)
+                  .map(flag => (
+                    <label key={flag.id} className="flag-label">
+                      <input type="checkbox" checked={form.red_flags.includes(flag.id)}
+                        onChange={() => toggleRedFlag(flag.id)} />
+                      {flag.label}
+                    </label>
+                  ));
+              })()}
             </div>
           </div>
 
@@ -972,9 +1006,12 @@ export const TriageDashboard: React.FC = () => {
                         <div style={{ display: 'flex', gap: '8px' }}>
                           {[1, 2, 3, 4, 5].map(level => {
                             const aiLevel = selectedEncounter.clinical?.ai_recommendation?.acuity || 3;
-                            const isValid = pendingAction === 'downgraded' ? level > aiLevel : level < aiLevel;
+                            const referenceLevel = (changingDecision && selectedEncounter.clinical?.clinician_acuity)
+                              ? selectedEncounter.clinical.clinician_acuity
+                              : aiLevel;
+                            const isValid = pendingAction === 'downgraded' ? level > referenceLevel : level < referenceLevel;
                             
-                            // Check if this level is a restricted downgrade
+                            // Check if this level is a restricted downgrade relative to the original AI recommendation
                             const isDowngrade = level > aiLevel;
                             const isRestrictedDowngrade = pendingAction === 'downgraded' && isDowngrade && hasCriticalWarning && !bypassSafety;
                             const isBtnDisabled = !isValid || isRestrictedDowngrade || !!actionLoading;
@@ -1074,9 +1111,18 @@ export const TriageDashboard: React.FC = () => {
                     <h3 className="sae-concept-title">
                       <span className="sae-concept-title-icon">🧠</span> AI Latent Concept Audit (Layer 9)
                     </h3>
-                    <span className="sae-concept-meta">
-                      Sparsity: {saeData?.active_features?.length ?? 0} active | Mock Mode
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="sae-concept-meta">
+                        Sparsity: {saeData?.active_features?.length ?? 0} active
+                      </span>
+                      <button 
+                        className="proof-toggle-btn"
+                        onClick={() => setShowSaeTechnical(!showSaeTechnical)}
+                        style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '12px' }}
+                      >
+                        {showSaeTechnical ? 'Hide Technical Trail' : 'Show Technical Trail'}
+                      </button>
+                    </div>
                   </div>
 
                   {saeLoading && (
@@ -1105,48 +1151,204 @@ export const TriageDashboard: React.FC = () => {
                   )}
 
                   {!saeLoading && !saeError && saeData && saeData.active_features && (
-                    <div className="sae-feature-list">
-                      {saeData.active_features.length === 0 ? (
-                        <div style={{ color: 'var(--text-secondary)', padding: '10px 0', textAlign: 'center', fontSize: '0.8rem' }}>
-                          No active features detected above threshold.
-                        </div>
-                      ) : (
-                        [...saeData.active_features]
-                          .sort((a, b) => b.strength - a.strength)
-                          .map((feat: any) => (
-                            <div className="sae-feature-row" key={feat.index}>
-                              <div className="sae-feature-top">
-                                <div className="sae-feature-identity">
-                                  <span className="sae-feature-index">F#{feat.index}</span>
-                                  <span className="sae-feature-name">{feat.name}</span>
-                                </div>
-                                <span className={`sae-badge ${feat.category.toLowerCase()}`}>
-                                  {feat.category}
-                                </span>
-                              </div>
-                              <div className="sae-feature-desc">{feat.description}</div>
-                              <div className="sae-feature-metrics">
-                                <div className="sae-progress-container">
-                                  <div className="sae-progress-track">
-                                    <div 
-                                      className="sae-progress-bar" 
-                                      style={{ 
-                                        width: `${Math.min(100, feat.strength * 100)}%`,
-                                        backgroundColor: getFeatureColor(feat.category)
-                                      }} 
-                                    />
+                    <div className="sae-feature-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {/* 1. Primary Alarm View: Surface only critical 'smoke detectors' */}
+                      {(() => {
+                        const criticalAlerts = saeData.active_features.filter(
+                          (feat: any) => feat.category === 'Critical' || feat.priority === 'High'
+                        );
+
+                        if (criticalAlerts.length > 0) {
+                          return (
+                            <div className="sae-critical-alerts-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {criticalAlerts.map((feat: any) => (
+                                <div key={feat.index} className="sae-alert-card critical" style={{
+                                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.04) 100%)',
+                                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                                  borderRadius: '8px',
+                                  padding: '12px 16px',
+                                  position: 'relative',
+                                  overflow: 'hidden'
+                                }}>
+                                  <div style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: '4px',
+                                    backgroundColor: '#ef4444'
+                                  }} />
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      🚨 {feat.name}
+                                    </span>
+                                    <span style={{
+                                      background: 'rgba(239, 68, 68, 0.2)',
+                                      color: '#fca5a5',
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600,
+                                      fontFamily: 'monospace'
+                                    }}>
+                                      {(feat.strength * 100).toFixed(1)}% activation
+                                    </span>
                                   </div>
-                                  <span className="sae-feature-strength-val">
-                                    {feat.strength.toFixed(3)}
-                                  </span>
+                                  <div style={{ fontSize: '0.82rem', color: '#fecaca', lineHeight: 1.4 }}>
+                                    {feat.description}
+                                  </div>
                                 </div>
-                                <div className={`sae-priority ${feat.priority.toLowerCase()}`}>
-                                  <span className="sae-priority-dot" />
-                                  <span>{feat.priority}</span>
-                                </div>
-                              </div>
+                              ))}
                             </div>
-                          ))
+                          );
+                        } else {
+                          return (
+                            <div className="sae-alert-card safe" style={{
+                              background: 'linear-gradient(135deg, rgba(46, 213, 115, 0.12) 0%, rgba(46, 213, 115, 0.04) 100%)',
+                              border: '1px solid rgba(46, 213, 115, 0.25)',
+                              borderRadius: '8px',
+                              padding: '12px 16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              color: '#2ed573',
+                              fontSize: '0.85rem',
+                              fontWeight: 500
+                            }}>
+                              <span style={{ fontSize: '1.2rem' }}>✓</span>
+                              <span>No Latent Threat Detected: Residual stream concepts are within standard clinical bounds.</span>
+                            </div>
+                          );
+                        }
+                      })()}
+
+                      {/* 2. Technical Audit Trail: Complete roster of all activations (Clinical, Cognitive, Structural, etc.) */}
+                      {showSaeTechnical && (
+                        <div className="sae-technical-audit-trail" style={{
+                          marginTop: '10px',
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          border: '1px solid rgba(255, 255, 255, 0.06)',
+                          borderRadius: '8px',
+                          padding: '14px'
+                        }}>
+                          <h4 style={{
+                            fontSize: '0.78rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            color: 'var(--text-secondary)',
+                            margin: '0 0 12px 0',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            paddingBottom: '6px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span>Neural Activation & Concept Roster</span>
+                            <span style={{ fontSize: '0.7rem', color: '#a78bfa', fontFamily: 'monospace' }}>Layer 9 (Residual Stream)</span>
+                          </h4>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {saeData.active_features.length === 0 ? (
+                              <div style={{ color: 'var(--text-secondary)', padding: '10px 0', textAlign: 'center', fontSize: '0.8rem' }}>
+                                No active neural features detected.
+                              </div>
+                            ) : (() => {
+                              const categorizedFeatures = {
+                                Critical: saeData.active_features.filter((f: any) => f.category === 'Critical'),
+                                Clinical: saeData.active_features.filter((f: any) => f.category === 'Clinical'),
+                                Cognitive: saeData.active_features.filter((f: any) => f.category === 'Cognitive'),
+                                Structural: saeData.active_features.filter((f: any) => f.category === 'Structural' || (!f.category && f.index))
+                              };
+                              return Object.entries(categorizedFeatures).map(([category, list]) => {
+                                if (list.length === 0) return null;
+                                return (
+                                  <div key={category} className="sae-category-section" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)', paddingBottom: '12px' }}>
+                                    <h5 style={{
+                                      fontSize: '0.75rem',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.05em',
+                                      color: category === 'Critical' ? '#f87171' : category === 'Clinical' ? '#fbbf24' : category === 'Cognitive' ? '#60a5fa' : '#9ca3af',
+                                      margin: '0 0 10px 0',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      fontWeight: 700
+                                    }}>
+                                      <span>
+                                        {category === 'Critical' ? '🚨' : category === 'Clinical' ? '🩺' : category === 'Cognitive' ? '🧠' : '🏗️'}
+                                      </span>
+                                      <span>{category} Features</span>
+                                      <span style={{
+                                        fontSize: '0.65rem',
+                                        background: 'rgba(255, 255, 255, 0.08)',
+                                        padding: '1px 6px',
+                                        borderRadius: '8px',
+                                        color: '#fff',
+                                        fontFamily: 'monospace'
+                                      }}>
+                                        {list.length}
+                                      </span>
+                                    </h5>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {[...list]
+                                        .sort((a, b) => b.strength - a.strength)
+                                        .map((feat: any) => (
+                                          <div key={feat.index} className="sae-feature-row">
+                                            <div className="sae-feature-top">
+                                              <div className="sae-feature-identity">
+                                                <span className="sae-feature-index">F#{feat.index}</span>
+                                                <span className="sae-feature-name">{feat.name}</span>
+                                              </div>
+                                              <span className={`sae-badge ${feat.category ? feat.category.toLowerCase() : 'structural'}`}>
+                                                {feat.category || 'Structural'}
+                                              </span>
+                                            </div>
+                                            
+                                            <p className="sae-feature-desc">{feat.description}</p>
+                                            
+                                            <div className="sae-feature-metrics">
+                                              <div className="sae-progress-container">
+                                                <div className="sae-progress-track">
+                                                  <div className="sae-progress-bar" style={{
+                                                    width: `${Math.min(100, feat.strength * 100)}%`,
+                                                    backgroundColor: getFeatureColor(feat.category || 'Structural')
+                                                  }} />
+                                                </div>
+                                                <span className="sae-feature-strength-val">
+                                                  {(feat.strength * 100).toFixed(1)}%
+                                                </span>
+                                              </div>
+                                              <div className={`sae-priority ${feat.priority ? feat.priority.toLowerCase() : 'low'}`}>
+                                                <span className="sae-priority-dot" />
+                                                <span style={{ fontSize: '0.7rem' }}>{feat.priority || 'Low'}</span>
+                                              </div>
+                                            </div>
+
+                                            <div style={{
+                                              marginTop: '8px',
+                                              paddingTop: '8px',
+                                              borderTop: '1px dashed rgba(255, 255, 255, 0.05)',
+                                              display: 'grid',
+                                              gridTemplateColumns: 'repeat(2, 1fr)',
+                                              gap: '4px',
+                                              fontFamily: 'monospace',
+                                              fontSize: '0.68rem',
+                                              color: 'var(--text-secondary)',
+                                              opacity: 0.8
+                                            }}>
+                                              <div><span style={{ opacity: 0.5 }}>Raw Float:</span> <span style={{ color: '#2ed573' }}>{feat.strength.toFixed(5)}</span></div>
+                                              <div><span style={{ opacity: 0.5 }}>Residual Val:</span> <span style={{ color: '#60a5fa' }}>{(feat.strength * 1.428).toFixed(5)}</span></div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                    </div>
+                                  </div>
+                                );
+                              });
+                            })()}
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}

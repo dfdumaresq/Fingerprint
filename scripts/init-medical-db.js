@@ -1,48 +1,61 @@
 const args = process.argv.slice(2);
-if (args[0] === 'test') {
+const isTest = args.includes('test');
+const forceDrop = isTest || args.includes('--force') || args.includes('-f');
+
+if (isTest) {
   require('dotenv').config({ path: '.env.test' });
 } else {
   require('dotenv').config();
 }
 const { Pool } = require('pg');
-const fs = require('fs');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/fingerprint',
 });
 
-const sql = `
--- Drop existing types if re-running (for dev)
+const dropSql = `
+-- Drop existing types and tables if force dropping
 DROP TABLE IF EXISTS agent_events CASCADE;
 DROP TABLE IF EXISTS merkle_anchors CASCADE;
 DROP TYPE IF EXISTS workflow_type_enum CASCADE;
 DROP TYPE IF EXISTS clinician_action_enum CASCADE;
 DROP TYPE IF EXISTS anchor_status_enum CASCADE;
+`;
 
--- Core Enum Types
-CREATE TYPE workflow_type_enum AS ENUM (
-    'triage_recommendation',
-    'draft_clinical_note',
-    'simulated_patient_interaction',
-    'care_plan_decision',
-    'system_alert',
-    'clinician_action',
-    'clinician_amendment'
-);
+const schemaSql = `
+-- Create Core Enum Types if they do not exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'workflow_type_enum') THEN
+        CREATE TYPE workflow_type_enum AS ENUM (
+            'triage_recommendation',
+            'draft_clinical_note',
+            'simulated_patient_interaction',
+            'care_plan_decision',
+            'system_alert',
+            'clinician_action',
+            'clinician_amendment'
+        );
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'clinician_action_enum') THEN
+        CREATE TYPE clinician_action_enum AS ENUM (
+            'accepted',
+            'overridden',
+            'ignored',
+            'escalated',
+            'autonomous',
+            'downgraded'
+        );
+    END IF;
 
-CREATE TYPE clinician_action_enum AS ENUM (
-    'accepted',
-    'overridden',
-    'ignored',
-    'escalated',
-    'autonomous',
-    'downgraded'
-);
-
-CREATE TYPE anchor_status_enum AS ENUM ('pending', 'confirmed', 'failed');
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'anchor_status_enum') THEN
+        CREATE TYPE anchor_status_enum AS ENUM ('pending', 'confirmed', 'failed');
+    END IF;
+END$$;
 
 -- Anchoring Table
-CREATE TABLE merkle_anchors (
+CREATE TABLE IF NOT EXISTS merkle_anchors (
     id SERIAL PRIMARY KEY,
     merkle_root VARCHAR(66) UNIQUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -54,7 +67,7 @@ CREATE TABLE merkle_anchors (
 );
 
 -- Core Ledger Table
-CREATE TABLE agent_events (
+CREATE TABLE IF NOT EXISTS agent_events (
     id SERIAL PRIMARY KEY,
     event_id UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
     session_id VARCHAR(255),
@@ -83,11 +96,11 @@ CREATE TABLE agent_events (
 );
 
 -- Indices for rapid querying
-CREATE INDEX idx_events_fingerprint ON agent_events(agent_fingerprint_id);
-CREATE INDEX idx_events_workflow ON agent_events(workflow_type);
-CREATE INDEX idx_events_anchoring ON agent_events(anchored_to_chain, merkle_root_id);
+CREATE INDEX IF NOT EXISTS idx_events_fingerprint ON agent_events(agent_fingerprint_id);
+CREATE INDEX IF NOT EXISTS idx_events_workflow ON agent_events(workflow_type);
+CREATE INDEX IF NOT EXISTS idx_events_anchoring ON agent_events(anchored_to_chain, merkle_root_id);
 
--- 3. Create the immutability trigger function
+-- Create the immutability trigger function
 CREATE OR REPLACE FUNCTION prevent_anchored_mutation()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -125,9 +138,13 @@ FOR EACH ROW EXECUTE FUNCTION prevent_anchored_mutation();
 
 async function initDb() {
   try {
-    console.log("Creating medical MVP tables...");
-    await pool.query(sql);
-    console.log("Tables created successfully!");
+    if (forceDrop) {
+      console.log("Force dropping existing tables and enums...");
+      await pool.query(dropSql);
+    }
+    console.log("Initializing non-destructive database schema...");
+    await pool.query(schemaSql);
+    console.log("Database initialized successfully!");
   } catch (error) {
     console.error("Error creating tables:", error);
   } finally {
@@ -136,3 +153,4 @@ async function initDb() {
 }
 
 initDb();
+

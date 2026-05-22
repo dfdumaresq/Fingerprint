@@ -89,18 +89,20 @@ def main():
         )
         return 1
 
-    # 2. Setup activation hook using dynamic monkey-patching
+    # 2. Setup activation hook using dynamic class-level monkey-patching
     captured_activation = None
-    original_layer_call = model.model.layers[args.layer].__call__
+    target_block = model.model.layers[args.layer]
+    BlockClass = target_block.__class__
+    original_block_call = BlockClass.__call__
 
-    def hooked_call(x, *layer_args, **layer_kwargs):
+    def hooked_block_call(self, x, *block_args, **block_kwargs):
         nonlocal captured_activation
-        # Capture the input vector to the target decoder layer (residual stream before layer L)
-        captured_activation = x
-        return original_layer_call(x, *layer_args, **layer_kwargs)
+        if self is target_block:
+            captured_activation = x
+        return original_block_call(self, x, *block_args, **block_kwargs)
 
-    # Inject the hook
-    model.model.layers[args.layer].__call__ = hooked_call
+    # Inject the hook at the class level to bypass Python's special method lookup
+    BlockClass.__call__ = hooked_block_call
 
     # 3. Tokenize input prompt and run the forward pass
     try:
@@ -121,7 +123,7 @@ def main():
         _ = model(x_in)
     except Exception as e:
         # Restore original call method in case of failure
-        model.model.layers[args.layer].__call__ = original_layer_call
+        BlockClass.__call__ = original_block_call
         print(
             json.dumps({"status": "error", "error": f"Forward pass execution failed: {str(e)}"}, indent=2),
             file=sys.stderr
@@ -129,7 +131,7 @@ def main():
         return 1
     finally:
         # Always restore model structure
-        model.model.layers[args.layer].__call__ = original_layer_call
+        BlockClass.__call__ = original_block_call
 
     if captured_activation is None:
         print(

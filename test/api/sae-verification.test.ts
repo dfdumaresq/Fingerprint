@@ -2,15 +2,53 @@ import request from 'supertest';
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import express from 'express';
 import * as path from 'path';
+import { getFeatureMetadata } from '../../src/sae/featureMap';
+import { EventEmitter } from 'events';
+
+// Mock child_process.spawn to make test environment-independent
+const mockSpawn = jest.fn().mockImplementation((command: any, args: any) => {
+  const child = new EventEmitter() as any;
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  
+  process.nextTick(() => {
+    if (args.includes('--mock')) {
+      const mockResult = {
+        status: "success",
+        mock: true,
+        prompt: args[args.indexOf('--prompt') + 1] || "test",
+        layer: parseInt(args[args.indexOf('--layer') + 1] || "8"),
+        d_model: 2048,
+        dict_size: 16384,
+        l0_sparsity: 25,
+        active_features: [
+          { index: 33, strength: 0.85 },
+          { index: 105, strength: 0.62 },
+          { index: 9999, strength: 0.15 }
+        ]
+      };
+      child.stdout.emit('data', Buffer.from(JSON.stringify(mockResult)));
+      child.emit('close', 0);
+    } else {
+      child.emit('close', 0);
+    }
+  });
+  
+  return child;
+});
+
+jest.mock('child_process', () => ({
+  spawn: (command: string, args: string[]) => mockSpawn(command, args)
+}));
 
 // Setup mocks for database and redis
 const mockRedis = {
-  get: jest.fn(),
-  set: jest.fn(),
+  get: jest.fn() as any,
+  set: jest.fn() as any,
 };
 
 const mockDb = {
-  query: jest.fn(),
+  query: jest.fn() as any,
 };
 
 // Recreate the minimal Express app under test to bypass app.listen block
@@ -50,8 +88,8 @@ app.post('/v1/agents/:fingerprintHash/sae/verify', async (req: express.Request, 
     const cached = await mockRedis.get(`agent:${fingerprintHash}`);
     let agentExists = !!cached;
     if (!agentExists) {
-      const rows = await mockDb.query('SELECT 1 FROM agents WHERE fingerprint_hash = $1', [fingerprintHash]);
-      agentExists = rows.length > 0;
+      const rows = (await mockDb.query('SELECT 1 FROM agents WHERE fingerprint_hash = $1', [fingerprintHash])) as any;
+      agentExists = (rows?.rows?.length ?? 0) > 0 || (rows?.length ?? 0) > 0;
     }
 
     if (!agentExists) {
@@ -108,6 +146,21 @@ app.post('/v1/agents/:fingerprintHash/sae/verify', async (req: express.Request, 
 
       try {
         const result = JSON.parse(stdout);
+        
+        // Enrich active features with human-readable names and descriptions
+        if (result.active_features && Array.isArray(result.active_features)) {
+          result.active_features = result.active_features.map((feat: any) => {
+            const metadata = getFeatureMetadata(feat.index);
+            return {
+              ...feat,
+              name: metadata.name,
+              description: metadata.description,
+              category: metadata.category,
+              priority: metadata.priority
+            };
+          });
+        }
+
         res.json({
           success: true,
           fingerprintHash,
@@ -205,6 +258,10 @@ describe('SAE Verification Endpoint Integration Tests', () => {
       if (res.body.active_features.length > 0) {
         expect(res.body.active_features[0]).toHaveProperty('index');
         expect(res.body.active_features[0]).toHaveProperty('strength');
+        expect(res.body.active_features[0]).toHaveProperty('name');
+        expect(res.body.active_features[0]).toHaveProperty('description');
+        expect(res.body.active_features[0]).toHaveProperty('category');
+        expect(res.body.active_features[0]).toHaveProperty('priority');
       }
     });
   });

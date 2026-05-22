@@ -57,14 +57,14 @@ CREATE TABLE merkle_anchors (
 CREATE TABLE agent_events (
     id SERIAL PRIMARY KEY,
     event_id UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
-    session_id VARCHAR(100),
+    session_id VARCHAR(255),
     timestamp TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     
     agent_fingerprint_id VARCHAR(66) NOT NULL,
     model_version VARCHAR(50) NOT NULL,
     
     workflow_type workflow_type_enum NOT NULL,
-    policy_id VARCHAR(100),
+    policy_id VARCHAR(512),
     clinician_action clinician_action_enum,
     
     input_ref VARCHAR(255) NOT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE agent_events (
     event_hash VARCHAR(66) NOT NULL,
     
     amends_event_id UUID,
-    reason_code VARCHAR(100),
+    reason_code VARCHAR(255),
     reason_text TEXT,
     clinical_data JSONB,
     

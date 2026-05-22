@@ -22,6 +22,7 @@ import {
 import { EventService } from '../services/event.service';
 import { AnchorService } from '../services/anchor.service';
 import { TriageService, AgentNotAvailableError } from '../services/triage.service';
+import { getFeatureMetadata } from '../sae/featureMap';
 
 dotenv.config();
 
@@ -709,6 +710,21 @@ app.post('/v1/agents/:fingerprintHash/sae/verify', async (req: Request, res: Res
 
       try {
         const result = JSON.parse(stdout);
+
+        // Enrich active features with human-readable names and descriptions
+        if (result.active_features && Array.isArray(result.active_features)) {
+          result.active_features = result.active_features.map((feat: any) => {
+            const metadata = getFeatureMetadata(feat.index);
+            return {
+              ...feat,
+              name: metadata.name,
+              description: metadata.description,
+              category: metadata.category,
+              priority: metadata.priority
+            };
+          });
+        }
+
         res.json({
           success: true,
           fingerprintHash,

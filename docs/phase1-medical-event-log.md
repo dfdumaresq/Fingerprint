@@ -27,7 +27,7 @@ CREATE TYPE clinician_action_enum AS ENUM (
 CREATE TABLE agent_events (
     id SERIAL PRIMARY KEY,
     event_id UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
-    session_id VARCHAR(100),           -- Correlate multiple events in one clinical episode
+    session_id VARCHAR(255),           -- Correlate multiple events in one clinical episode
     timestamp TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     
     -- Identity Links
@@ -36,7 +36,7 @@ CREATE TABLE agent_events (
     
     -- Clinical Context
     workflow_type workflow_type_enum NOT NULL,
-    policy_id VARCHAR(100),
+    policy_id VARCHAR(512),
     clinician_action clinician_action_enum,
     
     -- Data Pointers (Zero PHI: content hashes or de-identified URIs)

@@ -1018,3 +1018,278 @@
   line-height: 1.4;
   opacity: 0.7;
 }
+
+/* ── AI Latent Concept Audit Styles (Phase 3) ── */
+.sae-concept-panel {
+  margin-top: 25px;
+  background: rgba(20, 24, 43, 0.6);
+  border: 1px solid rgba(138, 92, 246, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.sae-concept-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(138, 92, 246, 0.5), transparent);
+}
+
+.sae-concept-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sae-concept-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+  margin: 0;
+}
+
+.sae-concept-title-icon {
+  color: #a78bfa;
+  font-size: 1.1rem;
+}
+
+.sae-concept-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sae-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.sae-feature-row {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 12px 14px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sae-feature-row:hover {
+  background: rgba(138, 92, 246, 0.04);
+  border-color: rgba(138, 92, 246, 0.2);
+  transform: translateX(2px);
+}
+
+.sae-feature-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.sae-feature-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sae-feature-index {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.sae-feature-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f0f2f8;
+}
+
+.sae-feature-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.sae-feature-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.sae-progress-container {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sae-progress-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-grow: 1;
+  position: relative;
+}
+
+.sae-progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sae-feature-strength-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Category Badges */
+.sae-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.sae-badge.critical {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.sae-badge.clinical {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.sae-badge.cognitive {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+.sae-badge.structural {
+  background: rgba(107, 114, 128, 0.15);
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  color: #9ca3af;
+}
+
+/* Priority Indicators */
+.sae-priority {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.sae-priority-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sae-priority.high { color: #f87171; }
+.sae-priority.high .sae-priority-dot { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+.sae-priority.medium { color: #fbbf24; }
+.sae-priority.medium .sae-priority-dot { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+
+.sae-priority.low { color: #9ca3af; }
+.sae-priority.low .sae-priority-dot { background: #6b7280; }
+
+/* Acuity Override Warning Panel */
+.sae-safety-alert {
+  margin-top: 15px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+  animation: alert-glow-pulse 2s infinite ease-in-out;
+}
+
+@keyframes alert-glow-pulse {
+  0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.25); }
+  50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.5); }
+  100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.25); }
+}
+
+.sae-safety-alert h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sae-safety-alert p {
+  margin: 0 0 12px 0;
+  font-size: 0.8rem;
+  color: #fbcfe8;
+  line-height: 1.4;
+}
+
+.sae-safety-alert-list {
+  margin: 0 0 15px 0;
+  padding-left: 20px;
+  font-size: 0.75rem;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.sae-safety-alert-list li {
+  margin-bottom: 4px;
+}
+
+.safety-bypass-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #f9a8d4;
+  cursor: pointer;
+  user-select: none;
+}
+
+.safety-bypass-checkbox {
+  margin-top: 3px;
+  cursor: pointer;
+  accent-color: #ef4444;
+}

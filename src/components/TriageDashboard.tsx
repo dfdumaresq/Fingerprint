@@ -146,6 +146,15 @@ const getAcuityColor = (lvl: number) => {
   }
 };
 
+const getFeatureColor = (category: string) => {
+  switch (category) {
+    case 'Critical': return '#ef4444';
+    case 'Clinical': return '#f59e0b';
+    case 'Cognitive': return '#3b82f6';
+    default: return '#6b7280';
+  }
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const TriageDashboard: React.FC = () => {
@@ -166,6 +175,89 @@ export const TriageDashboard: React.FC = () => {
   const [showTechnicalProofs, setShowTechnicalProofs] = useState(false);
   const [showExtendedVitals, setShowExtendedVitals] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  // AI Latent Concept Audit (SAE) States (Phase 3)
+  const [saeData, setSaeData] = useState<any | null>(null);
+  const [saeLoading, setSaeLoading] = useState(false);
+  const [saeError, setSaeError] = useState<string | null>(null);
+  const [bypassSafety, setBypassSafety] = useState(false);
+
+  const criticalFeatures = saeData?.active_features?.filter(
+    (feat: any) => feat.category === 'Critical' && feat.strength >= 0.5
+  ) || [];
+  const hasCriticalWarning = criticalFeatures.length > 0;
+
+  // Helper to build intermediate clinical representation for SAE inference
+  const buildEncounterSaePrompt = (encounter: TriageEncounter): string => {
+    const c = encounter.clinical;
+    const complaint = c.chief_complaint;
+    const vitals = c.vitals;
+    const hr = vitals.hr;
+    const sys = vitals.bp_sys;
+    const dia = vitals.bp_dia;
+    const rr = vitals.rr;
+    const spo2 = vitals.spo2;
+    const temp = vitals.temp ?? 37.0;
+    const pain = vitals.pain_score ?? 0;
+    const age = c.patient_context?.demographics?.age_years ?? c.age ?? 0;
+    const gender = c.patient_context?.demographics?.sex_at_birth ?? c.gender ?? 'unknown';
+    const pmh = c.history?.pmh?.length ? c.history.pmh.join(', ') : 'None';
+    
+    return `Patient chief complaint: ${complaint}. Vitals: HR ${hr} bpm, BP ${sys}/${dia} mmHg, RR ${rr}/min, SpO2 ${spo2}%, Temp ${temp}°C, Pain ${pain}/10. Age ${age}, Gender ${gender}. History: PMH ${pmh}.`;
+  };
+
+  // Asynchronously fetch active features when an encounter drawer opens
+  useEffect(() => {
+    if (!selectedEncounter) {
+      setSaeData(null);
+      setSaeLoading(false);
+      setSaeError(null);
+      setBypassSafety(false);
+      return;
+    }
+
+    const fetchSaeAudit = async () => {
+      const hash = triageStatus?.agent?.fingerprintHash;
+      if (!hash) {
+        setSaeError('No active agent resolved. Unable to perform latent concept audit.');
+        return;
+      }
+
+      setSaeLoading(true);
+      setSaeError(null);
+      setBypassSafety(false);
+
+      const saePrompt = buildEncounterSaePrompt(selectedEncounter);
+
+      try {
+        const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/sae/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${REACT_APP_API_KEY}`
+          },
+          body: JSON.stringify({
+            prompt: saePrompt,
+            mock: true // Enforce mock mode in dev/UI
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          setSaeData(data);
+        } else {
+          setSaeError(data.error || 'Failed to fetch latent concept audit.');
+        }
+      } catch (err: any) {
+        console.error('Failed to run SAE audit', err);
+        setSaeError(err.message || 'Failed to connect to SAE audit pipeline.');
+      } finally {
+        setSaeLoading(false);
+      }
+    };
+
+    fetchSaeAudit();
+  }, [selectedEncounter, triageStatus]);
 
   const [form, setForm] = useState<NewEncounterForm>({
     chief_complaint: '', custom_complaint: '',
@@ -851,18 +943,50 @@ export const TriageDashboard: React.FC = () => {
                         <div style={{ marginBottom: '10px', fontSize: '0.9rem', color: '#ccc' }}>
                           Select new Acuity Level ({pendingAction}):
                         </div>
+
+                        {pendingAction === 'downgraded' && hasCriticalWarning && (
+                          <div className="sae-safety-alert" style={{ marginBottom: '15px' }}>
+                            <h4>⚠️ EMERGENCY CLINICAL OVERRIDE DETECTED</h4>
+                            <p>
+                              The Sparse Autoencoder (SAE) has detected active high-priority clinical threat concepts in the residual stream (Layer 9) at strength &ge; 0.5. Downgrading acuity under these conditions represents extreme clinical risk.
+                            </p>
+                            <ul className="sae-safety-alert-list">
+                              {criticalFeatures.map((feat: any) => (
+                                <li key={feat.index}>
+                                  <strong>F#{feat.index} ({feat.name})</strong>: Strength {feat.strength.toFixed(3)}
+                                </li>
+                              ))}
+                            </ul>
+                            <label className="safety-bypass-label">
+                              <input
+                                type="checkbox"
+                                className="safety-bypass-checkbox"
+                                checked={bypassSafety}
+                                onChange={(e) => setBypassSafety(e.target.checked)}
+                              />
+                              <span>I acknowledge the active life-threat concepts and confirm this manual override is clinically justified.</span>
+                            </label>
+                          </div>
+                        )}
+
                         <div style={{ display: 'flex', gap: '8px' }}>
                           {[1, 2, 3, 4, 5].map(level => {
                             const aiLevel = selectedEncounter.clinical?.ai_recommendation?.acuity || 3;
                             const isValid = pendingAction === 'downgraded' ? level > aiLevel : level < aiLevel;
+                            
+                            // Check if this level is a restricted downgrade
+                            const isDowngrade = level > aiLevel;
+                            const isRestrictedDowngrade = pendingAction === 'downgraded' && isDowngrade && hasCriticalWarning && !bypassSafety;
+                            const isBtnDisabled = !isValid || isRestrictedDowngrade || !!actionLoading;
+
                             return (
                               <button
                                 key={level}
-                                disabled={!isValid || !!actionLoading}
+                                disabled={isBtnDisabled}
                                 onClick={() => dispatchAction(pendingAction, level)}
                                 className={`acuity-badge acuity-${level}`}
-                                style={{ width: 40, height: 40, opacity: isValid ? 1 : 0.3, cursor: isValid ? 'pointer' : 'not-allowed', border: 'none' }}
-                                title={isValid ? `Assign Acuity ${level}` : `Invalid for ${pendingAction}`}
+                                style={{ width: 40, height: 40, opacity: isBtnDisabled ? 0.3 : 1, cursor: isBtnDisabled ? 'not-allowed' : 'pointer', border: 'none' }}
+                                title={isBtnDisabled ? (isRestrictedDowngrade ? 'Requires active emergency bypass confirmation' : `Invalid for ${pendingAction}`) : `Assign Acuity ${level}`}
                               >
                                 {level}
                               </button>
@@ -938,6 +1062,92 @@ export const TriageDashboard: React.FC = () => {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* AI Latent Concept Audit Panel (Phase 3) */}
+              {selectedEncounter.clinical?.ai_recommendation && (
+                <div className="sae-concept-panel">
+                  <div className="sae-concept-header">
+                    <h3 className="sae-concept-title">
+                      <span className="sae-concept-title-icon">🧠</span> AI Latent Concept Audit (Layer 9)
+                    </h3>
+                    <span className="sae-concept-meta">
+                      Sparsity: {saeData?.active_features?.length ?? 0} active | Mock Mode
+                    </span>
+                  </div>
+
+                  {saeLoading && (
+                    <div className="sae-loading-state" style={{ color: '#a78bfa', padding: '20px 0', textAlign: 'center', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        border: '2px solid rgba(138, 92, 246, 0.2)',
+                        borderTopColor: '#a78bfa',
+                        borderRadius: '50%',
+                        animation: 'sae-spin 1s linear infinite'
+                      }} />
+                      <style>{`
+                        @keyframes sae-spin {
+                          to { transform: rotate(360deg); }
+                        }
+                      `}</style>
+                      <div>Extracting residual stream activations at Layer 9...</div>
+                    </div>
+                  )}
+
+                  {saeError && (
+                    <div style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px', fontSize: '0.8rem', marginTop: '10px' }}>
+                      ⚠️ {saeError}
+                    </div>
+                  )}
+
+                  {!saeLoading && !saeError && saeData && saeData.active_features && (
+                    <div className="sae-feature-list">
+                      {saeData.active_features.length === 0 ? (
+                        <div style={{ color: 'var(--text-secondary)', padding: '10px 0', textAlign: 'center', fontSize: '0.8rem' }}>
+                          No active features detected above threshold.
+                        </div>
+                      ) : (
+                        [...saeData.active_features]
+                          .sort((a, b) => b.strength - a.strength)
+                          .map((feat: any) => (
+                            <div className="sae-feature-row" key={feat.index}>
+                              <div className="sae-feature-top">
+                                <div className="sae-feature-identity">
+                                  <span className="sae-feature-index">F#{feat.index}</span>
+                                  <span className="sae-feature-name">{feat.name}</span>
+                                </div>
+                                <span className={`sae-badge ${feat.category.toLowerCase()}`}>
+                                  {feat.category}
+                                </span>
+                              </div>
+                              <div className="sae-feature-desc">{feat.description}</div>
+                              <div className="sae-feature-metrics">
+                                <div className="sae-progress-container">
+                                  <div className="sae-progress-track">
+                                    <div 
+                                      className="sae-progress-bar" 
+                                      style={{ 
+                                        width: `${Math.min(100, feat.strength * 100)}%`,
+                                        backgroundColor: getFeatureColor(feat.category)
+                                      }} 
+                                    />
+                                  </div>
+                                  <span className="sae-feature-strength-val">
+                                    {feat.strength.toFixed(3)}
+                                  </span>
+                                </div>
+                                <div className={`sae-priority ${feat.priority.toLowerCase()}`}>
+                                  <span className="sae-priority-dot" />
+                                  <span>{feat.priority}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                      )}
                     </div>
                   )}
                 </div>

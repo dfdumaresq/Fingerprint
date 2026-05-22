@@ -630,8 +630,110 @@ app.post('/v1/agents/verify', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /v1/agents/:fingerprintHash/sae/verify
+ * Executes the native MLX SAE activation auditing pipeline.
+ * Runs inside the local fingerprint-sae Conda environment asynchronously.
+ */
+app.post('/v1/agents/:fingerprintHash/sae/verify', async (req: Request, res: Response) => {
+  try {
+    const { fingerprintHash } = req.params;
+    const { prompt, layer = 8, mock = false } = req.body;
+
+    if (!prompt) {
+      res.status(400).json({ error: { code: 'bad_request', message: 'prompt is required in request body' } });
+      return;
+    }
+
+    // 1. Verify that agent exists
+    const cached = await redis.get(`agent:${fingerprintHash}`);
+    let agentExists = !!cached;
+    if (!agentExists) {
+      const { rows } = await db.query('SELECT 1 FROM agents WHERE fingerprint_hash = $1', [fingerprintHash]);
+      agentExists = rows.length > 0;
+    }
+
+    if (!agentExists) {
+      res.status(404).json({ error: { code: 'agent_not_found', message: 'No agent found for the provided fingerprintHash.' } });
+      return;
+    }
+
+    // 2. Build parameters for python invocation
+    const args = [
+      'run',
+      '-n',
+      'fingerprint-sae',
+      'python',
+      path.join(__dirname, '../sae/extract_activations.py'),
+      '--prompt',
+      prompt,
+      '--layer',
+      String(layer)
+    ];
+
+    if (mock) {
+      args.push('--mock');
+    } else {
+      // Point to downloaded safetensors weights
+      const weightsPath = path.join(__dirname, `../../cache/sae/blocks.${layer}.hook_resid_post/sae_weights.safetensors`);
+      args.push('--sae-weights', weightsPath);
+    }
+
+    // 3. Spawn conda runner child process asynchronously without blocking event loop
+    const { spawn } = require('child_process');
+    const child = spawn('conda', args);
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    child.on('close', (code: number) => {
+      if (code !== 0) {
+        console.error(`Python extraction script failed with code ${code}. Stderr: ${stderr}`);
+        res.status(500).json({
+          error: {
+            code: 'internal_error',
+            message: 'Activation extraction script failed',
+            details: stderr.trim()
+          }
+        });
+        return;
+      }
+
+      try {
+        const result = JSON.parse(stdout);
+        res.json({
+          success: true,
+          fingerprintHash,
+          ...result
+        });
+      } catch (parseErr: any) {
+        console.error('Failed to parse Python script stdout:', stdout);
+        res.status(500).json({
+          error: {
+            code: 'internal_error',
+            message: 'Failed to parse activation extraction results',
+            details: parseErr.message
+          }
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Error running SAE verification:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: 'An internal error occurred during SAE verification' } });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Web2.5 Gateway API running on port ${PORT}`);
   console.log(`Requires Authorization: Bearer ${API_KEY}`);
 });
+

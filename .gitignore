@@ -49,3 +49,8 @@ node_modules
 **/.claude/settings.local.json
 .claude/
 .npm-cache/
+
+# Python compiled files
+__pycache__/
+*.pyc
+

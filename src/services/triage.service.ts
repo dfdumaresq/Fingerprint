@@ -367,30 +367,59 @@ export class TriageService {
     const shouldRelease = isPool;
 
     try {
+      const idMatch = sessionId.match(/^enc_(\d+)$/);
+
       // 1. Check for existing clinician actions to see if this is an amendment
-      const existingRes = await client.query(
+      let existingRes = await client.query(
         `SELECT event_id, clinician_action FROM agent_events 
          WHERE session_id = $1
          ORDER BY id DESC LIMIT 1`,
         [sessionId]
       );
       
+      if (existingRes.rows.length === 0 && idMatch) {
+        existingRes = await client.query(
+          `SELECT event_id, clinician_action FROM agent_events 
+           WHERE id = $1 OR (session_id IS NULL AND id = $1)
+           ORDER BY id DESC LIMIT 1`,
+          [parseInt(idMatch[1])]
+        );
+      }
+      
       const lastEventId = existingRes.rows.length > 0 ? existingRes.rows[0].event_id : null;
       
-      const cliniciansActionFoundRes = await client.query(
+      let cliniciansActionFoundRes = await client.query(
         `SELECT clinician_action FROM agent_events 
          WHERE session_id = $1 AND clinician_action IS NOT NULL 
          LIMIT 1`,
         [sessionId]
       );
+      
+      if (cliniciansActionFoundRes.rows.length === 0 && idMatch) {
+        cliniciansActionFoundRes = await client.query(
+          `SELECT clinician_action FROM agent_events 
+           WHERE (id = $1 OR (session_id IS NULL AND id = $1)) AND clinician_action IS NOT NULL 
+           LIMIT 1`,
+          [parseInt(idMatch[1])]
+        );
+      }
+      
       const isAmendment = cliniciansActionFoundRes.rows.length > 0;
       const previousAction = isAmendment ? existingRes.rows[0].clinician_action : null;
 
       // 2. Fetch the original recommendation data to carry forward refs
-      const res = await client.query(
+      let res = await client.query(
         `SELECT input_ref, output_ref, policy_id, clinical_data FROM agent_events WHERE session_id = $1 AND workflow_type = 'triage_recommendation' ORDER BY id ASC LIMIT 1`,
         [sessionId]
       );
+      
+      if (res.rows.length === 0 && idMatch) {
+        res = await client.query(
+          `SELECT input_ref, output_ref, policy_id, clinical_data FROM agent_events WHERE id = $1 AND workflow_type = 'triage_recommendation'`,
+          [parseInt(idMatch[1])]
+        );
+      }
+      
       if (res.rows.length === 0) throw new Error(`Session ${sessionId} not found`);
       const { input_ref, output_ref, policy_id, clinical_data } = res.rows[0];
 

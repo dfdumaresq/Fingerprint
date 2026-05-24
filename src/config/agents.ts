@@ -20,8 +20,8 @@ export interface TriageAgentConfig {
 }
 
 export const TRIAGE_AGENT: TriageAgentConfig = {
-  slug: "ollama-llama3-8b",
-  name: "TriageBot (Ollama · llama3:8b)",
+  slug: process.env.TRIAGE_AGENT_SLUG || "ollama-llama3-8b",
+  name: process.env.TRIAGE_AGENT_NAME || "TriageBot (Ollama · llama3:8b)",
   provider:
     (process.env.TRIAGE_AGENT_PROVIDER as TriageAgentProvider) || "ollama",
   model: process.env.TRIAGE_AGENT_MODEL || "llama3:8b",

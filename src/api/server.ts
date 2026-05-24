@@ -279,16 +279,26 @@ app.get('/v1/triage/status', async (req: Request, res: Response) => {
     
     if (!activeAgent) {
       res.json({ 
-        success: false, 
-        available: false, 
-        error: 'No active agent found for role: ' + TRIAGE_AGENT.slug 
+        success: true, 
+        available: true, 
+        state: 'degraded',
+        provider: 'rules',
+        model: 'rules_fallback',
+        details: { error_code: 'agent_unregistered', message: 'No active agent resolved in the governance registry. Local clinical rules backup active.' },
+        agent: null
       });
       return;
     }
 
+    const health = await triageService.triageAgentHealth();
+
     res.json({ 
       success: true, 
-      available: true, 
+      available: true, // Auto-fallback rules ensure triage remains active and unblocked
+      state: health.state, // 'nominal' | 'degraded' | 'anomaly_detected'
+      provider: health.provider,
+      model: health.model,
+      details: health.details,
       agent: {
         fingerprintHash: activeAgent.fingerprint_hash,
         name: activeAgent.name,

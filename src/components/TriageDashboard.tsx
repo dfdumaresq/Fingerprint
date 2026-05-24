@@ -166,7 +166,16 @@ export const TriageDashboard: React.FC = () => {
   const [showNewForm, setShowNewForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [triageStatus, setTriageStatus] = useState<{ available: boolean; agent?: any; error?: string } | null>(null);
+  const [triageStatus, setTriageStatus] = useState<{ 
+    available: boolean; 
+    success: boolean;
+    state?: 'nominal' | 'degraded' | 'anomaly_detected' | 'blocked';
+    provider?: string;
+    model?: string;
+    details?: { error_code?: string; message?: string };
+    agent?: any; 
+    error?: string; 
+  } | null>(null);
   const [changingDecision, setChangingDecision] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [lastActionResult, setLastActionResult] = useState<{ is_amendment: boolean; previous_action: string | null } | null>(null);
@@ -512,21 +521,45 @@ export const TriageDashboard: React.FC = () => {
             <button 
               className="new-encounter-btn" 
               onClick={() => setShowNewForm(true)}
-              disabled={triageStatus?.available === false}
-              title={triageStatus?.available === false ? "AI Triage is disabled: No active agent found." : ""}
             >
               + New Encounter
             </button>
           </div>
         </div>
         
-        {triageStatus?.available === false && (
-          <div className="agent-status-banner error" style={{ marginTop: '16px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', fontSize: '0.85rem' }}>
-            <strong>🚨 Triage Blocked:</strong> {triageStatus.error || "No active non-revoked triage agent resolved. Please update Governance registry."}
+        {/* Render banners based on live status state */}
+        {!triageStatus?.agent && (
+          <div className="agent-status-banner warning" style={{ marginTop: '16px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>🤖 AI Assistance Paused: Local Rules Backup Active</strong>
+              <div style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '2px' }}>
+                No active agent resolved in the governance registry. Acuity calculations are running safely on the clinical rule engine.
+              </div>
+            </div>
+            <button 
+              onClick={() => window.location.hash = 'governance'} 
+              style={{ background: '#d97706', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', marginLeft: '16px', flexShrink: 0 }}
+            >
+              Configure Agent
+            </button>
           </div>
         )}
 
-        {triageStatus?.available && (
+        {triageStatus?.agent && triageStatus.state === 'degraded' && (
+          <div className="agent-status-banner warning" style={{ marginTop: '16px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div><strong>⚠️ Standard Backup Active:</strong> Connection lag is occurring with the local AI agent. Acuity calculations are running safely on the clinical rule engine.</div>
+            {triageStatus.details?.message && <div style={{ fontSize: '0.75rem', opacity: 0.85 }}>({triageStatus.details.message})</div>}
+          </div>
+        )}
+
+        {triageStatus?.agent && triageStatus.state === 'anomaly_detected' && (
+          <div className="agent-status-banner anomaly" style={{ marginTop: '16px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#b91c1c', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div><strong>🚨 Compliance Alert:</strong> A model/provenance signature anomaly was detected on the active AI agent. Safe rules-based fallback is engaged.</div>
+            {triageStatus.details?.message && <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Reason: {triageStatus.details.message}</div>}
+          </div>
+        )}
+
+        {triageStatus?.agent && (!triageStatus.state || triageStatus.state === 'nominal') && (
           <div className="agent-status-banner success" style={{ marginTop: '16px', padding: '12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', borderRadius: '8px', color: '#10b981', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><strong>✅ Active Agent Resolved:</strong> {triageStatus.agent.name} (v{triageStatus.agent.version})</span>
             <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', opacity: 0.8 }}>{triageStatus.agent.fingerprintHash.substring(0, 16)}...</span>

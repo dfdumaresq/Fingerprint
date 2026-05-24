@@ -30,6 +30,16 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
    - Consolidate the Registration and Verification views into a single, cohesive audit flow. **Goal**: Avoid forcing clinicians to think in terms of "Blockchain Registration" vs. "Verification" steps.
 6. **Demographic & Identity Model Refresh**
    - 🏗️ Implement structured `PatientContext` to support non-binary identities and coarse-granularity regional attributes.
+7. **Complete Canon Documentation Notes**
+   - Flesh out the remaining empty wiki canon notes to ensure permanent systems documentation is fully complete:
+     - [ ] `AI Fingerprinting - Master Note` (Core concept & portal overview)
+     - [ ] `AI Fingerprinting - Current Phase` (Milestone progress logs)
+     - [ ] `AI Fingerprinting - Crypto Design` (EIP-712 typing, keystores, and signing logic)
+     - [ ] `AI Fingerprinting - Blockchain Anchoring` (Sepolia smart contracts and Merkle root batching)
+     - [ ] `AI Fingerprinting - Threat Model` (Homographs, wrappers, and injection vector mitigations)
+     - [ ] `AI Fingerprinting - Medical Audit Reuse` (Regulatory mapping and EMR integration scenarios)
+     - [ ] `AI Fingerprinting - Decision Log` (Historical design choices and pivots)
+     - [ ] `AI Fingerprinting - Latest Log` (Pointer to the active session log)
 
 ## Medium Priority: Scale & Compliance
 

@@ -46,7 +46,7 @@ Out of scope for this phase:
 
 ## 4. Current state
 Active Git Branch:
-- `fix/triage-ui-drawer` (Contains committed triage overrides/amendment block fixes, red-flag deduplication, Layer 9 SAE neural panel overhaul, and dramatic cardiac scenario seeding; ready for merge)
+- `feat/triage-health-states` (In progress: implementing Soft vs. Hard health states, API status upgrades, and Triage Dashboard warning banners)
 
 Confirmed:
 - **Safety-Grade Behavioral Verification**: Fully operational off-chain verification using token-based Jaccard similarity (Bag-of-Words) and canonicalization layers to defeat formatting and whitespace attacks.
@@ -292,7 +292,7 @@ Known “don’t lose this” context:
 - [[AI Fingerprinting - Master Note]]
 - [[AI Fingerprinting - Current Phase]]
 - [AI Fingerprinting - Architecture](obsidian://open?vault=Obsidian-vault&file=AI%20Fingerprint%2FAI%20Fingerprinting%20-%20Architecture)
-- [[AI Fingerprinting - Crypto Design]]
+- [AI Fingerprinting - Crypto Design](obsidian://open?vault=Obsidian-vault&file=AI%20Fingerprint%2FAI%20Fingerprinting%20-%20Crypto%20Design)
 - [[AI Fingerprinting - Blockchain Anchoring]]
 - [[AI Fingerprinting - Threat Model]]
 - [[AI Fingerprinting - Medical Audit Reuse]]

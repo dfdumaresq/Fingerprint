@@ -204,6 +204,7 @@ export const TriageDashboard: React.FC = () => {
   // Pre-submission validation states
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [painInputConflict, setPainInputConflict] = useState(false);
+  const [preAuditLoading, setPreAuditLoading] = useState(false);
 
   const criticalFeatures = saeData?.active_features?.filter(
     (feat: any) => feat.category === 'Critical' && feat.strength >= 0.5
@@ -407,17 +408,58 @@ export const TriageDashboard: React.FC = () => {
   const submitEncounter = async () => {
     if (!form.chief_complaint || !form.hr || !form.bp_sys || !form.bp_dia) return;
 
-    // Pre-submission Clinical Validation Guardrail: Check for 0/10 pain in chest pain/dissection
-    const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
-    const complaintLower = (resolvedComplaint || '').toLowerCase();
-    const isChestPain = complaintLower.includes('chest pain') || complaintLower.includes('tearing') || complaintLower.includes('dissection') || complaintLower.includes('angina') || complaintLower.includes('pain');
     const enteredPain = Number(form.pain_score || 0);
+    const hash = triageStatus?.agent?.fingerprintHash;
 
-    if (isChestPain && enteredPain === 0 && !bypassSafety) {
-      setValidationWarning("Clinical contradiction detected: Chief complaint describes active chest pain/dissection, but Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
-      setPainInputConflict(true);
-      setShowExtendedVitals(true); // Automatically reveal the extended vitals section
-      return;
+    // Trigger Semantic Guardrail only if Pain is 0/10 and not bypassed
+    if (enteredPain === 0 && !bypassSafety && hash) {
+      setPreAuditLoading(true);
+      setValidationWarning(null);
+      setPainInputConflict(false);
+
+      // Build intermediate patient presentation context for semantic verification
+      const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+      const tempPrompt = `Patient chief complaint: ${resolvedComplaint}. Vitals: HR ${form.hr} bpm, BP ${form.bp_sys}/${form.bp_dia} mmHg, RR ${form.rr || 16}/min, SpO2 ${form.spo2 || 98}%, Temp ${form.temp || 37.0}°C, Pain 0/10. Age ${form.age_years || 0}, Gender ${form.sex_at_birth || 'unknown'}. History: PMH ${form.history.pmh || 'None'}.`;
+
+      try {
+        const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/semantic/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${REACT_APP_API_KEY}`
+          },
+          body: JSON.stringify({
+            prompt: tempPrompt,
+            acuityLevel: 2 // Verify against ESI-2 Emergent Baseline
+          })
+        });
+
+        const data = await res.json();
+        
+        // If Qwen recognizes the case as high ESI-2 emergent (similarity >= 0.70) but Pain is 0/10!
+        if (data.success && data.similarity >= 0.70) {
+          setValidationWarning("Clinical contradiction detected: The patient's presentation aligns semantically with an emergent ESI-2 condition, but the Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+          setPainInputConflict(true);
+          setShowExtendedVitals(true); // Automatically reveal the extended vitals section
+          setPreAuditLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Pre-submission semantic audit failed, falling back to lexical rules:", err);
+        
+        // Lexical fallback: catches chest, pain, pressure, tightness, tearing, dissection, or angina keywords
+        const complaintLower = (resolvedComplaint || '').toLowerCase();
+        const hasHighRiskKeywords = complaintLower.includes('chest') || complaintLower.includes('pain') || complaintLower.includes('pressure') || complaintLower.includes('tightness') || complaintLower.includes('tearing') || complaintLower.includes('dissection') || complaintLower.includes('angina');
+        
+        if (hasHighRiskKeywords) {
+          setValidationWarning("Clinical contradiction detected: Chief complaint describes high-risk symptoms, but Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+          setPainInputConflict(true);
+          setShowExtendedVitals(true);
+          setPreAuditLoading(false);
+          return;
+        }
+      }
+      setPreAuditLoading(false);
     }
 
     // Reset warnings if validation checks pass

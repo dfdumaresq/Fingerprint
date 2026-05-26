@@ -195,6 +195,12 @@ export const TriageDashboard: React.FC = () => {
   const [activeEncounterId, setActiveEncounterId] = useState<string | null>(null);
   const [showSaeTechnical, setShowSaeTechnical] = useState(false);
 
+  // Semantic Embedding Alignment Audit States
+  const [semanticData, setSemanticData] = useState<any | null>(null);
+  const [semanticLoading, setSemanticLoading] = useState(false);
+  const [semanticError, setSemanticError] = useState<string | null>(null);
+  const [showSemanticTechnical, setShowSemanticTechnical] = useState(false);
+
   const criticalFeatures = saeData?.active_features?.filter(
     (feat: any) => feat.category === 'Critical' && feat.strength >= 0.5
   ) || [];
@@ -229,23 +235,28 @@ export const TriageDashboard: React.FC = () => {
       setAmendmentReason('initial_decision');
       setAmendmentNote('');
       setShowSaeTechnical(false);
+      setShowSemanticTechnical(false);
     }
   }, [selectedEncounter, activeEncounterId]);
 
-  // Asynchronously fetch active features when an encounter drawer opens
+  // Asynchronously fetch active features and semantic alignment in parallel when an encounter drawer opens
   useEffect(() => {
     if (!selectedEncounter) {
       setSaeData(null);
       setSaeLoading(false);
       setSaeError(null);
       setBypassSafety(false);
+      setSemanticData(null);
+      setSemanticLoading(false);
+      setSemanticError(null);
       return;
     }
 
-    const fetchSaeAudit = async () => {
+    const fetchAudits = async () => {
       const hash = triageStatus?.agent?.fingerprintHash;
       if (!hash) {
         setSaeError('No active agent resolved. Unable to perform latent concept audit.');
+        setSemanticError('No active agent resolved. Unable to perform semantic embedding audit.');
         return;
       }
 
@@ -253,36 +264,75 @@ export const TriageDashboard: React.FC = () => {
       setSaeError(null);
       setBypassSafety(false);
 
+      setSemanticLoading(true);
+      setSemanticError(null);
+
       const saePrompt = buildEncounterSaePrompt(selectedEncounter);
+      const predictedAcuity = selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3;
 
-      try {
-        const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/sae/verify`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${REACT_APP_API_KEY}`
-          },
-          body: JSON.stringify({
-            prompt: saePrompt,
-            mock: true // Enforce mock mode in dev/UI
-          })
-        });
+      // Execute both audit endpoint requests concurrently in parallel
+      await Promise.all([
+        // 1. SAE Audit
+        (async () => {
+          try {
+            const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/sae/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${REACT_APP_API_KEY}`
+              },
+              body: JSON.stringify({
+                prompt: saePrompt,
+                mock: true // Enforce mock mode in dev/UI
+              })
+            });
 
-        const data = await res.json();
-        if (data.success) {
-          setSaeData(data);
-        } else {
-          setSaeError(data.error || 'Failed to fetch latent concept audit.');
-        }
-      } catch (err: any) {
-        console.error('Failed to run SAE audit', err);
-        setSaeError(err.message || 'Failed to connect to SAE audit pipeline.');
-      } finally {
-        setSaeLoading(false);
-      }
+            const data = await res.json();
+            if (data.success) {
+              setSaeData(data);
+            } else {
+              setSaeError(data.error || 'Failed to fetch latent concept audit.');
+            }
+          } catch (err: any) {
+            console.error('Failed to run SAE audit', err);
+            setSaeError(err.message || 'Failed to connect to SAE audit pipeline.');
+          } finally {
+            setSaeLoading(false);
+          }
+        })(),
+
+        // 2. Semantic Embedding Alignment Audit
+        (async () => {
+          try {
+            const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/semantic/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${REACT_APP_API_KEY}`
+              },
+              body: JSON.stringify({
+                prompt: saePrompt,
+                acuityLevel: predictedAcuity
+              })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+              setSemanticData(data);
+            } else {
+              setSemanticError(data.error?.message || 'Failed to fetch semantic alignment audit.');
+            }
+          } catch (err: any) {
+            console.error('Failed to run semantic audit', err);
+            setSemanticError(err.message || 'Failed to connect to semantic alignment audit pipeline.');
+          } finally {
+            setSemanticLoading(false);
+          }
+        })()
+      ]);
     };
 
-    fetchSaeAudit();
+    fetchAudits();
   }, [selectedEncounter, triageStatus]);
 
   const [form, setForm] = useState<NewEncounterForm>({
@@ -1385,6 +1435,200 @@ export const TriageDashboard: React.FC = () => {
                                 );
                               });
                             })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Semantic Embedding Alignment Panel */}
+              {selectedEncounter.clinical?.ai_recommendation && (
+                <div className="sae-concept-panel" style={{ marginTop: '20px' }}>
+                  <div className="sae-concept-header">
+                    <h3 className="sae-concept-title">
+                      <span className="sae-concept-title-icon">✨</span> Semantic Embedding Alignment
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="sae-concept-meta">
+                        Floor: {semanticData ? `${(semanticData.threshold * 100).toFixed(0)}%` : '--%'}
+                      </span>
+                      <button 
+                        className="proof-toggle-btn"
+                        onClick={() => setShowSemanticTechnical(!showSemanticTechnical)}
+                        style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '12px' }}
+                      >
+                        {showSemanticTechnical ? 'Hide Technical Trail' : 'Show Technical Trail'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {semanticLoading && (
+                    <div className="sae-loading-state" style={{ color: '#60a5fa', padding: '20px 0', textAlign: 'center', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        border: '2px solid rgba(59, 130, 246, 0.2)',
+                        borderTopColor: '#60a5fa',
+                        borderRadius: '50%',
+                        animation: 'sae-spin 1s linear infinite'
+                      }} />
+                      <div>Extracting active model embeddings and calculating cosine similarity...</div>
+                    </div>
+                  )}
+
+                  {semanticError && (
+                    <div style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px', fontSize: '0.8rem', marginTop: '10px' }}>
+                      ⚠️ {semanticError}
+                    </div>
+                  )}
+
+                  {!semanticLoading && !semanticError && semanticData && (
+                    <div className="semantic-audit-container" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      
+                      {/* Metric Gauge & Alert Cards */}
+                      {semanticData.status === 'aligned' ? (
+                        <div className="sae-alert-card safe" style={{
+                          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%)',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          borderRadius: '8px',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#a7f3d0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              ✅ Semantic Alignment Confirmed
+                            </span>
+                            <span style={{
+                              background: 'rgba(16, 185, 129, 0.2)',
+                              color: '#a7f3d0',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace'
+                            }}>
+                              {(semanticData.similarity * 100).toFixed(1)}% similarity
+                            </span>
+                          </div>
+                          
+                          {/* Progress bar visual indicator */}
+                          <div className="sae-progress-container" style={{ margin: '4px 0 0 0' }}>
+                            <div className="sae-progress-track" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '4px', height: '6px' }}>
+                              <div className="sae-progress-bar" style={{
+                                width: `${semanticData.similarity * 100}%`,
+                                backgroundColor: '#10b981',
+                                borderRadius: '4px',
+                                boxShadow: '0 0 8px #10b981'
+                              }} />
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '0.82rem', color: '#d1fae5', lineHeight: 1.4, marginTop: '2px' }}>
+                            Model representation aligns securely with ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)} emergent guidelines. Cognitive integrity verified.
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="sae-alert-card critical" style={{
+                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          borderRadius: '8px',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              ⚠️ Semantic Mismatch Detected
+                            </span>
+                            <span style={{
+                              background: 'rgba(239, 68, 68, 0.2)',
+                              color: '#fca5a5',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace'
+                            }}>
+                              {(semanticData.similarity * 100).toFixed(1)}% similarity
+                            </span>
+                          </div>
+                          
+                          {/* Progress bar visual indicator */}
+                          <div className="sae-progress-container" style={{ margin: '4px 0 0 0' }}>
+                            <div className="sae-progress-track" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '4px', height: '6px' }}>
+                              <div className="sae-progress-bar" style={{
+                                width: `${semanticData.similarity * 100}%`,
+                                backgroundColor: '#ef4444',
+                                borderRadius: '4px',
+                                boxShadow: '0 0 8px #ef4444'
+                              }} />
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '0.82rem', color: '#fecaca', lineHeight: 1.4, marginTop: '2px' }}>
+                            Critical Warning: The model's internal concept representation has drifted below the required floor of {(semanticData.threshold * 100).toFixed(0)}% for ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)}. Cognitive drift or anomalous triage suspected.
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. Technical Audit Trail: Complete roster of sentinel baseline prompt vector data */}
+                      {showSemanticTechnical && (
+                        <div className="sae-technical-audit-trail" style={{
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          border: '1px solid rgba(255, 255, 255, 0.06)',
+                          borderRadius: '8px',
+                          padding: '14px'
+                        }}>
+                          <h4 style={{
+                            fontSize: '0.78rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            color: 'var(--text-secondary)',
+                            margin: '0 0 12px 0',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            paddingBottom: '6px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span>Semantic Vector Proving</span>
+                            <span style={{ fontSize: '0.7rem', color: '#60a5fa', fontFamily: 'monospace' }}>Cosine Similarity (3584-D)</span>
+                          </h4>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                            <div>
+                              <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '3px' }}>Patient Clinical Prompt:</strong>
+                              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.78rem', color: '#9fa6b2', lineHeight: 1.3 }}>
+                                {buildEncounterSaePrompt(selectedEncounter)}
+                              </div>
+                            </div>
+                            <div>
+                              <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '3px' }}>Ideal Sentinel ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)} Baseline:</strong>
+                              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.78rem', color: '#9fa6b2', lineHeight: 1.3 }}>
+                                {semanticData.sentinelPromptUsed}
+                              </div>
+                            </div>
+                            <div style={{
+                              marginTop: '8px',
+                              paddingTop: '8px',
+                              borderTop: '1px dashed rgba(255, 255, 255, 0.05)',
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(2, 1fr)',
+                              gap: '8px',
+                              fontFamily: 'monospace',
+                              fontSize: '0.7rem',
+                              color: 'var(--text-secondary)'
+                            }}>
+                              <div><span style={{ opacity: 0.5 }}>Active Model:</span> <span style={{ color: '#60a5fa' }}>{triageStatus?.agent?.name || 'Qwen2'}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>Cosine Sim:</span> <span style={{ color: semanticData.status === 'aligned' ? '#10b981' : '#ef4444' }}>{semanticData.similarity.toFixed(6)}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>ESI Floor:</span> <span style={{ color: '#fff' }}>{semanticData.threshold.toFixed(2)}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>Compliance:</span> <span style={{ color: semanticData.status === 'aligned' ? '#10b981' : '#ef4444', textTransform: 'uppercase', fontWeight: 'bold' }}>{semanticData.status}</span></div>
+                            </div>
                           </div>
                         </div>
                       )}

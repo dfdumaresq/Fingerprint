@@ -5,18 +5,20 @@ import { useBlockchain } from '../contexts/BlockchainContext';
 interface RevokeFingerprintProps {
   blockchainService?: any; 
   onSuccess: () => void;
+  initialHash?: string;
 }
 
-const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService: propBlockchainService, onSuccess }) => {
+const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService: propBlockchainService, onSuccess, initialHash = '' }) => {
   const { service: contextService } = useBlockchain();
   const service = propBlockchainService || contextService;
   
-  const [fingerprintHash, setFingerprintHash] = useState('');
+  const [fingerprintHash, setFingerprintHash] = useState(initialHash);
   const [revoking, setRevoking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
-  const [isInputValid, setIsInputValid] = useState<boolean>(false);
+  const [isInputValid, setIsInputValid] = useState<boolean>(isValidFingerprintFormat(initialHash));
   const [isRevocationSupported, setIsRevocationSupported] = useState<boolean>(true);
+
 
   useEffect(() => {
     const checkRevocationSupport = async () => {

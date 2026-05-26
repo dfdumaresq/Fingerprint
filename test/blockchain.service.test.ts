@@ -82,4 +82,49 @@ describe('BlockchainService', () => {
         expect(agent).not.toBeNull();
         expect(agent?.id).toBe('agent-1');
     });
+
+    it('should fetch registered agents in sandbox mode', async () => {
+        service.setSandboxMode(true);
+        const agentPayload = {
+            id: 'mock-agent-id',
+            name: 'MockAgent',
+            provider: 'MockProvider',
+            version: '1.0.0',
+            fingerprintHash: '0xmockhash123'
+        };
+        await service.registerFingerprint(agentPayload);
+
+        const list = await service.getRegisteredAgents();
+        expect(list.length).toBe(1);
+        expect(list[0].id).toBe('mock-agent-id');
+        expect(list[0].name).toBe('MockAgent');
+    });
+
+    it('should fetch registered agents in live blockchain mode', async () => {
+        mockContract.filters.FingerprintRegistered = jest.fn().mockReturnValue('filter-signature');
+        mockContract.queryFilter.mockResolvedValue([
+            {
+                args: [
+                    '0xhash123',
+                    'agent-live-1',
+                    'LiveAgentOne',
+                    'LiveProvider',
+                    '1.1',
+                    '0xregisteredByAddress',
+                    BigInt(1650000000)
+                ]
+            }
+        ]);
+
+        mockContract.isRevoked.mockResolvedValue([false, BigInt(0), '0x0000000000000000000000000000000000000000']);
+        mockContract.getBehavioralTraitData.mockResolvedValue([true, '0xtraithash', 'reasoning-v1.0', BigInt(1650000000), BigInt(1650000000)]);
+
+        const list = await service.getRegisteredAgents();
+        expect(list.length).toBe(1);
+        expect(list[0].id).toBe('agent-live-1');
+        expect(list[0].name).toBe('LiveAgentOne');
+        expect(list[0].behavioralTraitHash).toBe('0xtraithash');
+        expect(list[0].revoked).toBe(false);
+    });
 });
+

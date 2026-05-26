@@ -5,13 +5,14 @@ import { useBlockchain } from '../contexts/BlockchainContext';
 
 interface VerifyFingerprintProps {
   blockchainService?: any; 
+  initialHash?: string;
 }
 
-const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService: propBlockchainService }) => {
+const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService: propBlockchainService, initialHash = '' }) => {
   const { service: contextService } = useBlockchain();
   const service = propBlockchainService || contextService;
   
-  const [fingerprintHash, setFingerprintHash] = useState('');
+  const [fingerprintHash, setFingerprintHash] = useState(initialHash);
   const [verifying, setVerifying] = useState(false);
   const [verificationAttempted, setVerificationAttempted] = useState(false);
   const [result, setResult] = useState<{
@@ -25,7 +26,8 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
   });
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [isInputValid, setIsInputValid] = useState<boolean>(false);
+  const [isInputValid, setIsInputValid] = useState<boolean>(isValidFingerprintFormat(initialHash));
+
   const [traitHistory, setTraitHistory] = useState<any[] | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
 

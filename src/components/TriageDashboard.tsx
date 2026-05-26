@@ -162,7 +162,9 @@ export const TriageDashboard: React.FC = () => {
   const [selectedEncounter, setSelectedEncounter] = useState<TriageEncounter | null>(null);
   const [securityExpanded, setSecurityExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<TriageMode>('all');
+  const [mode, setMode] = useState<TriageMode>(() => {
+    return (localStorage.getItem('triage_filter_mode') as TriageMode) || 'all';
+  });
   const [showNewForm, setShowNewForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -512,7 +514,10 @@ export const TriageDashboard: React.FC = () => {
             {/* Mode toggle */}
             <div className="mode-toggle">
               {(['all', 'live', 'scenario'] as TriageMode[]).map(m => (
-                <button key={m} className={`mode-btn${mode === m ? ' active' : ''}`} onClick={() => setMode(m)}>
+                <button key={m} className={`mode-btn${mode === m ? ' active' : ''}`} onClick={() => {
+                  setMode(m);
+                  localStorage.setItem('triage_filter_mode', m);
+                }}>
                   {m === 'all' ? 'All' : m === 'live' ? '● Live' : '● Scenario'}
                 </button>
               ))}

@@ -1,10 +1,12 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 // @ts-ignore
 import express, { Request, Response, NextFunction } from 'express';
 // @ts-ignore
 import cors from 'cors';
 import { Pool } from 'pg';
 import Redis from 'ioredis';
-import * as dotenv from 'dotenv';
 import { ethers } from 'ethers';
 // @ts-ignore
 import swaggerUi from 'swagger-ui-express';
@@ -23,8 +25,6 @@ import { EventService } from '../services/event.service';
 import { AnchorService } from '../services/anchor.service';
 import { TriageService, AgentNotAvailableError } from '../services/triage.service';
 import { getFeatureMetadata } from '../sae/featureMap';
-
-dotenv.config();
 
 // Initialize DB and Redis (acting as the synchronized Datastore from the Indexer)
 const db = new Pool({

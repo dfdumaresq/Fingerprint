@@ -201,6 +201,10 @@ export const TriageDashboard: React.FC = () => {
   const [semanticError, setSemanticError] = useState<string | null>(null);
   const [showSemanticTechnical, setShowSemanticTechnical] = useState(false);
 
+  // Pre-submission validation states
+  const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [painInputConflict, setPainInputConflict] = useState(false);
+
   const criticalFeatures = saeData?.active_features?.filter(
     (feat: any) => feat.category === 'Critical' && feat.strength >= 0.5
   ) || [];
@@ -402,6 +406,24 @@ export const TriageDashboard: React.FC = () => {
 
   const submitEncounter = async () => {
     if (!form.chief_complaint || !form.hr || !form.bp_sys || !form.bp_dia) return;
+
+    // Pre-submission Clinical Validation Guardrail: Check for 0/10 pain in chest pain/dissection
+    const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+    const complaintLower = (resolvedComplaint || '').toLowerCase();
+    const isChestPain = complaintLower.includes('chest pain') || complaintLower.includes('tearing') || complaintLower.includes('dissection') || complaintLower.includes('angina') || complaintLower.includes('pain');
+    const enteredPain = Number(form.pain_score || 0);
+
+    if (isChestPain && enteredPain === 0 && !bypassSafety) {
+      setValidationWarning("Clinical contradiction detected: Chief complaint describes active chest pain/dissection, but Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+      setPainInputConflict(true);
+      setShowExtendedVitals(true); // Automatically reveal the extended vitals section
+      return;
+    }
+
+    // Reset warnings if validation checks pass
+    setValidationWarning(null);
+    setPainInputConflict(false);
+
     setSubmitting(true);
     const complaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
     try {
@@ -575,7 +597,12 @@ export const TriageDashboard: React.FC = () => {
             {/* New Encounter */}
             <button 
               className="new-encounter-btn" 
-              onClick={() => setShowNewForm(true)}
+              onClick={() => {
+                setValidationWarning(null);
+                setPainInputConflict(false);
+                setBypassSafety(false);
+                setShowNewForm(true);
+              }}
             >
               + New Encounter
             </button>
@@ -695,9 +722,15 @@ export const TriageDashboard: React.FC = () => {
                   <input className="form-input tabular-nums" type="number" step="0.1" placeholder="37.0" value={form.temp} onChange={e => setForm(f => ({ ...f, temp: e.target.value }))} />
                   <span className="vital-unit-suffix">°C</span>
                 </div>
-                <div className="vital-input-box">
+                <div className="vital-input-box" style={painInputConflict ? { border: '1px solid #f59e0b', boxShadow: '0 0 8px rgba(245, 158, 11, 0.4)' } : undefined}>
                   <span className="vital-unit">Pain</span>
-                  <input className="form-input tabular-nums" type="number" min="0" max="10" placeholder="0" value={form.pain_score} onChange={e => setForm(f => ({ ...f, pain_score: e.target.value }))} />
+                  <input className="form-input tabular-nums" type="number" min="0" max="10" placeholder="0" value={form.pain_score} onChange={e => {
+                    setForm(f => ({ ...f, pain_score: e.target.value }));
+                    if (Number(e.target.value) > 0) {
+                      setPainInputConflict(false);
+                      setValidationWarning(null);
+                    }
+                  }} />
                   <span className="vital-unit-suffix">/10</span>
                 </div>
                 <div className="vital-input-box">
@@ -779,6 +812,32 @@ export const TriageDashboard: React.FC = () => {
             <input className="form-input" placeholder="Dr. Smith" value={form.clinician_name}
               onChange={e => setForm(f => ({ ...f, clinician_name: e.target.value }))} />
           </div>
+
+          {validationWarning && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid #f59e0b',
+              borderRadius: '8px',
+              padding: '12px',
+              color: '#fbbf24',
+              fontSize: '0.82rem',
+              lineHeight: 1.4,
+              marginBottom: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <div>⚠️ {validationWarning}</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', cursor: 'pointer', color: '#fbbf24', fontWeight: 600 }}>
+                <input 
+                  type="checkbox" 
+                  checked={bypassSafety} 
+                  onChange={(e) => setBypassSafety(e.target.checked)} 
+                />
+                Confirm Pain Score of 0/10 is correct (Bypass Warning)
+              </label>
+            </div>
+          )}
 
           <button
             className="submit-btn"

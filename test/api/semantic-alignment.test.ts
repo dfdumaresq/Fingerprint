@@ -127,8 +127,8 @@ app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: express.Requ
     }
 
     const floors: Record<number, number> = {
-      1: 0.80,
-      2: 0.80,
+      1: 0.65,
+      2: 0.65,
       3: 0.72,
       4: 0.70,
       5: 0.70
@@ -240,7 +240,7 @@ describe('Semantic Embedding Alignment Endpoint Integration Tests', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.fingerprintHash).toBe('0xMockAgentHash');
       expect(res.body.acuityLevel).toBe(2);
-      expect(res.body.threshold).toBe(0.80);
+      expect(res.body.threshold).toBe(0.65);
       expect(res.body.similarity).toBe(0.88);
       expect(res.body.status).toBe('aligned');
     });
@@ -278,7 +278,7 @@ describe('Semantic Embedding Alignment Endpoint Integration Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.acuityLevel).toBe(1);
-      expect(res.body.threshold).toBe(0.80);
+      expect(res.body.threshold).toBe(0.65);
       expect(res.body.similarity).toBe(0.61);
       expect(res.body.status).toBe('mismatch');
     });

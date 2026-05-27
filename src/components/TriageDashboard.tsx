@@ -227,7 +227,7 @@ export const TriageDashboard: React.FC = () => {
     const gender = c.patient_context?.demographics?.sex_at_birth ?? c.gender ?? 'unknown';
     const pmh = c.history?.pmh?.length ? c.history.pmh.join(', ') : 'None';
     
-    return `Patient chief complaint: ${complaint}. Vitals: HR ${hr} bpm, BP ${sys}/${dia} mmHg, RR ${rr}/min, SpO2 ${spo2}%, Temp ${temp}°C, Pain ${pain}/10. Age ${age}, Gender ${gender}. History: PMH ${pmh}.`;
+    return `Patient chief complaint: ${complaint}. Vitals: HR ${hr} bpm, BP ${sys}/${dia} mmHg, RR ${rr}/min, SpO2 ${spo2}%, Temp ${temp}°C, Pain ${Number(pain) * 10}%. Age ${age}, Gender ${gender}. History: PMH ${pmh}.`;
   };
 
   // Reset all transient drawer/action states whenever the selected encounter changes (opened, closed, or switched)
@@ -419,7 +419,7 @@ export const TriageDashboard: React.FC = () => {
 
       // Build intermediate patient presentation context for semantic verification
       const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
-      const tempPrompt = `Patient chief complaint: ${resolvedComplaint}. Vitals: HR ${form.hr} bpm, BP ${form.bp_sys}/${form.bp_dia} mmHg, RR ${form.rr || 16}/min, SpO2 ${form.spo2 || 98}%, Temp ${form.temp || 37.0}°C, Pain 0/10. Age ${form.age_years || 0}, Gender ${form.sex_at_birth || 'unknown'}. History: PMH ${form.history.pmh || 'None'}.`;
+      const tempPrompt = `Patient chief complaint: ${resolvedComplaint}. Vitals: HR ${form.hr} bpm, BP ${form.bp_sys}/${form.bp_dia} mmHg, RR ${form.rr || 16}/min, SpO2 ${form.spo2 || 98}%, Temp ${form.temp || 37.0}°C, Pain 0%. Age ${form.age_years || 0}, Gender ${form.sex_at_birth || 'unknown'}. History: PMH ${form.history.pmh || 'None'}.`;
 
       try {
         const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/semantic/verify`, {

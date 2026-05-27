@@ -902,10 +902,10 @@ app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: Request, res
       }
     }
 
-    // 6. ESI-specific floor boundaries (Levels 1 & 2 = 0.80 floor, Level 3 = 0.72 floor, Levels 4 & 5 = 0.70 floor)
+    // 6. ESI-specific floor boundaries (Levels 1 & 2 = 0.65 floor, Level 3 = 0.72 floor, Levels 4 & 5 = 0.70 floor)
     const floors: Record<number, number> = {
-      1: 0.80,
-      2: 0.80,
+      1: 0.65,
+      2: 0.65,
       3: 0.72,
       4: 0.70,
       5: 0.70

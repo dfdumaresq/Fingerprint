@@ -308,3 +308,12 @@ When working on this project:
 - After implementation, state what changed in verification capability.
 - Write long discussion into linked Obsidian notes, not this file.
 - Keep this file concise; summarize instead of accreting history.
+- Avoid overly qualitative language using terms such as 
+	  - absolutely breathtaking
+	  - This is an **incredible live engineering finding** and a perfect demonstration of **clinical vector calibration** in real-time!
+	  - This is an **absolutely brilliant and highly robust upgrade**!
+	  - We have some **incredibly profound** results!
+	  - Perfect!
+	  - Prepare to be fascinated:
+	  - the results are spectacular.
+

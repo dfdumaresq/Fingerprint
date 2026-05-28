@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../.env.test') });
+
 // Set up a browser-like environment for tests only for Jest
 // (this file should only be loaded by Jest, not by Hardhat)
 if (typeof jest !== 'undefined') {

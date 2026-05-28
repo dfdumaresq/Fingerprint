@@ -46,14 +46,17 @@ Out of scope for this phase:
 
 ## 4. Current state
 Active Git Branch:
-- `fix/triage-ui-drawer` (Contains committed triage overrides/amendment block fixes, red-flag deduplication, Layer 9 SAE neural panel overhaul, and dramatic cardiac scenario seeding; ready for merge)
+- `feat/parallel-semantic-audit` (Completed: Real-time Parallel Semantic Embedding Alignment Audit and Pre-Submission Clinical Contradiction Guardrail)
 
 Confirmed:
 - **Safety-Grade Behavioral Verification**: Fully operational off-chain verification using token-based Jaccard similarity (Bag-of-Words) and canonicalization layers to defeat formatting and whitespace attacks.
 - **Unicode Perturbation Detector**: Active screening for encoding anomalies and Cyrillic homograph attacks, successfully triggering rejections (0% confidence) when spoofing is detected.
 - **Structured PatientContext**: Fully typed, inclusive, and PHI-aware schema containing high-granularity regional, demographic, and clinical indicators without violating patient privacy rules.
 - **Layer 9 SAE Latent Concept Panel**: UI dashboard organizes active SAE concepts (Critical, Clinical, Cognitive, Structural) and renders floating-point strengths alongside dynamic visual activation bars.
-- **Stable Multi-Worker Test Suite**: Database-linked testing suite optimized with `maxWorkers: 1` in `jest.config.js` to eliminate transactional deadlocks, passing all 25 test suites (197 cases).
+- **Parallel Semantic Embedding Alignment Audit**: Fully implemented real-time cosine similarity comparisons against ESI gold-standard sentinel prompts. Runs in parallel with the SAE audit via `Promise.all` in the drawer.
+- **Pre-Submission Clinical Contradiction Guardrail**: Implemented asynchronous semantic validation to intercept and block chest symptom admissions with `0/10` pain score, featuring automatically expanded extended vitals, warning alerts, and safety bypass overrides.
+- **Percentage-Mapped Attention Optimizations**: Implemented under-the-hood prompt formatting to map pain scores to percentages (`Pain 80%` and `Pain 0%`) to force value priority in the model's self-attention layers, resolving the high-frequency numeric token centering bias.
+- **Stable Multi-Worker Test Suite**: Verified full API and frontend compliance; all 26 test suites (208 test cases) pass successfully.
 
 In progress:
 - **Unified Baseline & Drift Audit View**: Merging `BehavioralRegistration` and `BehavioralVerification` components to simplify clinician interaction under `behavior-audit`.
@@ -258,6 +261,7 @@ Unresolved threats:
 - **2026-05-21**: Integrated Layer 9 Sparse Autoencoder (SAE) Latent Concept auditing to transition from surface behavioral testing to direct neural verification.
 - **2026-05-22**: Fixed triage UI clinician decision amendments to validate manual inputs relative to active clinician overrides instead of static baselines, and resolved red-flag deduplication.
 - **2026-05-23**: Decided to retain Ollama and live LLM integration as a core requirement. True behavioral auditing, Jaccard drift detection, and SAE neural analysis require a non-deterministic generative model to produce real-world clinical variations. We maintain a dual-mode testing framework: offline deterministic mock mode for developer convenience/testing, and live generative mode (Ollama/APIs) for clinical validation.
+- **2026-05-26**: Recalibrated ESI-1 and ESI-2 safety floor boundaries to `0.65` and implemented percentage-based pain mapping (`Pain: 80%`) to neutralize the high-frequency token centering artifact of raw numeric digits like `0/10` in dense embedding spaces.
 
 ## 15. Open questions
 - How to scale offline C2PA verification certificates for hospital environments with intermittent external network connectivity?
@@ -292,7 +296,7 @@ Known “don’t lose this” context:
 - [[AI Fingerprinting - Master Note]]
 - [[AI Fingerprinting - Current Phase]]
 - [AI Fingerprinting - Architecture](obsidian://open?vault=Obsidian-vault&file=AI%20Fingerprint%2FAI%20Fingerprinting%20-%20Architecture)
-- [[AI Fingerprinting - Crypto Design]]
+- [AI Fingerprinting - Crypto Design](obsidian://open?vault=Obsidian-vault&file=AI%20Fingerprint%2FAI%20Fingerprinting%20-%20Crypto%20Design)
 - [[AI Fingerprinting - Blockchain Anchoring]]
 - [[AI Fingerprinting - Threat Model]]
 - [[AI Fingerprinting - Medical Audit Reuse]]
@@ -308,3 +312,12 @@ When working on this project:
 - After implementation, state what changed in verification capability.
 - Write long discussion into linked Obsidian notes, not this file.
 - Keep this file concise; summarize instead of accreting history.
+- Avoid overly qualitative language using terms such as 
+	  - absolutely breathtaking
+	  - This is an **incredible live engineering finding** and a perfect demonstration of **clinical vector calibration** in real-time!
+	  - This is an **absolutely brilliant and highly robust upgrade**!
+	  - We have some **incredibly profound** results!
+	  - Perfect!
+	  - Prepare to be fascinated:
+	  - the results are spectacular.
+

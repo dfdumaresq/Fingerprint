@@ -1150,4 +1150,76 @@ export class BlockchainService {
   public generateSafetyGradeHash(responses: ResponseSet): string {
     return generateBehavioralTraitHash(responses, true).hash;
   }
+
+  /**
+   * Fetch all registered agents from the blockchain (event logs) or sandbox in-memory map
+   */
+  public async getRegisteredAgents(): Promise<Agent[]> {
+    if (this.isSandbox) {
+      return Array.from(this.mockAgents.values());
+    }
+
+    if (!this.isConnected) {
+      return [];
+    }
+
+    try {
+      const filter = this.contract.filters.FingerprintRegistered();
+      const events = await this.contract.queryFilter(filter);
+      
+      const agents: Agent[] = [];
+      for (const event of events) {
+        if ("args" in event && event.args) {
+          const [fingerprintHash, id, name, provider_name, version, registeredBy, createdAt] = event.args;
+          
+          let revoked = false;
+          let revokedAt = 0;
+          let revokedBy = undefined;
+          
+          try {
+            const revocation = await this.isRevoked(fingerprintHash);
+            if (revocation) {
+              revoked = revocation.revoked;
+              revokedAt = revocation.revokedAt;
+              revokedBy = revocation.revokedBy;
+            }
+          } catch (e) {
+            console.warn("Failed to check revocation for", fingerprintHash, e);
+          }
+
+          // Fetch behavioral trait info if exists
+          let behavioralTraitHash = undefined;
+          let behavioralTraitVersion = undefined;
+          try {
+            const [exists, traitHash, traitVersion] = await this.contract.getBehavioralTraitData(fingerprintHash);
+            if (exists) {
+              behavioralTraitHash = traitHash;
+              behavioralTraitVersion = traitVersion;
+            }
+          } catch (e) {
+            // Optional behavior not registered/supported
+          }
+
+          agents.push({
+            id,
+            name,
+            provider: provider_name,
+            version,
+            fingerprintHash,
+            createdAt: Number(createdAt),
+            revoked,
+            revokedAt,
+            revokedBy,
+            behavioralTraitHash,
+            behavioralTraitVersion,
+          });
+        }
+      }
+      return agents;
+    } catch (error) {
+      console.error("Failed to fetch registered agents:", error);
+      return [];
+    }
+  }
 }
+

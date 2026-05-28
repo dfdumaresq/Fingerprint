@@ -162,11 +162,22 @@ export const TriageDashboard: React.FC = () => {
   const [selectedEncounter, setSelectedEncounter] = useState<TriageEncounter | null>(null);
   const [securityExpanded, setSecurityExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<TriageMode>('all');
+  const [mode, setMode] = useState<TriageMode>(() => {
+    return (localStorage.getItem('triage_filter_mode') as TriageMode) || 'all';
+  });
   const [showNewForm, setShowNewForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [triageStatus, setTriageStatus] = useState<{ available: boolean; agent?: any; error?: string } | null>(null);
+  const [triageStatus, setTriageStatus] = useState<{ 
+    available: boolean; 
+    success: boolean;
+    state?: 'nominal' | 'degraded' | 'anomaly_detected' | 'blocked';
+    provider?: string;
+    model?: string;
+    details?: { error_code?: string; message?: string };
+    agent?: any; 
+    error?: string; 
+  } | null>(null);
   const [changingDecision, setChangingDecision] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [lastActionResult, setLastActionResult] = useState<{ is_amendment: boolean; previous_action: string | null } | null>(null);
@@ -183,6 +194,17 @@ export const TriageDashboard: React.FC = () => {
   const [bypassSafety, setBypassSafety] = useState(false);
   const [activeEncounterId, setActiveEncounterId] = useState<string | null>(null);
   const [showSaeTechnical, setShowSaeTechnical] = useState(false);
+
+  // Semantic Embedding Alignment Audit States
+  const [semanticData, setSemanticData] = useState<any | null>(null);
+  const [semanticLoading, setSemanticLoading] = useState(false);
+  const [semanticError, setSemanticError] = useState<string | null>(null);
+  const [showSemanticTechnical, setShowSemanticTechnical] = useState(false);
+
+  // Pre-submission validation states
+  const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [painInputConflict, setPainInputConflict] = useState(false);
+  const [preAuditLoading, setPreAuditLoading] = useState(false);
 
   const criticalFeatures = saeData?.active_features?.filter(
     (feat: any) => feat.category === 'Critical' && feat.strength >= 0.5
@@ -205,7 +227,7 @@ export const TriageDashboard: React.FC = () => {
     const gender = c.patient_context?.demographics?.sex_at_birth ?? c.gender ?? 'unknown';
     const pmh = c.history?.pmh?.length ? c.history.pmh.join(', ') : 'None';
     
-    return `Patient chief complaint: ${complaint}. Vitals: HR ${hr} bpm, BP ${sys}/${dia} mmHg, RR ${rr}/min, SpO2 ${spo2}%, Temp ${temp}°C, Pain ${pain}/10. Age ${age}, Gender ${gender}. History: PMH ${pmh}.`;
+    return `Patient chief complaint: ${complaint}. Vitals: HR ${hr} bpm, BP ${sys}/${dia} mmHg, RR ${rr}/min, SpO2 ${spo2}%, Temp ${temp}°C, Pain ${Number(pain) * 10}%. Age ${age}, Gender ${gender}. History: PMH ${pmh}.`;
   };
 
   // Reset all transient drawer/action states whenever the selected encounter changes (opened, closed, or switched)
@@ -218,23 +240,28 @@ export const TriageDashboard: React.FC = () => {
       setAmendmentReason('initial_decision');
       setAmendmentNote('');
       setShowSaeTechnical(false);
+      setShowSemanticTechnical(false);
     }
   }, [selectedEncounter, activeEncounterId]);
 
-  // Asynchronously fetch active features when an encounter drawer opens
+  // Asynchronously fetch active features and semantic alignment in parallel when an encounter drawer opens
   useEffect(() => {
     if (!selectedEncounter) {
       setSaeData(null);
       setSaeLoading(false);
       setSaeError(null);
       setBypassSafety(false);
+      setSemanticData(null);
+      setSemanticLoading(false);
+      setSemanticError(null);
       return;
     }
 
-    const fetchSaeAudit = async () => {
+    const fetchAudits = async () => {
       const hash = triageStatus?.agent?.fingerprintHash;
       if (!hash) {
         setSaeError('No active agent resolved. Unable to perform latent concept audit.');
+        setSemanticError('No active agent resolved. Unable to perform semantic embedding audit.');
         return;
       }
 
@@ -242,36 +269,75 @@ export const TriageDashboard: React.FC = () => {
       setSaeError(null);
       setBypassSafety(false);
 
+      setSemanticLoading(true);
+      setSemanticError(null);
+
       const saePrompt = buildEncounterSaePrompt(selectedEncounter);
+      const predictedAcuity = selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3;
 
-      try {
-        const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/sae/verify`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${REACT_APP_API_KEY}`
-          },
-          body: JSON.stringify({
-            prompt: saePrompt,
-            mock: true // Enforce mock mode in dev/UI
-          })
-        });
+      // Execute both audit endpoint requests concurrently in parallel
+      await Promise.all([
+        // 1. SAE Audit
+        (async () => {
+          try {
+            const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/sae/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${REACT_APP_API_KEY}`
+              },
+              body: JSON.stringify({
+                prompt: saePrompt,
+                mock: true // Enforce mock mode in dev/UI
+              })
+            });
 
-        const data = await res.json();
-        if (data.success) {
-          setSaeData(data);
-        } else {
-          setSaeError(data.error || 'Failed to fetch latent concept audit.');
-        }
-      } catch (err: any) {
-        console.error('Failed to run SAE audit', err);
-        setSaeError(err.message || 'Failed to connect to SAE audit pipeline.');
-      } finally {
-        setSaeLoading(false);
-      }
+            const data = await res.json();
+            if (data.success) {
+              setSaeData(data);
+            } else {
+              setSaeError(data.error || 'Failed to fetch latent concept audit.');
+            }
+          } catch (err: any) {
+            console.error('Failed to run SAE audit', err);
+            setSaeError(err.message || 'Failed to connect to SAE audit pipeline.');
+          } finally {
+            setSaeLoading(false);
+          }
+        })(),
+
+        // 2. Semantic Embedding Alignment Audit
+        (async () => {
+          try {
+            const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/semantic/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${REACT_APP_API_KEY}`
+              },
+              body: JSON.stringify({
+                prompt: saePrompt,
+                acuityLevel: predictedAcuity
+              })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+              setSemanticData(data);
+            } else {
+              setSemanticError(data.error?.message || 'Failed to fetch semantic alignment audit.');
+            }
+          } catch (err: any) {
+            console.error('Failed to run semantic audit', err);
+            setSemanticError(err.message || 'Failed to connect to semantic alignment audit pipeline.');
+          } finally {
+            setSemanticLoading(false);
+          }
+        })()
+      ]);
     };
 
-    fetchSaeAudit();
+    fetchAudits();
   }, [selectedEncounter, triageStatus]);
 
   const [form, setForm] = useState<NewEncounterForm>({
@@ -340,9 +406,72 @@ export const TriageDashboard: React.FC = () => {
   }, [selectedEncounter, showNewForm]);
 
   const submitEncounter = async () => {
-    if (!form.chief_complaint || !form.hr || !form.bp_sys || !form.bp_dia) return;
+    if (!form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia) return;
+
+    const enteredPain = Number(form.pain_score || 0);
+    const hash = triageStatus?.agent?.fingerprintHash;
+
+    // Trigger Semantic Guardrail only if Pain is 0/10 and not bypassed
+    if (enteredPain === 0 && !bypassSafety && hash) {
+      setPreAuditLoading(true);
+      setValidationWarning(null);
+      setPainInputConflict(false);
+
+      // Build intermediate patient presentation context for semantic verification
+      const resolvedComplaint = form.chief_complaint === 'Other…' 
+        ? form.custom_complaint 
+        : (form.custom_complaint ? `${form.chief_complaint} (${form.custom_complaint})` : form.chief_complaint);
+      const tempPrompt = `Patient chief complaint: ${resolvedComplaint}. Vitals: HR ${form.hr} bpm, BP ${form.bp_sys}/${form.bp_dia} mmHg, RR ${form.rr || 16}/min, SpO2 ${form.spo2 || 98}%, Temp ${form.temp || 37.0}°C, Pain 0%. Age ${form.age_years || 0}, Gender ${form.sex_at_birth || 'unknown'}. History: PMH ${form.history.pmh || 'None'}.`;
+
+      try {
+        const res = await fetch(`${REACT_APP_API_URL}/v1/agents/${encodeURIComponent(hash)}/semantic/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${REACT_APP_API_KEY}`
+          },
+          body: JSON.stringify({
+            prompt: tempPrompt,
+            acuityLevel: 2 // Verify against ESI-2 Emergent Baseline
+          })
+        });
+
+        const data = await res.json();
+        
+        // If Qwen recognizes the case as high ESI-2 emergent (similarity >= 0.70) but Pain is 0/10!
+        if (data.success && data.similarity >= 0.70) {
+          setValidationWarning("Clinical contradiction detected: The patient's presentation aligns semantically with an emergent ESI-2 condition, but the Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+          setPainInputConflict(true);
+          setShowExtendedVitals(true); // Automatically reveal the extended vitals section
+          setPreAuditLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Pre-submission semantic audit failed, falling back to lexical rules:", err);
+        
+        // Lexical fallback: catches chest, pain, pressure, tightness, tearing, dissection, or angina keywords
+        const complaintLower = (resolvedComplaint || '').toLowerCase();
+        const hasHighRiskKeywords = complaintLower.includes('chest') || complaintLower.includes('pain') || complaintLower.includes('pressure') || complaintLower.includes('tightness') || complaintLower.includes('tearing') || complaintLower.includes('dissection') || complaintLower.includes('angina');
+        
+        if (hasHighRiskKeywords) {
+          setValidationWarning("Clinical contradiction detected: Chief complaint describes high-risk symptoms, but Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+          setPainInputConflict(true);
+          setShowExtendedVitals(true);
+          setPreAuditLoading(false);
+          return;
+        }
+      }
+      setPreAuditLoading(false);
+    }
+
+    // Reset warnings if validation checks pass
+    setValidationWarning(null);
+    setPainInputConflict(false);
+
     setSubmitting(true);
-    const complaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+    const complaint = form.chief_complaint === 'Other…' 
+      ? form.custom_complaint 
+      : (form.custom_complaint ? `${form.chief_complaint} (${form.custom_complaint})` : form.chief_complaint);
     try {
       if (form.clinician_name) localStorage.setItem('clinician_name', form.clinician_name);
       
@@ -377,7 +506,9 @@ export const TriageDashboard: React.FC = () => {
         },
         red_flags: form.red_flags.filter(flagId => {
           const flag = RED_FLAG_OPTIONS.find(o => o.id === flagId);
-          const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+          const resolvedComplaint = form.chief_complaint === 'Other…' 
+            ? form.custom_complaint 
+            : (form.custom_complaint ? `${form.chief_complaint} (${form.custom_complaint})` : form.chief_complaint);
           return flag ? flag.label.toLowerCase() !== resolvedComplaint?.trim().toLowerCase() : true;
         }),
         clinician_name: form.clinician_name || 'clinician',
@@ -503,7 +634,10 @@ export const TriageDashboard: React.FC = () => {
             {/* Mode toggle */}
             <div className="mode-toggle">
               {(['all', 'live', 'scenario'] as TriageMode[]).map(m => (
-                <button key={m} className={`mode-btn${mode === m ? ' active' : ''}`} onClick={() => setMode(m)}>
+                <button key={m} className={`mode-btn${mode === m ? ' active' : ''}`} onClick={() => {
+                  setMode(m);
+                  localStorage.setItem('triage_filter_mode', m);
+                }}>
                   {m === 'all' ? 'All' : m === 'live' ? '● Live' : '● Scenario'}
                 </button>
               ))}
@@ -511,22 +645,51 @@ export const TriageDashboard: React.FC = () => {
             {/* New Encounter */}
             <button 
               className="new-encounter-btn" 
-              onClick={() => setShowNewForm(true)}
-              disabled={triageStatus?.available === false}
-              title={triageStatus?.available === false ? "AI Triage is disabled: No active agent found." : ""}
+              onClick={() => {
+                setValidationWarning(null);
+                setPainInputConflict(false);
+                setBypassSafety(false);
+                setShowNewForm(true);
+              }}
             >
               + New Encounter
             </button>
           </div>
         </div>
         
-        {triageStatus?.available === false && (
-          <div className="agent-status-banner error" style={{ marginTop: '16px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', fontSize: '0.85rem' }}>
-            <strong>🚨 Triage Blocked:</strong> {triageStatus.error || "No active non-revoked triage agent resolved. Please update Governance registry."}
+        {/* Render banners based on live status state */}
+        {!triageStatus?.agent && (
+          <div className="agent-status-banner warning" style={{ marginTop: '16px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>🤖 AI Assistance Paused: Local Rules Backup Active</strong>
+              <div style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '2px' }}>
+                No active agent resolved in the governance registry. Acuity calculations are running safely on the clinical rule engine.
+              </div>
+            </div>
+            <button 
+              onClick={() => window.location.hash = 'governance'} 
+              style={{ background: '#d97706', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', marginLeft: '16px', flexShrink: 0 }}
+            >
+              Configure Agent
+            </button>
           </div>
         )}
 
-        {triageStatus?.available && (
+        {triageStatus?.agent && triageStatus.state === 'degraded' && (
+          <div className="agent-status-banner warning" style={{ marginTop: '16px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', borderRadius: '8px', color: '#b45309', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div><strong>⚠️ Standard Backup Active:</strong> Connection lag is occurring with the local AI agent. Acuity calculations are running safely on the clinical rule engine.</div>
+            {triageStatus.details?.message && <div style={{ fontSize: '0.75rem', opacity: 0.85 }}>({triageStatus.details.message})</div>}
+          </div>
+        )}
+
+        {triageStatus?.agent && triageStatus.state === 'anomaly_detected' && (
+          <div className="agent-status-banner anomaly" style={{ marginTop: '16px', padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#b91c1c', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div><strong>🚨 Compliance Alert:</strong> A model/provenance signature anomaly was detected on the active AI agent. Safe rules-based fallback is engaged.</div>
+            {triageStatus.details?.message && <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Reason: {triageStatus.details.message}</div>}
+          </div>
+        )}
+
+        {triageStatus?.agent && (!triageStatus.state || triageStatus.state === 'nominal') && (
           <div className="agent-status-banner success" style={{ marginTop: '16px', padding: '12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', borderRadius: '8px', color: '#10b981', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><strong>✅ Active Agent Resolved:</strong> {triageStatus.agent.name} (v{triageStatus.agent.version})</span>
             <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', opacity: 0.8 }}>{triageStatus.agent.fingerprintHash.substring(0, 16)}...</span>
@@ -558,8 +721,9 @@ export const TriageDashboard: React.FC = () => {
               <option value="">Select…</option>
               {CHIEF_COMPLAINTS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            {form.chief_complaint === 'Other…' && (
-              <input className="form-input" style={{ marginTop: 8 }} placeholder="Describe complaint…"
+            {form.chief_complaint !== '' && (
+              <input className="form-input" style={{ marginTop: 8 }} 
+                placeholder={form.chief_complaint === 'Other…' ? "Describe complaint..." : "Additional details (optional)..."}
                 value={form.custom_complaint}
                 onChange={e => setForm(f => ({ ...f, custom_complaint: e.target.value }))} />
             )}
@@ -607,9 +771,15 @@ export const TriageDashboard: React.FC = () => {
                   <input className="form-input tabular-nums" type="number" step="0.1" placeholder="37.0" value={form.temp} onChange={e => setForm(f => ({ ...f, temp: e.target.value }))} />
                   <span className="vital-unit-suffix">°C</span>
                 </div>
-                <div className="vital-input-box">
+                <div className="vital-input-box" style={painInputConflict ? { border: '1px solid #f59e0b', boxShadow: '0 0 8px rgba(245, 158, 11, 0.4)' } : undefined}>
                   <span className="vital-unit">Pain</span>
-                  <input className="form-input tabular-nums" type="number" min="0" max="10" placeholder="0" value={form.pain_score} onChange={e => setForm(f => ({ ...f, pain_score: e.target.value }))} />
+                  <input className="form-input tabular-nums" type="number" min="0" max="10" placeholder="0" value={form.pain_score} onChange={e => {
+                    setForm(f => ({ ...f, pain_score: e.target.value }));
+                    if (Number(e.target.value) > 0) {
+                      setPainInputConflict(false);
+                      setValidationWarning(null);
+                    }
+                  }} />
                   <span className="vital-unit-suffix">/10</span>
                 </div>
                 <div className="vital-input-box">
@@ -671,7 +841,9 @@ export const TriageDashboard: React.FC = () => {
             <label className="form-label">Red Flags</label>
             <div className="flag-checkboxes">
               {(() => {
-                const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+                const resolvedComplaint = form.chief_complaint === 'Other…' 
+                  ? form.custom_complaint 
+                  : (form.custom_complaint ? `${form.chief_complaint} (${form.custom_complaint})` : form.chief_complaint);
                 const normalizedComplaint = resolvedComplaint?.trim().toLowerCase();
                 return RED_FLAG_OPTIONS
                   .filter(flag => flag.label.toLowerCase() !== normalizedComplaint)
@@ -692,9 +864,35 @@ export const TriageDashboard: React.FC = () => {
               onChange={e => setForm(f => ({ ...f, clinician_name: e.target.value }))} />
           </div>
 
+          {validationWarning && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid #f59e0b',
+              borderRadius: '8px',
+              padding: '12px',
+              color: '#fbbf24',
+              fontSize: '0.82rem',
+              lineHeight: 1.4,
+              marginBottom: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <div>⚠️ {validationWarning}</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', cursor: 'pointer', color: '#fbbf24', fontWeight: 600 }}>
+                <input 
+                  type="checkbox" 
+                  checked={bypassSafety} 
+                  onChange={(e) => setBypassSafety(e.target.checked)} 
+                />
+                Confirm Pain Score of 0/10 is correct (Bypass Warning)
+              </label>
+            </div>
+          )}
+
           <button
             className="submit-btn"
-            disabled={submitting || !form.chief_complaint || !form.hr || !form.bp_sys || !form.bp_dia}
+            disabled={submitting || !form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia}
             onClick={submitEncounter}
           >
             {submitting ? '⏳ Running AI Triage…' : '→ Submit & Triage'}
@@ -703,7 +901,8 @@ export const TriageDashboard: React.FC = () => {
       )}
 
       {/* ── Triage Queue Table ── */}
-      <table className="triage-queue">
+      <div className="triage-table-container" style={{ overflowX: 'auto', width: '100%', borderRadius: '8px', border: '1px solid var(--border-light)', background: 'var(--bg-card)' }}>
+        <table className="triage-queue" style={{ margin: 0, borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             <th>Acuity</th>
@@ -772,6 +971,7 @@ export const TriageDashboard: React.FC = () => {
           )}
         </tbody>
       </table>
+      </div>
 
       {/* ── Drawer Overlay ── */}
       <div className={`drawer-overlay ${selectedEncounter ? 'open' : ''}`} onClick={() => { setSelectedEncounter(null); setChangingDecision(false); }} />
@@ -920,7 +1120,11 @@ export const TriageDashboard: React.FC = () => {
                 <div className={`ai-recommendation-card acuity-border-${selectedEncounter.clinical.ai_recommendation.acuity}`}>
                   <div className="ai-rec-header">
                     <span>🤖 AI Triage Recommendation</span>
-                    <span className="provider-badge">{selectedEncounter.clinical?.ai_provider || 'rules'}</span>
+                    <span className="provider-badge">
+                      {selectedEncounter.clinical?.ai_provider === 'ollama' 
+                        ? (triageStatus?.agent?.name || 'Qwen') 
+                        : (selectedEncounter.clinical?.ai_provider || 'rules')}
+                    </span>
                   </div>
                   <div className="ai-acuity-line">
                     Acuity <strong>{selectedEncounter.clinical.ai_recommendation.acuity}</strong>
@@ -1347,6 +1551,200 @@ export const TriageDashboard: React.FC = () => {
                                 );
                               });
                             })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Semantic Embedding Alignment Panel */}
+              {selectedEncounter.clinical?.ai_recommendation && (
+                <div className="sae-concept-panel" style={{ marginTop: '20px' }}>
+                  <div className="sae-concept-header">
+                    <h3 className="sae-concept-title">
+                      <span className="sae-concept-title-icon">✨</span> Semantic Embedding Alignment
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="sae-concept-meta">
+                        Floor: {semanticData ? `${(semanticData.threshold * 100).toFixed(0)}%` : '--%'}
+                      </span>
+                      <button 
+                        className="proof-toggle-btn"
+                        onClick={() => setShowSemanticTechnical(!showSemanticTechnical)}
+                        style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '12px' }}
+                      >
+                        {showSemanticTechnical ? 'Hide Technical Trail' : 'Show Technical Trail'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {semanticLoading && (
+                    <div className="sae-loading-state" style={{ color: '#60a5fa', padding: '20px 0', textAlign: 'center', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        border: '2px solid rgba(59, 130, 246, 0.2)',
+                        borderTopColor: '#60a5fa',
+                        borderRadius: '50%',
+                        animation: 'sae-spin 1s linear infinite'
+                      }} />
+                      <div>Extracting active model embeddings and calculating cosine similarity...</div>
+                    </div>
+                  )}
+
+                  {semanticError && (
+                    <div style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px', fontSize: '0.8rem', marginTop: '10px' }}>
+                      ⚠️ {semanticError}
+                    </div>
+                  )}
+
+                  {!semanticLoading && !semanticError && semanticData && (
+                    <div className="semantic-audit-container" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      
+                      {/* Metric Gauge & Alert Cards */}
+                      {semanticData.status === 'aligned' ? (
+                        <div className="sae-alert-card safe" style={{
+                          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%)',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                          borderRadius: '8px',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#a7f3d0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              ✅ Semantic Alignment Confirmed
+                            </span>
+                            <span style={{
+                              background: 'rgba(16, 185, 129, 0.2)',
+                              color: '#a7f3d0',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace'
+                            }}>
+                              {(semanticData.similarity * 100).toFixed(1)}% similarity
+                            </span>
+                          </div>
+                          
+                          {/* Progress bar visual indicator */}
+                          <div className="sae-progress-container" style={{ margin: '4px 0 0 0' }}>
+                            <div className="sae-progress-track" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '4px', height: '6px' }}>
+                              <div className="sae-progress-bar" style={{
+                                width: `${semanticData.similarity * 100}%`,
+                                backgroundColor: '#10b981',
+                                borderRadius: '4px',
+                                boxShadow: '0 0 8px #10b981'
+                              }} />
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '0.82rem', color: '#d1fae5', lineHeight: 1.4, marginTop: '2px' }}>
+                            Model representation aligns securely with ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)} emergent guidelines. Cognitive integrity verified.
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="sae-alert-card critical" style={{
+                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          borderRadius: '8px',
+                          padding: '14px 16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              ⚠️ Semantic Mismatch Detected
+                            </span>
+                            <span style={{
+                              background: 'rgba(239, 68, 68, 0.2)',
+                              color: '#fca5a5',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace'
+                            }}>
+                              {(semanticData.similarity * 100).toFixed(1)}% similarity
+                            </span>
+                          </div>
+                          
+                          {/* Progress bar visual indicator */}
+                          <div className="sae-progress-container" style={{ margin: '4px 0 0 0' }}>
+                            <div className="sae-progress-track" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '4px', height: '6px' }}>
+                              <div className="sae-progress-bar" style={{
+                                width: `${semanticData.similarity * 100}%`,
+                                backgroundColor: '#ef4444',
+                                borderRadius: '4px',
+                                boxShadow: '0 0 8px #ef4444'
+                              }} />
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '0.82rem', color: '#fecaca', lineHeight: 1.4, marginTop: '2px' }}>
+                            Critical Warning: The model's internal concept representation has drifted below the required floor of {(semanticData.threshold * 100).toFixed(0)}% for ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)}. Cognitive drift or anomalous triage suspected.
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. Technical Audit Trail: Complete roster of sentinel baseline prompt vector data */}
+                      {showSemanticTechnical && (
+                        <div className="sae-technical-audit-trail" style={{
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          border: '1px solid rgba(255, 255, 255, 0.06)',
+                          borderRadius: '8px',
+                          padding: '14px'
+                        }}>
+                          <h4 style={{
+                            fontSize: '0.78rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            color: 'var(--text-secondary)',
+                            margin: '0 0 12px 0',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            paddingBottom: '6px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span>Semantic Vector Proving</span>
+                            <span style={{ fontSize: '0.7rem', color: '#60a5fa', fontFamily: 'monospace' }}>Cosine Similarity (3584-D)</span>
+                          </h4>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                            <div>
+                              <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '3px' }}>Patient Clinical Prompt:</strong>
+                              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.78rem', color: '#9fa6b2', lineHeight: 1.3 }}>
+                                {buildEncounterSaePrompt(selectedEncounter)}
+                              </div>
+                            </div>
+                            <div>
+                              <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '3px' }}>Ideal Sentinel ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)} Baseline:</strong>
+                              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.78rem', color: '#9fa6b2', lineHeight: 1.3 }}>
+                                {semanticData.sentinelPromptUsed}
+                              </div>
+                            </div>
+                            <div style={{
+                              marginTop: '8px',
+                              paddingTop: '8px',
+                              borderTop: '1px dashed rgba(255, 255, 255, 0.05)',
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(2, 1fr)',
+                              gap: '8px',
+                              fontFamily: 'monospace',
+                              fontSize: '0.7rem',
+                              color: 'var(--text-secondary)'
+                            }}>
+                              <div><span style={{ opacity: 0.5 }}>Active Model:</span> <span style={{ color: '#60a5fa' }}>{triageStatus?.agent?.name || 'Qwen2'}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>Cosine Sim:</span> <span style={{ color: semanticData.status === 'aligned' ? '#10b981' : '#ef4444' }}>{semanticData.similarity.toFixed(6)}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>ESI Floor:</span> <span style={{ color: '#fff' }}>{semanticData.threshold.toFixed(2)}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>Compliance:</span> <span style={{ color: semanticData.status === 'aligned' ? '#10b981' : '#ef4444', textTransform: 'uppercase', fontWeight: 'bold' }}>{semanticData.status}</span></div>
+                            </div>
                           </div>
                         </div>
                       )}

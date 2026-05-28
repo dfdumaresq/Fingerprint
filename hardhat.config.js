@@ -101,13 +101,7 @@ module.exports = {
     // Sepolia testnet configuration
     sepolia: {
       url: process.env.SEPOLIA_URL || "https://eth-sepolia.g.alchemy.com/v2/your-api-key",
-      accounts: {
-        mnemonic: process.env.MNEMONIC || '',
-        // We use a getter function to fetch keys securely
-        async lazyFetchAccount() {
-          return await getAccounts();
-        }
-      },
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111
     }
   },

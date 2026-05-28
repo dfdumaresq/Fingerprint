@@ -28,9 +28,9 @@
   background-color: var(--bg-dark);
   color: var(--text-primary);
   font-family: 'Inter', -apple-system, sans-serif;
-  padding: 40px;
+  padding: 20px 0 40px 0;
   position: relative;
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 
 .triage-header {

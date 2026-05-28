@@ -33,6 +33,20 @@ export interface PatientContext {
   };
 }
 
+export type TriageSystemState = 'nominal' | 'degraded' | 'anomaly_detected';
+
+export interface TriageHealthStatus {
+  available: boolean;
+  success: boolean;
+  state: TriageSystemState;
+  provider: string;
+  model: string;
+  details?: {
+    error_code?: string;
+    message?: string;
+  };
+}
+
 export interface ClinicalInput {
   chief_complaint: string;
   vitals: { 
@@ -299,8 +313,13 @@ export class TriageService {
   async createEncounterWithAI(input: ClinicalInput, clinicianName: string): Promise<TriageEncounter> {
     const sessionId = `${clinicianName.toLowerCase().replace(/\s+/g, '_')}_${randomUUID()}`;
 
-    // 1. Resolve active agent fingerprint
-    const activeFingerprint = await this.resolveActiveAgent(TRIAGE_AGENT.slug);
+    // 1. Resolve active agent fingerprint (or safely fallback to standard rule engine signature if unconfigured)
+    let activeFingerprint = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    try {
+      activeFingerprint = await this.resolveActiveAgent(TRIAGE_AGENT.slug);
+    } catch (err) {
+      console.warn(`Registry warning: No active agent resolved for ${TRIAGE_AGENT.slug}. Safely routing to rules-based fallback.`);
+    }
 
     // 2. Run AI triage
     const { result: recommendation, provider } = await runTriageAgent(input);
@@ -663,15 +682,46 @@ export class TriageService {
     return res.rows[0];
   }
 
-  async triageAgentHealth(): Promise<{ available: boolean; provider: string; model: string }> {
-    if (TRIAGE_AGENT.provider !== 'ollama') return { available: true, provider: 'rules', model: 'built-in' };
+  async triageAgentHealth(): Promise<TriageHealthStatus> {
+    if (TRIAGE_AGENT.provider !== 'ollama') {
+      return { success: true, available: true, state: 'nominal', provider: 'rules', model: 'built-in' };
+    }
     try {
       const res = await fetch(`${TRIAGE_AGENT.endpoint}/api/tags`);
+      if (!res.ok) {
+        return {
+          success: true,
+          available: true,
+          state: 'degraded',
+          provider: 'rules',
+          model: 'rules_fallback',
+          details: { error_code: 'endpoint_error', message: `Ollama returned status ${res.status}. Falling back to rule engine.` }
+        };
+      }
       const data = await res.json() as any;
-      const available = data.models?.some((m: any) => m.name.startsWith(TRIAGE_AGENT.model)) ?? false;
-      return { available, provider: 'ollama', model: TRIAGE_AGENT.model };
-    } catch {
-      return { available: false, provider: 'ollama', model: TRIAGE_AGENT.model };
+      const modelAvailable = data.models?.some((m: any) => m.name.startsWith(TRIAGE_AGENT.model)) ?? false;
+      if (!modelAvailable) {
+        // The endpoint is online, but the model is missing (configuration/provenance anomaly)
+        return {
+          success: true,
+          available: true,
+          state: 'anomaly_detected',
+          provider: 'rules',
+          model: 'rules_fallback',
+          details: { error_code: 'model_not_found', message: `Registered model "${TRIAGE_AGENT.model}" is not loaded on Ollama server. Falling back to rule engine.` }
+        };
+      }
+      return { success: true, available: true, state: 'nominal', provider: 'ollama', model: TRIAGE_AGENT.model };
+    } catch (e: any) {
+      // Offline/Timeout -> soft connection degraded state
+      return {
+        success: true,
+        available: true,
+        state: 'degraded',
+        provider: 'rules',
+        model: 'rules_fallback',
+        details: { error_code: 'connection_timeout', message: `Connection to local Ollama agent failed. Falling back to rule engine.` }
+      };
     }
   }
 }

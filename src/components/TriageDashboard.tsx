@@ -406,7 +406,7 @@ export const TriageDashboard: React.FC = () => {
   }, [selectedEncounter, showNewForm]);
 
   const submitEncounter = async () => {
-    if (!form.chief_complaint || !form.hr || !form.bp_sys || !form.bp_dia) return;
+    if (!form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia) return;
 
     const enteredPain = Number(form.pain_score || 0);
     const hash = triageStatus?.agent?.fingerprintHash;
@@ -418,7 +418,9 @@ export const TriageDashboard: React.FC = () => {
       setPainInputConflict(false);
 
       // Build intermediate patient presentation context for semantic verification
-      const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+      const resolvedComplaint = form.chief_complaint === 'Other…' 
+        ? form.custom_complaint 
+        : (form.custom_complaint ? `${form.chief_complaint} (${form.custom_complaint})` : form.chief_complaint);
       const tempPrompt = `Patient chief complaint: ${resolvedComplaint}. Vitals: HR ${form.hr} bpm, BP ${form.bp_sys}/${form.bp_dia} mmHg, RR ${form.rr || 16}/min, SpO2 ${form.spo2 || 98}%, Temp ${form.temp || 37.0}°C, Pain 0%. Age ${form.age_years || 0}, Gender ${form.sex_at_birth || 'unknown'}. History: PMH ${form.history.pmh || 'None'}.`;
 
       try {
@@ -467,7 +469,9 @@ export const TriageDashboard: React.FC = () => {
     setPainInputConflict(false);
 
     setSubmitting(true);
-    const complaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+    const complaint = form.chief_complaint === 'Other…' 
+      ? form.custom_complaint 
+      : (form.custom_complaint ? `${form.chief_complaint} (${form.custom_complaint})` : form.chief_complaint);
     try {
       if (form.clinician_name) localStorage.setItem('clinician_name', form.clinician_name);
       
@@ -502,7 +506,9 @@ export const TriageDashboard: React.FC = () => {
         },
         red_flags: form.red_flags.filter(flagId => {
           const flag = RED_FLAG_OPTIONS.find(o => o.id === flagId);
-          const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+          const resolvedComplaint = form.chief_complaint === 'Other…' 
+            ? form.custom_complaint 
+            : (form.custom_complaint ? `${form.chief_complaint} (${form.custom_complaint})` : form.chief_complaint);
           return flag ? flag.label.toLowerCase() !== resolvedComplaint?.trim().toLowerCase() : true;
         }),
         clinician_name: form.clinician_name || 'clinician',
@@ -715,8 +721,9 @@ export const TriageDashboard: React.FC = () => {
               <option value="">Select…</option>
               {CHIEF_COMPLAINTS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            {form.chief_complaint === 'Other…' && (
-              <input className="form-input" style={{ marginTop: 8 }} placeholder="Describe complaint…"
+            {form.chief_complaint !== '' && (
+              <input className="form-input" style={{ marginTop: 8 }} 
+                placeholder={form.chief_complaint === 'Other…' ? "Describe complaint..." : "Additional details (optional)..."}
                 value={form.custom_complaint}
                 onChange={e => setForm(f => ({ ...f, custom_complaint: e.target.value }))} />
             )}
@@ -834,7 +841,9 @@ export const TriageDashboard: React.FC = () => {
             <label className="form-label">Red Flags</label>
             <div className="flag-checkboxes">
               {(() => {
-                const resolvedComplaint = form.chief_complaint === 'Other…' ? form.custom_complaint : form.chief_complaint;
+                const resolvedComplaint = form.chief_complaint === 'Other…' 
+                  ? form.custom_complaint 
+                  : (form.custom_complaint ? `${form.chief_complaint} (${form.custom_complaint})` : form.chief_complaint);
                 const normalizedComplaint = resolvedComplaint?.trim().toLowerCase();
                 return RED_FLAG_OPTIONS
                   .filter(flag => flag.label.toLowerCase() !== normalizedComplaint)
@@ -883,7 +892,7 @@ export const TriageDashboard: React.FC = () => {
 
           <button
             className="submit-btn"
-            disabled={submitting || !form.chief_complaint || !form.hr || !form.bp_sys || !form.bp_dia}
+            disabled={submitting || !form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia}
             onClick={submitEncounter}
           >
             {submitting ? '⏳ Running AI Triage…' : '→ Submit & Triage'}
@@ -892,7 +901,8 @@ export const TriageDashboard: React.FC = () => {
       )}
 
       {/* ── Triage Queue Table ── */}
-      <table className="triage-queue">
+      <div className="triage-table-container" style={{ overflowX: 'auto', width: '100%', borderRadius: '8px', border: '1px solid var(--border-light)', background: 'var(--bg-card)' }}>
+        <table className="triage-queue" style={{ margin: 0, borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             <th>Acuity</th>
@@ -961,6 +971,7 @@ export const TriageDashboard: React.FC = () => {
           )}
         </tbody>
       </table>
+      </div>
 
       {/* ── Drawer Overlay ── */}
       <div className={`drawer-overlay ${selectedEncounter ? 'open' : ''}`} onClick={() => { setSelectedEncounter(null); setChangingDecision(false); }} />
@@ -1109,7 +1120,11 @@ export const TriageDashboard: React.FC = () => {
                 <div className={`ai-recommendation-card acuity-border-${selectedEncounter.clinical.ai_recommendation.acuity}`}>
                   <div className="ai-rec-header">
                     <span>🤖 AI Triage Recommendation</span>
-                    <span className="provider-badge">{selectedEncounter.clinical?.ai_provider || 'rules'}</span>
+                    <span className="provider-badge">
+                      {selectedEncounter.clinical?.ai_provider === 'ollama' 
+                        ? (triageStatus?.agent?.name || 'Qwen') 
+                        : (selectedEncounter.clinical?.ai_provider || 'rules')}
+                    </span>
                   </div>
                   <div className="ai-acuity-line">
                     Acuity <strong>{selectedEncounter.clinical.ai_recommendation.acuity}</strong>

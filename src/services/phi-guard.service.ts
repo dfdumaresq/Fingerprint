@@ -222,7 +222,7 @@ async function getNerPipeline(): Promise<NERPipeline | null> {
     nerPipeline = await pipeline(
       'token-classification',
       'Xenova/bert-base-NER',
-      { aggregation_strategy: 'simple' }
+      { aggregation_strategy: 'simple' } as any
     ) as NERPipeline;
 
     console.log('[PhiGuard] BERT-NER pipeline ready');

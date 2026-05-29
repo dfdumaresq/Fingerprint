@@ -193,7 +193,7 @@ function applyKeywordTier(text: string): { text: string; matches: PhiMatch[] } {
 
 // ─── Tier 3: Local WASM NER ───────────────────────────────────────────────────
 
-type NERPipeline = (text: string) => Promise<TokenClassificationOutput>;
+type NERPipeline = (text: string, options?: any) => Promise<any>;
 let nerPipeline: NERPipeline | null = null;
 let nerInitialised = false;
 let nerInitError: Error | null = null;
@@ -243,17 +243,17 @@ async function applyNerTier(text: string): Promise<{ text: string; matches: PhiM
   const matches: PhiMatch[] = [];
 
   try {
-    const entities = await pipe(text) as any[];
+    // Pass aggregation_strategy at execution time so transformers aggregates sub-tokens into words/phrases
+    const entities = await pipe(text, { aggregation_strategy: 'simple' } as any) as any[];
 
-    // Filter to PERSON entities only; sort descending by end offset so
-    // slice replacements don't shift indices of earlier matches
-    const personEntities = entities
-      .filter((e: any) => e.entity_group === 'PER' && e.score > 0.85)
-      .sort((a: any, b: any) => b.end - a.end);
+    // Filter to PERSON entities only with confidence > 0.85
+    const personEntities = entities.filter((e: any) => e.entity_group === 'PER' && e.score > 0.85);
 
     let result = text;
     for (const entity of personEntities) {
-      const original = result.slice(entity.start, entity.end);
+      const original = entity.word;
+      if (!original || original.trim().length === 0) continue;
+
       // Skip tokens that are purely numeric, whitespace-only, punctuation-only,
       // or already contain a redaction placeholder from a prior tier.
       if (
@@ -262,14 +262,19 @@ async function applyNerTier(text: string): Promise<{ text: string; matches: PhiM
         original.includes('_REDACTED')
       ) continue;
 
-      result = result.slice(0, entity.start) + '[NAME_REDACTED]' + result.slice(entity.end);
+      // Find the start/end index of the name in the current text (best-effort)
+      const start = result.indexOf(original);
+      if (start === -1) continue;
+      const end = start + original.length;
+
+      result = result.slice(0, start) + '[NAME_REDACTED]' + result.slice(end);
       matches.push({
         original,
         replacement: '[NAME_REDACTED]',
         tier: 'ner',
         label: 'PERSON',
-        start: entity.start,
-        end: entity.end,
+        start,
+        end,
       });
     }
 

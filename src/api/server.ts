@@ -26,6 +26,7 @@ import { AnchorService } from '../services/anchor.service';
 import { TriageService, AgentNotAvailableError } from '../services/triage.service';
 import { getFeatureMetadata } from '../sae/featureMap';
 import { TRIAGE_AGENT } from '../config/agents';
+import { warmUpPhiGuard } from '../services/phi-guard.service';
 
 // Initialize DB and Redis (acting as the synchronized Datastore from the Indexer)
 const db = new Pool({
@@ -336,7 +337,7 @@ app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
       clinician_name || 'clinician'
     );
 
-    res.status(201).json({ success: true, data: encounter });
+    res.status(201).json({ success: true, data: encounter, phi_scan: encounter.phi_scan ?? null });
   } catch (error: any) {
     if (error instanceof AgentNotAvailableError) {
       res.status(503).json({ 
@@ -374,7 +375,8 @@ app.post('/v1/triage/encounters/:session_id/action', async (req: Request, res: R
       action, 
       session_id, 
       is_amendment: result.is_amendment,
-      previous_action: result.previous_action 
+      previous_action: result.previous_action,
+      phi_scan: result.phi_scan ?? null
     });
   } catch (error: any) {
     if (error instanceof AgentNotAvailableError) {
@@ -932,5 +934,11 @@ app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: Request, res
 app.listen(PORT, () => {
   console.log(`Web2.5 Gateway API running on port ${PORT}`);
   console.log(`Requires Authorization: Bearer ${API_KEY}`);
+
+  // Warm up the PhiGuard NER pipeline so the first clinical encounter
+  // does not pay the model-load latency cost.
+  warmUpPhiGuard().catch(err =>
+    console.warn('[PhiGuard] Warm-up failed — regex + keyword tiers remain active:', err)
+  );
 });
 

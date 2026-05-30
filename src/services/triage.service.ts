@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { generateEventHash, buildCanonicalPayload, AgentEvent } from '../utils/crypto.utils';
 import { EventService } from './event.service';
 import { TRIAGE_AGENT, TriageAgentConfig } from '../config/agents';
+import { scanFields, ScanResult } from './phi-guard.service';
 
 // ─── Domain Types ────────────────────────────────────────────────────────────
 
@@ -109,6 +110,13 @@ export interface TriageResult {
   reasons: string[];
 }
 
+export interface PhiScanSummary {
+  phiDetected: boolean;
+  fieldsScanned: string[];
+  matchCount: number;
+  durationMs: number;
+}
+
 export interface TriageEncounter {
   encounter_id: string;
   db_row_id: number;
@@ -136,6 +144,8 @@ export interface TriageEncounter {
     amends_event_id?: string;
     clinician_acuity?: number;
   }[];
+  /** Present when at least one PHI token was detected and masked during ingestion */
+  phi_scan?: PhiScanSummary;
 }
 
 export class AgentNotAvailableError extends Error {
@@ -321,13 +331,45 @@ export class TriageService {
       console.warn(`Registry warning: No active agent resolved for ${TRIAGE_AGENT.slug}. Safely routing to rules-based fallback.`);
     }
 
-    // 2. Run AI triage
+    // 2. Run AI triage — uses ORIGINAL text intentionally.
+    //    The Ollama prompt is transient (wire-only, never stored or hashed).
+    //    All ledger-bound fields are masked in step 3 before hash computation.
     const { result: recommendation, provider } = await runTriageAgent(input);
+
+    // 3. PHI masking — runs BEFORE clinicalData assembly and hash computation.
+    //    Redact-and-proceed: masking never blocks the clinical workflow.
+    const phiScans = await scanFields({
+      chief_complaint: input.chief_complaint,
+      gender_identity: input.patient_context.demographics.gender_identity,
+    });
+
+    const maskedComplaint = phiScans.chief_complaint?.maskedText ?? input.chief_complaint;
+    const maskedGenderIdentity = phiScans.gender_identity?.maskedText ?? input.patient_context.demographics.gender_identity;
+
+    const phiDetectedInEncounter = Object.values(phiScans).some(r => r.phiDetected);
+    const totalPhiMatches = Object.values(phiScans).reduce((n, r) => n + r.matches.length, 0);
+    const totalScanMs = Object.values(phiScans).reduce((n, r) => n + r.durationMs, 0);
+
+    if (phiDetectedInEncounter) {
+      console.warn(
+        `[PhiGuard] PHI detected and masked in encounter ${sessionId}. ` +
+        `Fields: ${Object.keys(phiScans).join(', ')}. Matches: ${totalPhiMatches}.`
+      );
+    }
+
+    // 4. Assemble clinicalData from MASKED fields — this is what gets hashed and stored.
+    const maskedPatientContext = {
+      ...input.patient_context,
+      demographics: {
+        ...input.patient_context.demographics,
+        gender_identity: maskedGenderIdentity,
+      },
+    };
 
     const clinicalData: ClinicalData = {
       schemaVersion: 2,
-      chief_complaint: input.chief_complaint,
-      patient_context: input.patient_context,
+      chief_complaint: maskedComplaint,
+      patient_context: maskedPatientContext,
       vitals: input.vitals,
       history: {
         allergies: input.patient_context.clinical?.allergies?.map(a => a.substance) || [],
@@ -341,18 +383,28 @@ export class TriageService {
       state: 'waiting'
     };
 
-    // 3. Write the event referencing pointers (never raw PHI)
+    // 5. Write the event referencing pointers (never raw PHI — masking enforced above)
     const event = await this.eventService.ingestEvent({
        agent_fingerprint_id: activeFingerprint,
        model_version: provider === 'ollama' ? TRIAGE_AGENT.model : 'rules_fallback',
        workflow_type: 'triage_recommendation',
        session_id: sessionId,
-       input_ref: 'clinical_admission_form', 
+       input_ref: 'clinical_admission_form',
        output_ref: 'ai_triage_audit',
-       policy_id: `live::${input.chief_complaint}::${input.vitals.hr}::${input.vitals.bp_sys}/${input.vitals.bp_dia}::${recommendation.acuity}::${recommendation.reasons.join('|')}`,
+       // policy_id uses masked complaint so it is also safe to store
+       policy_id: `live::${maskedComplaint}::${input.vitals.hr}::${input.vitals.bp_sys}/${input.vitals.bp_dia}::${recommendation.acuity}::${recommendation.reasons.join('|')}`,
        clinical_data: clinicalData,
        reason_code: 'initial_decision'
     });
+
+    const phi_scan: PhiScanSummary | undefined = phiDetectedInEncounter
+      ? {
+          phiDetected: true,
+          fieldsScanned: Object.keys(phiScans),
+          matchCount: totalPhiMatches,
+          durationMs: totalScanMs,
+        }
+      : undefined;
 
     return {
        encounter_id: sessionId,
@@ -367,7 +419,8 @@ export class TriageService {
          merkle_root_id: null,
          anchored_to_chain: false,
          tamper_status: 'pending'
-       }
+       },
+       phi_scan,
     };
   }
 
@@ -375,12 +428,12 @@ export class TriageService {
    * Record a clinician action (accepted, overridden, etc.) with reason and optional amendment linkage.
    */
   async logClinicianAction(
-    sessionId: string, 
-    action: string, 
-    reasonCode: string, 
+    sessionId: string,
+    action: string,
+    reasonCode: string,
     reasonText?: string,
     assignedAcuity?: number
-  ): Promise<{ is_amendment: boolean; previous_action: string | null }> {
+  ): Promise<{ is_amendment: boolean; previous_action: string | null; phi_scan?: PhiScanSummary }> {
     const isPool = (this.db as any).connect && typeof (this.db as any).release !== 'function';
     const client = isPool ? await (this.db as any).connect() : this.db;
     const shouldRelease = isPool;
@@ -447,9 +500,31 @@ export class TriageService {
         payload = { ...clinical_data, schemaVersion: 1, clinician_acuity: Number(assignedAcuity) };
       }
 
-      // 3. Append the new decision event (resolving current platform agent)
+      // 3. PHI masking on reason_text before it reaches the ledger
+      let maskedReasonText = reasonText;
+      let phi_scan: PhiScanSummary | undefined;
+
+      if (reasonText) {
+        const scan = await scanFields({ reason_text: reasonText });
+        maskedReasonText = scan.reason_text?.maskedText ?? reasonText;
+
+        if (scan.reason_text?.phiDetected) {
+          console.warn(
+            `[PhiGuard] PHI detected and masked in clinician reason_text for session ${sessionId}. ` +
+            `Matches: ${scan.reason_text.matches.length}.`
+          );
+          phi_scan = {
+            phiDetected: true,
+            fieldsScanned: ['reason_text'],
+            matchCount: scan.reason_text.matches.length,
+            durationMs: scan.reason_text.durationMs,
+          };
+        }
+      }
+
+      // 4. Append the new decision event (resolving current platform agent)
       const activeFingerprint = await this.resolveActiveAgent(TRIAGE_AGENT.slug);
-      
+
       await this.eventService.ingestEvent({
         agent_fingerprint_id: activeFingerprint,
         model_version: 'clinician',
@@ -462,10 +537,10 @@ export class TriageService {
         output_ref,
         amends_event_id: lastEventId,
         reason_code: reasonCode,
-        reason_text: reasonText
+        reason_text: maskedReasonText
       });
 
-      return { is_amendment: isAmendment, previous_action: previousAction };
+      return { is_amendment: isAmendment, previous_action: previousAction, phi_scan };
     } finally {
       if (shouldRelease) client.release();
     }

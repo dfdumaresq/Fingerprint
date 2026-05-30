@@ -77,6 +77,15 @@ interface TriageEncounter {
   }[];
 }
 
+interface PhiScanWarning {
+  /** Which fields were scanned and had PHI detected */
+  fieldsScanned: string[];
+  /** Total number of PHI tokens redacted */
+  matchCount: number;
+  /** 'encounter' = fired on new encounter submission; 'action' = fired on clinician action */
+  source: 'encounter' | 'action';
+}
+
 interface NewEncounterForm {
   chief_complaint: string;
   custom_complaint: string;
@@ -186,6 +195,11 @@ export const TriageDashboard: React.FC = () => {
   const [showTechnicalProofs, setShowTechnicalProofs] = useState(false);
   const [showExtendedVitals, setShowExtendedVitals] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  // PHI masking soft-warning state
+  // Set whenever the server detects and masks PHI in a submitted field.
+  // Never blocks the workflow — informational only.
+  const [phiScanWarning, setPhiScanWarning] = useState<PhiScanWarning | null>(null);
 
   // AI Latent Concept Audit (SAE) States (Phase 3)
   const [saeData, setSaeData] = useState<any | null>(null);
@@ -525,6 +539,15 @@ export const TriageDashboard: React.FC = () => {
         setEncounters(prev => [data.data, ...prev]);
         setSelectedEncounter(data.data);
         setSecurityExpanded(false);
+
+        // Surface PHI soft-warning if the server masked any tokens
+        if (data.phi_scan?.phiDetected) {
+          setPhiScanWarning({
+            fieldsScanned: data.phi_scan.fieldsScanned ?? [],
+            matchCount: data.phi_scan.matchCount ?? 1,
+            source: 'encounter',
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to create encounter', err);
@@ -566,6 +589,16 @@ export const TriageDashboard: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setLastActionResult({ is_amendment: data.is_amendment, previous_action: data.previous_action });
+
+        // Surface PHI soft-warning if the server masked any tokens in reason_text
+        if (data.phi_scan?.phiDetected) {
+          setPhiScanWarning({
+            fieldsScanned: data.phi_scan.fieldsScanned ?? ['reason_text'],
+            matchCount: data.phi_scan.matchCount ?? 1,
+            source: 'action',
+          });
+        }
+
         // Reset reasons
         setAmendmentReason('initial_decision');
         setAmendmentNote('');
@@ -693,6 +726,38 @@ export const TriageDashboard: React.FC = () => {
           <div className="agent-status-banner success" style={{ marginTop: '16px', padding: '12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', borderRadius: '8px', color: '#10b981', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span><strong>✅ Active Agent Resolved:</strong> {triageStatus.agent.name} (v{triageStatus.agent.version})</span>
             <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', opacity: 0.8 }}>{triageStatus.agent.fingerprintHash.substring(0, 16)}...</span>
+          </div>
+        )}
+
+        {/* PHI Soft-Warning Banner — dismissible, never blocks workflow */}
+        {phiScanWarning && (
+          <div
+            className="phi-warning-banner"
+            role="alert"
+            aria-live="polite"
+            id="phi-warning-banner"
+          >
+            <div className="phi-warning-icon">🛡️</div>
+            <div className="phi-warning-body">
+              <strong>PHI Detected &amp; Masked</strong>
+              <span className="phi-warning-detail">
+                {phiScanWarning.matchCount} token{phiScanWarning.matchCount !== 1 ? 's' : ''} redacted
+                {phiScanWarning.fieldsScanned.length > 0 && (
+                  <> in <code>{phiScanWarning.fieldsScanned.join(', ')}</code></>  
+                )}{' '}before the audit record was hashed.
+                {phiScanWarning.source === 'encounter'
+                  ? ' The encounter was logged with masked values.'
+                  : ' The clinician note was logged with masked values.'}
+              </span>
+            </div>
+            <button
+              className="phi-warning-dismiss"
+              aria-label="Dismiss PHI warning"
+              id="phi-warning-dismiss-btn"
+              onClick={() => setPhiScanWarning(null)}
+            >
+              ×
+            </button>
           </div>
         )}
       </div>

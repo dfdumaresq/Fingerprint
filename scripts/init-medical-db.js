@@ -102,6 +102,18 @@ CREATE INDEX IF NOT EXISTS idx_events_fingerprint ON agent_events(agent_fingerpr
 CREATE INDEX IF NOT EXISTS idx_events_workflow ON agent_events(workflow_type);
 CREATE INDEX IF NOT EXISTS idx_events_anchoring ON agent_events(anchored_to_chain, merkle_root_id);
 
+-- Baseline Fixture Store (record-and-replay for admin workflows)
+CREATE TABLE IF NOT EXISTS baseline_fixtures (
+    id               SERIAL PRIMARY KEY,
+    fingerprint_hash VARCHAR(66)   NOT NULL,
+    agent_name       VARCHAR(255),
+    suite_version    VARCHAR(50)   NOT NULL,
+    responses        JSONB         NOT NULL,
+    saved_at         TIMESTAMPTZ   DEFAULT NOW() NOT NULL,
+    UNIQUE (fingerprint_hash, suite_version)
+);
+CREATE INDEX IF NOT EXISTS idx_fixtures_hash ON baseline_fixtures(fingerprint_hash);
+
 -- Create the immutability trigger function
 CREATE OR REPLACE FUNCTION prevent_anchored_mutation()
 RETURNS TRIGGER AS $$

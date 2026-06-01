@@ -185,6 +185,7 @@
   },
   "active": "9a7e699dcd538ac8",
   "lastOpenFiles": [
+    "scripts/migrate-baseline-fixtures.js",
     "scripts/migrate-rebaselined-action.js",
     "scripts/migrate-behavior-rebaseline.js",
     "db-check.js",
@@ -195,7 +196,6 @@
     "test/unit",
     "src/services/phi-guard.service.ts",
     "node_modules/onnxruntime-node/lib/version.ts",
-    "node_modules/onnxruntime-node/lib/binding.ts",
     "node_modules/onnxruntime-node/README.md",
     "node_modules/@img/sharp-libvips-darwin-arm64/README.md",
     "node_modules/@huggingface/transformers/README.md",

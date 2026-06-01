@@ -664,6 +664,11 @@ export const BehaviorAuditView: React.FC = () => {
             mode={stepperIntent as StepperMode}
             onComplete={handleStepperComplete}
             onCancel={() => setPhase('ready')}
+            agentFingerprintHash={activeHash}
+            agentName={selectedAgent?.name}
+            suiteVersion={REASONING_TEST_SUITE_V1.version}
+            apiBaseUrl={REACT_APP_API_URL}
+            apiToken={REACT_APP_API_KEY}
           />
         </div>
       )}

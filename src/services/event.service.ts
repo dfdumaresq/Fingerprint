@@ -109,13 +109,18 @@ export class EventService {
   /**
    * Fetch recent medical events for the audit dashboard
    */
-  async getEvents(filters: { agent_fingerprint_id?: string, days_back?: number }) {
+  async getEvents(filters: { agent_fingerprint_id?: string, workflow_type?: string, days_back?: number }) {
     let query = 'SELECT * FROM agent_events WHERE 1=1';
     const params: any[] = [];
     
     if (filters.agent_fingerprint_id) {
       params.push(filters.agent_fingerprint_id);
       query += ` AND agent_fingerprint_id = $${params.length}`;
+    }
+
+    if (filters.workflow_type) {
+      params.push(filters.workflow_type);
+      query += ` AND workflow_type = $${params.length}`;
     }
     
     if (filters.days_back) {

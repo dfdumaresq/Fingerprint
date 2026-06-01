@@ -34,7 +34,8 @@ BEGIN
             'care_plan_decision',
             'system_alert',
             'clinician_action',
-            'clinician_amendment'
+            'clinician_amendment',
+            'behavior_rebaseline'
         );
     END IF;
     
@@ -45,7 +46,8 @@ BEGIN
             'ignored',
             'escalated',
             'autonomous',
-            'downgraded'
+            'downgraded',
+            'rebaselined'
         );
     END IF;
 

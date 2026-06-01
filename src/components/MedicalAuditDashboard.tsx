@@ -220,6 +220,7 @@ export const MedicalAuditDashboard: React.FC = () => {
                 <option value="triage_recommendation">Triage Recruitment</option>
                 <option value="clinician_action">Decision Logging</option>
                 <option value="clinician_amendment">Clinical Amendments</option>
+                <option value="behavior_rebaseline">Behavior Re-baseline</option>
               </select>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '4px' }}>
@@ -338,13 +339,21 @@ export const MedicalAuditDashboard: React.FC = () => {
                   const isFailing = auditResult?.failingEventIds?.includes(ev.id);
                   const isImpacted = auditResult?.impactedEventIds?.includes(ev.id);
                   const isAnomaly = isFailing || isImpacted;
+                  const isRebaseline = ev.workflow_type === 'behavior_rebaseline';
+
+                  let rowClassName = '';
+                  if (isAnomaly) {
+                    rowClassName = isFailing ? 'row-anomaly' : 'row-impacted';
+                  } else if (isRebaseline) {
+                    rowClassName = 'row-warning';
+                  }
 
                   return (
                     <React.Fragment key={ev.id}>
                       <tr 
                         onClick={() => setExpandedRow(expandedRow === ev.id ? null : ev.id)} 
                         style={{ cursor: 'pointer', opacity: isAnomaly ? 1 : 0.9 }}
-                        className={isAnomaly ? (isFailing ? 'row-anomaly' : 'row-impacted') : ''}
+                        className={rowClassName}
                       >
                         <td className="tabular-nums" style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>{new Date(ev.timestamp).toLocaleString()}</td>
                         <td style={{ padding: '16px', borderBottom: '1px solid var(--plasma-border)' }}>{ev.workflow_type.replace('_', ' ')}</td>
@@ -376,6 +385,7 @@ export const MedicalAuditDashboard: React.FC = () => {
                           <span className={`status-pill status-${
                             ev.clinician_action === 'accepted' ? 'completed' : 
                             ev.clinician_action === 'escalated' ? 'critical' : 
+                            ev.clinician_action === 'rebaselined' ? 'warning' :
                             'neutral'
                           }`} style={{ fontSize: '0.7rem' }}>
                             {ev.clinician_action || 'AI Recommendation'}

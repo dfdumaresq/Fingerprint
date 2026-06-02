@@ -7,6 +7,7 @@ import {
   createManualResponseSet,
   generateBehavioralTraitHash,
   BehavioralHashResult,
+  verifyBehavioralSignature,
 } from '../utils/behavioral.utils';
 import { REASONING_TEST_SUITE_V1 } from '../tests/behavioralTestSuite';
 import { Agent } from '../types';
@@ -48,7 +49,7 @@ interface AgentListItem {
 // ---------------------------------------------------------------------------
 
 export const BehaviorAuditView: React.FC = () => {
-  const { service, isConnected } = useBlockchain();
+  const { service, isConnected, isSandbox } = useBlockchain();
 
   // Phase state machine
   const [phase, setPhase] = useState<Phase>('select');
@@ -241,6 +242,73 @@ export const BehaviorAuditView: React.FC = () => {
     setPhase('result');
 
     try {
+      if (isSandbox) {
+        // Load the baseline responses from localStorage
+        const baselineStr = localStorage.getItem(`sidecar_${activeHash}`);
+        if (!baselineStr) {
+          throw new Error('Baseline responses not found. Please register a baseline first.');
+        }
+
+        const baselineResponses = JSON.parse(baselineStr);
+        const verification = verifyBehavioralSignature(
+          baselineResponses,
+          result.responseSet,
+          'triage'
+        );
+
+        let trust_score = 100;
+        let decision = 'accept';
+        const signals: string[] = ['contract_status_active'];
+        const recommendations: string[] = [];
+
+        if (verification.match) {
+          if (verification.perturbation.suspicious) {
+            signals.push('suspicious_perturbations_detected');
+            trust_score = 0;
+            decision = 'deny';
+            recommendations.push('Hard reject: Probable homograph injection or evasion assault.');
+          } else {
+            signals.push('behavioral_match_success');
+            trust_score = 100;
+          }
+        } else {
+          signals.push('behavioral_mismatch');
+          if (verification.perturbation.suspicious) {
+            signals.push('suspicious_perturbations_detected');
+            trust_score = 0;
+            decision = 'deny';
+            recommendations.push('Hard reject: Probable homograph injection or evasion assault.');
+          } else {
+            trust_score = Math.floor(verification.similarity * 100);
+            decision = 'challenge';
+            recommendations.push('Similarity score too low. Possible model substitution.');
+          }
+        }
+
+        // Get the agent profile info
+        const agentName = agents.find(a => a.fingerprintHash === activeHash)?.name || 'Unknown Agent';
+        const agentProvider = agents.find(a => a.fingerprintHash === activeHash)?.provider || 'Unknown Provider';
+
+        const auditResponse = {
+          decision,
+          trust_score,
+          agent: {
+            fingerprintHash: activeHash,
+            name: agentName,
+            provider: agentProvider,
+            isRevoked: false,
+          },
+          signals,
+          indexer: { isStale: false, lagBlocks: 0 },
+          recommendations,
+          verification_details: { similarity_score: verification.similarity }
+        };
+
+        setAuditResult(auditResponse);
+        return;
+      }
+
+      // Live mode fallback: query the API endpoint
       const res = await fetch(`${REACT_APP_API_URL}/v1/agents/verify`, {
         method: 'POST',
         headers: {

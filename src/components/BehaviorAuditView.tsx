@@ -92,6 +92,34 @@ export const BehaviorAuditView: React.FC = () => {
   const fetchAgents = useCallback(async () => {
     setAgentsLoading(true);
     try {
+      // 1. Try to load from blockchain/sandbox service first
+      if (service) {
+        try {
+          const list = await service.getRegisteredAgents();
+          if (list && list.length > 0) {
+            const mappedList: AgentListItem[] = list
+              .filter(a => !a.revoked)
+              .map(a => ({
+                fingerprintHash: a.fingerprintHash,
+                name: a.name,
+                provider: a.provider,
+                isRevoked: !!a.revoked,
+                hasBehavioralTrait: !!a.behavioralTraitHash
+              }));
+            setAgents(mappedList);
+            // Pre-select first if available and nothing already chosen
+            if (mappedList.length > 0 && !selectedHash) {
+              setSelectedHash(mappedList[0].fingerprintHash);
+            }
+            setAgentsLoading(false);
+            return;
+          }
+        } catch (serviceErr) {
+          console.warn('Failed to load agents from blockchain service, falling back to API:', serviceErr);
+        }
+      }
+
+      // 2. Fallback to backend API database
       const res = await fetch(`${REACT_APP_API_URL}/v1/agents?limit=50`, {
         headers: { Authorization: `Bearer ${REACT_APP_API_KEY}` },
       });
@@ -109,7 +137,7 @@ export const BehaviorAuditView: React.FC = () => {
     } finally {
       setAgentsLoading(false);
     }
-  }, [selectedHash]);
+  }, [selectedHash, service]);
 
 
 
@@ -189,8 +217,7 @@ export const BehaviorAuditView: React.FC = () => {
       // Automatically trigger the baseline check
       checkBaseline(pendingHash);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkBaseline]);
+  }, [fetchAgents, checkBaseline]);
 
   // ---------------------------------------------------------------------------
   // Post-stepper handlers

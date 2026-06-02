@@ -247,6 +247,7 @@ export class BlockchainService {
         ...agent,
         createdAt: Math.floor(Date.now() / 1000),
       };
+      // TODO: Generate and store EIP-712 signatures for mock agents in Sandbox mode when useEIP712 is true.
       this.mockAgents.set(agent.fingerprintHash, fullAgent);
       console.log("Sandbox: Registered agent", agent.fingerprintHash);
       return true;
@@ -293,6 +294,8 @@ export class BlockchainService {
 
         // In a production system, you might want to store this signature data
         // in a separate database table or in the smart contract itself
+        // TODO: Implement off-chain signature storage (e.g., LocalStorage / database sidecar)
+        // and in-memory Sandbox signing to make the verification flow functional on lookup.
       }
 
       // Use the contract with signer to make the transaction

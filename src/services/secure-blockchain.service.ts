@@ -290,6 +290,8 @@ export class SecureBlockchainService {
 
         // In a production system, you might want to store this signature data
         // in a separate database table or in the smart contract itself
+        // TODO: Implement off-chain signature storage (e.g., LocalStorage / database sidecar)
+        // and in-memory Sandbox signing to make the verification flow functional on lookup.
       }
 
       // Use the contract with signer to make the transaction

@@ -58,6 +58,7 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
 ## Lower Priority / Deferred
 
    - Defer environmental carbon-footprint mapping for blockchain operations until the core clinical integrity MVP is finalized.
+   - Defer full EIP-712 signature storage (e.g., LocalStorage / database sidecar) and in-memory Sandbox signing to make the signature verification flow functional on lookup.
 
 ## Next Immediate Actions
 

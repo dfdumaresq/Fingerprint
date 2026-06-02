@@ -111,10 +111,7 @@ export const BehaviorAuditView: React.FC = () => {
     }
   }, [selectedHash]);
 
-  useEffect(() => {
-    fetchAgents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
 
   // ---------------------------------------------------------------------------
   // Check baseline
@@ -180,6 +177,20 @@ export const BehaviorAuditView: React.FC = () => {
       setPhase('select');
     }
   }, [service]);
+
+  useEffect(() => {
+    fetchAgents();
+    
+    // Check if there is a pending fingerprint hash to audit from governance
+    const pendingHash = sessionStorage.getItem('pending_behavior_audit_hash');
+    if (pendingHash) {
+      sessionStorage.removeItem('pending_behavior_audit_hash');
+      setSelectedHash(pendingHash);
+      // Automatically trigger the baseline check
+      checkBaseline(pendingHash);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkBaseline]);
 
   // ---------------------------------------------------------------------------
   // Post-stepper handlers

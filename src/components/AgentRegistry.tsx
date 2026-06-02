@@ -3,13 +3,18 @@ import FingerprintForm from './FingerprintForm';
 import VerifyFingerprint from './VerifyFingerprint';
 import RevokeFingerprint from './RevokeFingerprint';
 import { useBlockchain } from '../contexts/BlockchainContext';
+import { PlatformView } from './Sidebar';
 import { Agent } from '../types';
 import { formatTimestamp } from '../utils/fingerprint.utils';
 
 const REACT_APP_API_URL = process.env.REACT_APP_API_URL || '';
 const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || 'sk_test_123';
 
-export const AgentRegistry: React.FC = () => {
+interface AgentRegistryProps {
+    onViewChange?: (view: PlatformView) => void;
+}
+
+export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) => {
     const { service } = useBlockchain();
     const [subView, setSubView] = useState<'list' | 'register' | 'verify' | 'revoke'>('list');
     const [registrationSuccess, setRegistrationSuccess] = useState(false);
@@ -463,8 +468,13 @@ export const AgentRegistry: React.FC = () => {
                                                     <button 
                                                         className="card-action-btn"
                                                         onClick={() => {
-                                                            setSelectedHash(agent.fingerprintHash);
-                                                            setSubView('verify');
+                                                            if (onViewChange) {
+                                                                sessionStorage.setItem('pending_behavior_audit_hash', agent.fingerprintHash);
+                                                                onViewChange('behavior-audit');
+                                                            } else {
+                                                                setSelectedHash(agent.fingerprintHash);
+                                                                setSubView('verify');
+                                                            }
                                                         }}
                                                     >
                                                         🔍 Verify Baseline

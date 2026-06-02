@@ -65,7 +65,7 @@ const AppContent: React.FC = () => {
             
             {activeView === 'medical-audit' && <MedicalAuditDashboard />}
 
-            {activeView === 'governance' && <AgentRegistry />}
+            {activeView === 'governance' && <AgentRegistry onViewChange={handleViewChange} />}
 
             {activeView === 'behavior-audit' && <BehaviorAuditView />}
         </PlatformLayout>

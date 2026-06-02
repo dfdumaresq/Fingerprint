@@ -3,7 +3,7 @@ project: AI Fingerprinting / Verification System
 short_name: fingerprint-ai
 status: active
 owner: Dave Dumaresq
-last_updated: 2026-06-01
+last_updated: 2026-06-02
 primary_repo: /Users/dfdumaresq/Projects/Fingerprint
 primary_vault_note: [[AI Fingerprinting - Master Note]]
 phase: Medical MVP — Unified Behavioral Audit & Fixture Replay (v1.3.0)
@@ -46,10 +46,8 @@ Out of scope for this phase:
 - Dynamic, automated context-drift tracking or real-time continuous learning adjustments (deferred to Phase 3).
 
 ## 4. Current state
-Active Git Branches:
-- `feat/unified-behavior-audit` — ready to merge.
-- `feat/baseline-fixture-replay` — ready to merge.
-- `feat/phi-guard-masking` — ready to merge.
+Active Git Branch:
+- `main` — all feature branches merged and up to date.
 
 Confirmed:
 - **Safety-Grade Behavioral Verification**: Fully operational off-chain verification using token-based Jaccard similarity (Bag-of-Words) and canonicalization layers to defeat formatting and whitespace attacks.
@@ -61,10 +59,11 @@ Confirmed:
 - **PHI Guard Masking Engine**: Three-tier pipeline (regex battery → keyword prefix scan → local WASM BERT-NER) masks all PHI before Keccak256 hash computation. Redact-and-proceed design. 239/239 tests passing.
 - **Unified Behavioral Baseline & Drift Audit**: Single guided stepper workflow (Select Agent → Baseline Status → Prompt Suite → Result). Supports initial baseline, re-baseline with REPLACE confirmation modal, and drift audit. Audit log events written to `agent_events` with `behavior_rebaseline` workflow type and `rebaselined` clinician action.
 - **Baseline Fixture Record & Replay**: Admin responses stored server-side in `baseline_fixtures` table (PostgreSQL JSONB). One-click Load Responses in both baseline and audit modes. Save & Finalize records to server on first run. Export as JSON for backup.
-- **Integrity Score 100/100**: Clean audit pass returns 100. Perturbation score reflects natural linguistic texture.
+- **Integrity Score 100/100**: Clean audit pass (match=true, no suspicious patterns) now returns 100/100. Hard zero enforced for suspicious perturbations. Mismatch scaled by similarity.
+- **Collapsible Sidebar**: ‹ › toggle collapses sidebar to 60px icon-only rail (0.25s transition). Nav data-driven via `NAV_SECTIONS` array. All inline styles replaced with semantic CSS classes. Version badge shows `v1.3.0`.
 
 In progress:
-- Pending merge to `main`.
+- Nothing active. `main` is clean.
 
 Blocked:
 - None.
@@ -268,6 +267,7 @@ Unresolved threats:
 - **2026-05-26**: Recalibrated ESI-1 and ESI-2 safety floor boundaries to `0.65` and implemented percentage-based pain mapping (`Pain: 80%`) to neutralize the high-frequency token centering artifact of raw numeric digits like `0/10` in dense embedding spaces.
 - **2026-05-29**: Implemented three-tier PHI Guard masking engine on `feat/phi-guard-masking`. Design decisions: redact-and-proceed (never block clinical workflow); mask before Keccak256 hash, after AI inference; no cloud NER (cloud NER paradox — can't send PHI to detect PHI); `aggregation_strategy` must be passed at pipeline execution time, not instantiation, in `@huggingface/transformers` WASM runtime.
 - **2026-06-01**: Completed unified Behavioral Baseline & Drift Audit workflow. Fixed two missing PostgreSQL enum values (`behavior_rebaseline`, `rebaselined`). Added server-side baseline fixture record/replay (`baseline_fixtures` table + 3 API endpoints). Fixture loading enabled in both baseline and audit modes; saving restricted to baseline mode only. Integrity Score changed from confidence-weighted (95) to binary clean-pass (100) — perturbation score reflects natural linguistic texture, not an attack, and should not penalise a clean match.
+- **2026-06-02**: Merged all feature branches to `main`. Collapsible sidebar (‹ › toggle, 60px icon-only rail, 0.25s transition). Nav refactored to data-driven `NAV_SECTIONS` array. All inline styles in `Sidebar.tsx` and `PlatformLayout.tsx` replaced with semantic CSS classes. Version bumped to `v1.3.0`.
 
 ## 15. Open questions
 - How to scale offline C2PA verification certificates for hospital environments with intermittent external network connectivity?
@@ -275,16 +275,16 @@ Unresolved threats:
 - What is the optimal ROC calibration curve to minimize false positives in multi-lingual medical triage environments?
 
 ## 16. Next priority tasks
-1. **Merge feature branches to main**: `feat/unified-behavior-audit` and `feat/baseline-fixture-replay` are complete and validated — merge to `main`.
-2. **Dynamic Lexical Drift Monitoring (v1)**: Compute continuous per-agent drift scores ($1 - \text{mean Jaccard}$) across historical encounters and graph trends.
-3. **Interactive Evidence Timeline**: Build a timeline trace in the `MedicalAuditDashboard` for clinicians to explore blockchain anchors and event history.
-4. **Fixture Suite Versioning**: When `REASONING_TEST_SUITE_V1` is upgraded to v2, ensure old fixtures are archived rather than silently overwritten.
+1. **Dynamic Lexical Drift Monitoring (v1)**: Compute continuous per-agent drift scores ($1 - \text{mean Jaccard}$) across historical encounters and graph trends.
+2. **Interactive Evidence Timeline**: Build a timeline trace in the `MedicalAuditDashboard` for clinicians to explore blockchain anchors and event history.
+3. **Fixture Suite Versioning**: When `REASONING_TEST_SUITE_V1` is upgraded to v2, archive old fixtures rather than silently overwriting.
+4. **Phase 2 SAE Integration**: Transition from surface behavioral testing to direct neural verification via Sparse Autoencoder layer analysis.
 
 ## 17. Session handoff
 Read first on resume:
 - This file (`PROJECT_MEMORY.md`)
 - [[AI Fingerprinting - Master Note]]
-- The latest progress log in [[02_Log/2026-06-01 - Unified Audit Flow, Enum Fixes, and Baseline Fixture Replay]]
+- The latest progress log in [[02_Log/2026-06-02 - Branch Merges, Collapsible Sidebar, CSS Cleanup]]
 
 Do not re-open by default unless needed:
 - Older exploratory notes
@@ -292,7 +292,7 @@ Do not re-open by default unless needed:
 - Long-form research digests
 
 Best next action:
-- Merge `feat/unified-behavior-audit` and `feat/baseline-fixture-replay` into `main`, then begin Dynamic Lexical Drift Monitoring.
+- Begin Dynamic Lexical Drift Monitoring (v1) on a new branch.
 
 Known "don't lose this" context:
 - **Homograph Safety**: If homograph characters are detected, the perturbation scorer MUST drop verification confidence to exactly 0%, regardless of similarity percentages.

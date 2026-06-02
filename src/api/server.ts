@@ -613,8 +613,10 @@ app.post('/v1/agents/verify', async (req: Request, res: Response) => {
           );
         } else {
           signals.push("behavioral_match_success");
-          // Confidence scaling based on perturbation absence and similarity strength
-          trust_score = Math.floor(verification.confidence * 100);
+          // match=true + not suspicious = full integrity score.
+          // Perturbation score reflects natural linguistic texture, not an attack.
+          // Hard zero is still enforced above if perturbation.suspicious=true.
+          trust_score = 100;
         }
       } else {
         signals.push("behavioral_mismatch");
@@ -959,6 +961,129 @@ app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: Request, res
   } catch (error: any) {
     console.error('Error running semantic alignment verification:', error);
     res.status(500).json({ error: { code: 'internal_error', message: 'An internal error occurred during semantic alignment verification', details: error.message } });
+  }
+});
+
+// ─── Baseline Fixture: Record & Replay ────────────────────────────────────────
+
+/**
+ * GET /v1/fixtures/:fingerprintHash
+ * Returns the saved baseline fixture for a given agent + suite version.
+ * Query param: ?suite=reasoning-v1.0  (defaults to most recent if omitted)
+ */
+app.get('/v1/fixtures/:fingerprintHash', async (req: Request, res: Response) => {
+  const { fingerprintHash } = req.params;
+  const suite = req.query.suite as string | undefined;
+
+  try {
+    let result;
+    if (suite) {
+      result = await db.query(
+        `SELECT fingerprint_hash, agent_name, suite_version, responses, saved_at
+         FROM baseline_fixtures
+         WHERE fingerprint_hash = $1 AND suite_version = $2`,
+        [fingerprintHash, suite]
+      );
+    } else {
+      result = await db.query(
+        `SELECT fingerprint_hash, agent_name, suite_version, responses, saved_at
+         FROM baseline_fixtures
+         WHERE fingerprint_hash = $1
+         ORDER BY saved_at DESC LIMIT 1`,
+        [fingerprintHash]
+      );
+    }
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: { code: 'not_found', message: 'No fixture found for this agent and suite version.' } });
+      return;
+    }
+
+    const row = result.rows[0];
+    res.json({
+      fingerprintHash: row.fingerprint_hash,
+      agentName: row.agent_name,
+      suiteVersion: row.suite_version,
+      responses: row.responses,
+      savedAt: row.saved_at,
+    });
+  } catch (error: any) {
+    console.error('Error fetching fixture:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: 'Failed to fetch fixture.' } });
+  }
+});
+
+/**
+ * POST /v1/fixtures/:fingerprintHash
+ * Upserts a baseline fixture. Body: { agentName, suiteVersion, responses: string[] }
+ */
+app.post('/v1/fixtures/:fingerprintHash', async (req: Request, res: Response) => {
+  const { fingerprintHash } = req.params;
+  const { agentName, suiteVersion, responses } = req.body;
+
+  if (!suiteVersion || typeof suiteVersion !== 'string') {
+    res.status(400).json({ error: { code: 'bad_request', message: 'suiteVersion is required.' } });
+    return;
+  }
+  if (!Array.isArray(responses) || responses.length === 0 || responses.some((r: any) => typeof r !== 'string' || !r.trim())) {
+    res.status(400).json({ error: { code: 'bad_request', message: 'responses must be a non-empty array of strings.' } });
+    return;
+  }
+
+  try {
+    const result = await db.query(
+      `INSERT INTO baseline_fixtures (fingerprint_hash, agent_name, suite_version, responses, saved_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (fingerprint_hash, suite_version)
+       DO UPDATE SET agent_name = EXCLUDED.agent_name,
+                     responses  = EXCLUDED.responses,
+                     saved_at   = NOW()
+       RETURNING fingerprint_hash, agent_name, suite_version, responses, saved_at`,
+      [fingerprintHash, agentName || null, suiteVersion, JSON.stringify(responses)]
+    );
+
+    const row = result.rows[0];
+    res.status(201).json({
+      fingerprintHash: row.fingerprint_hash,
+      agentName: row.agent_name,
+      suiteVersion: row.suite_version,
+      responses: row.responses,
+      savedAt: row.saved_at,
+    });
+  } catch (error: any) {
+    console.error('Error saving fixture:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: 'Failed to save fixture.' } });
+  }
+});
+
+/**
+ * DELETE /v1/fixtures/:fingerprintHash
+ * Removes a fixture. Body: { suiteVersion }
+ */
+app.delete('/v1/fixtures/:fingerprintHash', async (req: Request, res: Response) => {
+  const { fingerprintHash } = req.params;
+  const { suiteVersion } = req.body;
+
+  if (!suiteVersion) {
+    res.status(400).json({ error: { code: 'bad_request', message: 'suiteVersion is required.' } });
+    return;
+  }
+
+  try {
+    const result = await db.query(
+      `DELETE FROM baseline_fixtures WHERE fingerprint_hash = $1 AND suite_version = $2`,
+      [fingerprintHash, suiteVersion]
+    );
+
+    if ((result.rowCount ?? 0) === 0) {
+      res.status(404).json({ error: { code: 'not_found', message: 'No fixture found to delete.' } });
+      return;
+    }
+
+    res.json({ success: true, message: 'Fixture deleted.' });
+  } catch (error: any) {
+    console.error('Error deleting fixture:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: 'Failed to delete fixture.' } });
   }
 });
 

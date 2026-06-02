@@ -3,10 +3,10 @@ project: AI Fingerprinting / Verification System
 short_name: fingerprint-ai
 status: active
 owner: Dave Dumaresq
-last_updated: 2026-05-29
+last_updated: 2026-06-01
 primary_repo: /Users/dfdumaresq/Projects/Fingerprint
 primary_vault_note: [[AI Fingerprinting - Master Note]]
-phase: Medical MVP — PHI Guard Masking Engine (v1.2.0)
+phase: Medical MVP — Unified Behavioral Audit & Fixture Replay (v1.3.0)
 trust_level: experimental (Phase 1 Completed, Phase 2 in progress)
 ---
 
@@ -28,7 +28,7 @@ Why this matters:
 
 ## 3. Current phase
 Phase:
-- Medical MVP & Inclusive Demographics (v1.1.0) / Phase 2 SAE Groundwork
+- Medical MVP — Unified Behavioral Audit & Fixture Replay (v1.3.0)
 
 Phase objective:
 - Harden behavioral verification, complete the clinician-facing triage queue (with structured PatientContext and decision logging), and lay the groundwork for Phase 2 Sparse Autoencoder (SAE) neurological latent concept auditing.
@@ -38,15 +38,18 @@ Definition of done:
 - [x] SAE Layer 9 visual audit panel categorizing active latent concepts (Critical, Clinical, Cognitive, Structural) by activation strength.
 - [x] Clinician decision overrides and amendments logged as cryptographically anchored ledger entries.
 - [x] Comprehensive automated PHI masking guardrails preventing patient identifiers from reaching the Keccak256 hash chain or blockchain ledger.
-- [ ] Unified "Baseline-then-Audit" UI workflow merging registration and verification into a single clinician screen.
+- [x] Unified "Baseline-then-Audit" UI workflow merging registration and verification into a single clinician screen.
+- [x] Baseline Fixture Record & Replay — server-side storage of prompt responses for one-click re-baseline and audit verification.
 
 Out of scope for this phase:
 - Production deployment on mainnet networks (restricted to Sepolia and local simulation environments).
 - Dynamic, automated context-drift tracking or real-time continuous learning adjustments (deferred to Phase 3).
 
 ## 4. Current state
-Active Git Branch:
-- `feat/phi-guard-masking` (3 commits, ready for review and merge)
+Active Git Branches:
+- `feat/unified-behavior-audit` — ready to merge.
+- `feat/baseline-fixture-replay` — ready to merge.
+- `feat/phi-guard-masking` — ready to merge.
 
 Confirmed:
 - **Safety-Grade Behavioral Verification**: Fully operational off-chain verification using token-based Jaccard similarity (Bag-of-Words) and canonicalization layers to defeat formatting and whitespace attacks.
@@ -55,15 +58,16 @@ Confirmed:
 - **Layer 9 SAE Latent Concept Panel**: UI dashboard organizes active SAE concepts (Critical, Clinical, Cognitive, Structural) and renders floating-point strengths alongside dynamic visual activation bars.
 - **Parallel Semantic Embedding Alignment Audit**: Fully implemented real-time cosine similarity comparisons against ESI gold-standard sentinel prompts. Runs in parallel with the SAE audit via `Promise.all` in the drawer.
 - **Pre-Submission Clinical Contradiction Guardrail**: Implemented asynchronous semantic validation to intercept and block chest symptom admissions with `0/10` pain score, featuring automatically expanded extended vitals, warning alerts, and safety bypass overrides.
-- **Percentage-Mapped Attention Optimizations**: Implemented under-the-hood prompt formatting to map pain scores to percentages (`Pain 80%` and `Pain 0%`) to force value priority in the model's self-attention layers, resolving the high-frequency numeric token centering bias.
-- **PHI Guard Masking Engine**: Three-tier pipeline (regex battery → keyword prefix scan → local WASM BERT-NER) masks all PHI in `chief_complaint`, `gender_identity`, and `reason_text` before Keccak256 hash computation. Redact-and-proceed design never blocks clinical workflow. Soft UI warning banner surfaced on PHI detection. 31 unit tests, 239/239 total tests passing.
-- **Stable Multi-Worker Test Suite**: All 27 test suites (239 test cases) pass on `feat/phi-guard-masking`.
+- **PHI Guard Masking Engine**: Three-tier pipeline (regex battery → keyword prefix scan → local WASM BERT-NER) masks all PHI before Keccak256 hash computation. Redact-and-proceed design. 239/239 tests passing.
+- **Unified Behavioral Baseline & Drift Audit**: Single guided stepper workflow (Select Agent → Baseline Status → Prompt Suite → Result). Supports initial baseline, re-baseline with REPLACE confirmation modal, and drift audit. Audit log events written to `agent_events` with `behavior_rebaseline` workflow type and `rebaselined` clinician action.
+- **Baseline Fixture Record & Replay**: Admin responses stored server-side in `baseline_fixtures` table (PostgreSQL JSONB). One-click Load Responses in both baseline and audit modes. Save & Finalize records to server on first run. Export as JSON for backup.
+- **Integrity Score 100/100**: Clean audit pass returns 100. Perturbation score reflects natural linguistic texture.
 
 In progress:
-- **Unified Baseline & Drift Audit View**: Merging `BehavioralRegistration` and `BehavioralVerification` components to simplify clinician interaction under `behavior-audit`.
+- Pending merge to `main`.
 
 Blocked:
-- None. Core hardhat contracts, postgres backend, and Express API layers are stable and operational.
+- None.
 
 ## 5. System model
 System pipeline:
@@ -71,7 +75,7 @@ System pipeline:
 2. **Model / Agent Inference**: The active AI agent processes input and generates clinical acuity recommendations. *(Note: Dual-mode architecture supports lightweight deterministic rule fallbacks for offline testing, and live local/cloud LLMs—via Ollama or API adapters—to audit non-deterministic outputs and latent neural features).*
 3. **Event Ingestion & Ledger Logging**: `EventService` captures inputs, outputs, and parameters, generating Keccak256 event-chains referencing the previous event.
 4. **On-chain Anchoring**: Periodic batching generates Merkle roots of event blocks and commits them to the smart contract registry (Sepolia).
-5. **Drift Auditing**: The system periodically compares live prompt responses against the registered on-chain baseline using safety-grade Jaccard metrics. *(Do we need to implement a manual audit workflow as well? Do we need to setup an automated schedule?)*
+5. **Drift Auditing**: The system periodically compares live prompt responses against the registered on-chain baseline using safety-grade Jaccard metrics.
 6. **Provenance Manifest Export**: Verification outcomes are signed and exported as standard, tamper-evident C2PA manifests.
 7. **Human Clinician Review**: Human-in-the-loop actions (accepting, modifying, or overriding acuity) are recorded and chained as parent-child amendments.
 
@@ -263,6 +267,7 @@ Unresolved threats:
 - **2026-05-23**: Decided to retain Ollama and live LLM integration as a core requirement. True behavioral auditing, Jaccard drift detection, and SAE neural analysis require a non-deterministic generative model to produce real-world clinical variations. We maintain a dual-mode testing framework: offline deterministic mock mode for developer convenience/testing, and live generative mode (Ollama/APIs) for clinical validation.
 - **2026-05-26**: Recalibrated ESI-1 and ESI-2 safety floor boundaries to `0.65` and implemented percentage-based pain mapping (`Pain: 80%`) to neutralize the high-frequency token centering artifact of raw numeric digits like `0/10` in dense embedding spaces.
 - **2026-05-29**: Implemented three-tier PHI Guard masking engine on `feat/phi-guard-masking`. Design decisions: redact-and-proceed (never block clinical workflow); mask before Keccak256 hash, after AI inference; no cloud NER (cloud NER paradox — can't send PHI to detect PHI); `aggregation_strategy` must be passed at pipeline execution time, not instantiation, in `@huggingface/transformers` WASM runtime.
+- **2026-06-01**: Completed unified Behavioral Baseline & Drift Audit workflow. Fixed two missing PostgreSQL enum values (`behavior_rebaseline`, `rebaselined`). Added server-side baseline fixture record/replay (`baseline_fixtures` table + 3 API endpoints). Fixture loading enabled in both baseline and audit modes; saving restricted to baseline mode only. Integrity Score changed from confidence-weighted (95) to binary clean-pass (100) — perturbation score reflects natural linguistic texture, not an attack, and should not penalise a clean match.
 
 ## 15. Open questions
 - How to scale offline C2PA verification certificates for hospital environments with intermittent external network connectivity?
@@ -270,16 +275,16 @@ Unresolved threats:
 - What is the optimal ROC calibration curve to minimize false positives in multi-lingual medical triage environments?
 
 ## 16. Next priority tasks
-1. **Merge PHI Guard Branch**: Review `feat/phi-guard-masking` and merge to `main`.
-2. **Unified Baseline-then-Audit Workflow**: Merge `BehavioralRegistration` and `BehavioralVerification` into a single, cohesive React view.
-3. **Dynamic Lexical Drift Monitoring (v1)**: Compute continuous per-agent drift scores ($1 - \text{mean Jaccard}$) across historical encounters and graph trends.
-4. **Interactive Evidence Timeline**: Build a timeline trace in the `MedicalAuditDashboard` for clinicians to explore blockchain anchors and history.
+1. **Merge feature branches to main**: `feat/unified-behavior-audit` and `feat/baseline-fixture-replay` are complete and validated — merge to `main`.
+2. **Dynamic Lexical Drift Monitoring (v1)**: Compute continuous per-agent drift scores ($1 - \text{mean Jaccard}$) across historical encounters and graph trends.
+3. **Interactive Evidence Timeline**: Build a timeline trace in the `MedicalAuditDashboard` for clinicians to explore blockchain anchors and event history.
+4. **Fixture Suite Versioning**: When `REASONING_TEST_SUITE_V1` is upgraded to v2, ensure old fixtures are archived rather than silently overwritten.
 
 ## 17. Session handoff
 Read first on resume:
 - This file (`PROJECT_MEMORY.md`)
 - [[AI Fingerprinting - Master Note]]
-- The latest progress log in [[02_Log/2026-05-29 - PHI Guard Masking Engine]]
+- The latest progress log in [[02_Log/2026-06-01 - Unified Audit Flow, Enum Fixes, and Baseline Fixture Replay]]
 
 Do not re-open by default unless needed:
 - Older exploratory notes
@@ -287,11 +292,13 @@ Do not re-open by default unless needed:
 - Long-form research digests
 
 Best next action:
-- Merge branch `feat/phi-guard-masking` into `main`, then begin the Unified Baseline-then-Audit UI workflow.
+- Merge `feat/unified-behavior-audit` and `feat/baseline-fixture-replay` into `main`, then begin Dynamic Lexical Drift Monitoring.
 
-Known “don’t lose this” context:
+Known "don't lose this" context:
 - **Homograph Safety**: If homograph characters are detected, the perturbation scorer MUST drop verification confidence to exactly 0%, regardless of similarity percentages.
 - **ACS Acuity Fallbacks**: If the patient's sex is marked as `unknown`, the safety-grade rule engine must err on the side of caution and apply male risk thresholds (age 40) for chest pain acuity.
+- **Integrity Score is binary on a clean pass**: 100 if match=true and not suspicious. Do not reintroduce confidence-weighted scoring for clean passes — the perturbation score of ~0.15 is expected natural linguistic texture.
+- **Fixture loading is available in audit mode**: Admins need to replay the same baseline responses during a drift audit to verify scoring logic changes without re-entering responses.
 
 ## 18. Canon notes
 - [[AI Fingerprinting - Master Note]]

@@ -8,9 +8,17 @@ interface PlatformLayoutProps {
   onViewChange: (view: PlatformView) => void;
 }
 
+const VIEW_TITLES: Record<PlatformView, string> = {
+  'triage':         'Clinical Triage Dashboard',
+  'medical-audit':  'Medical Audit Trail',
+  'governance':     'Agent Governance Registry',
+  'behavior-audit': 'Behavioral Drift Audit',
+};
+
 export const PlatformLayout: React.FC<PlatformLayoutProps> = ({ children, activeView, onViewChange }) => {
   const { walletAddress, isConnected, isSandbox } = useBlockchain();
   const [copied, setCopied] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
 
   const handleCopy = () => {
     if (walletAddress) {
@@ -20,54 +28,39 @@ export const PlatformLayout: React.FC<PlatformLayoutProps> = ({ children, active
     }
   };
 
+  const shortAddress = walletAddress
+    ? `${walletAddress.substring(0, 6)}…${walletAddress.substring(walletAddress.length - 4)}`
+    : 'Loading…';
+
   return (
     <div className="platform-shell">
-      <Sidebar activeView={activeView} onViewChange={onViewChange} />
-      
+      <Sidebar
+        activeView={activeView}
+        onViewChange={onViewChange}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(c => !c)}
+      />
+
       <main className="main-content">
-        <header className="platform-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, color: 'var(--plasma-clinical-blue)', letterSpacing: '-0.5px' }}>
-              {activeView === 'triage' ? 'Clinical Triage Dashboard' :
-               activeView === 'medical-audit' ? 'Medical Audit Trail' :
-               'Agent Governance Registry'}
+        <header className="platform-header">
+
+          <div className="platform-header__left">
+            <h1 className="platform-header__title">
+              {VIEW_TITLES[activeView]}
             </h1>
             {isSandbox && (
-              <span style={{ 
-                background: 'rgba(245, 158, 11, 0.1)', 
-                color: '#f59e0b', 
-                padding: '2px 10px', 
-                borderRadius: '12px', 
-                fontSize: '0.7rem', 
-                fontWeight: 700,
-                border: '1px solid rgba(245, 158, 11, 0.2)'
-              }}>
-                SANDBOX MODE
-              </span>
+              <span className="badge badge--sandbox">SANDBOX MODE</span>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div className="platform-header__right">
             {isConnected ? (
-              <div style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                background: 'var(--plasma-surface-2)',
-                padding: '6px 12px', 
-                borderRadius: '6px', 
-                fontSize: '0.85rem',
-                border: '1px solid var(--plasma-border)'
-              }}>
-                <span style={{ color: 'var(--plasma-text-muted)', marginRight: '8px' }}>Wallet:</span>
-                <span className="tabular-nums" style={{ marginRight: '10px' }}>
-                  {walletAddress ? (`${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`) : 'Loading...'}
-                </span>
+              <div className="wallet-pill">
+                <span className="wallet-pill__label">Wallet</span>
+                <span className="wallet-pill__address tabular-nums">{shortAddress}</span>
                 <button
                   onClick={handleCopy}
-                  className="icon-btn"
-                  style={{
-                    color: copied ? 'var(--plasma-integrity-green)' : 'inherit',
-                  }}
+                  className={`icon-btn${copied ? ' icon-btn--success' : ''}`}
                   aria-label="Copy wallet address"
                   title="Copy full address"
                 >
@@ -75,9 +68,10 @@ export const PlatformLayout: React.FC<PlatformLayoutProps> = ({ children, active
                 </button>
               </div>
             ) : (
-              <span style={{ color: 'var(--plasma-text-secondary)', fontSize: '0.9rem' }}>Disconnected</span>
+              <span className="platform-header__disconnected">Disconnected</span>
             )}
           </div>
+
         </header>
 
         <div className="content-viewport">

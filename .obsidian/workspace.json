@@ -1,0 +1,225 @@
+{
+  "main": {
+    "id": "188c34f7e3a73c70",
+    "type": "split",
+    "children": [
+      {
+        "id": "03600de727893a17",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9a7e699dcd538ac8",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "PROJECT_MEMORY.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "PROJECT_MEMORY"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "eff5852dc6e6e8aa",
+    "type": "split",
+    "children": [
+      {
+        "id": "c4a66d9a8542ecdd",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8744c66e039831fb",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "83aa857c331ec22f",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "72cb2b481c46d691",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "8db1976ccf551028",
+    "type": "split",
+    "children": [
+      {
+        "id": "6ed6b21bc720de3a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "99c912083d81ed27",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "PROJECT_MEMORY.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for PROJECT_MEMORY"
+            }
+          },
+          {
+            "id": "9b6571697bef3883",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "PROJECT_MEMORY.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from PROJECT_MEMORY"
+            }
+          },
+          {
+            "id": "25de547eff6565d1",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "6ad84e86193658a6",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "cb4bde708218be85",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "PROJECT_MEMORY.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of PROJECT_MEMORY"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "9a7e699dcd538ac8",
+  "lastOpenFiles": [
+    "scripts/migrate-rebaselined-action.js",
+    "scripts/migrate-behavior-rebaseline.js",
+    "db-check.js",
+    "src/components/BehaviorAuditView.tsx",
+    "src/components/PromptStepper.tsx",
+    "scratch/test-ner.ts",
+    "test/unit/phi-guard.test.ts",
+    "test/unit",
+    "src/services/phi-guard.service.ts",
+    "node_modules/onnxruntime-node/lib/version.ts",
+    "node_modules/onnxruntime-node/lib/binding.ts",
+    "node_modules/onnxruntime-node/README.md",
+    "node_modules/@img/sharp-libvips-darwin-arm64/README.md",
+    "node_modules/@huggingface/transformers/README.md",
+    "node_modules/onnxruntime-common/README.md",
+    "node_modules/protobufjs/README.md",
+    "node_modules/long/README.md",
+    "node_modules/es6-error/README.md",
+    "node_modules/matcher/readme.md",
+    "node_modules/es6-error/LICENSE.md",
+    "node_modules/es6-error/CHANGELOG.md",
+    "node_modules/guid-typescript/README.md",
+    "node_modules/boolean/README.md",
+    "node_modules/boolean/CHANGELOG.md",
+    "node_modules/platform/README.md",
+    "node_modules/flatbuffers/README.md",
+    "node_modules/protobufjs/ext/descriptor/README.md",
+    "node_modules/protobufjs/ext/debug/README.md",
+    "node_modules/protobufjs/google/README.md",
+    "node_modules/serialize-error/node_modules/type-fest/readme.md",
+    "node_modules/serialize-error/readme.md",
+    "node_modules/onnxruntime-web/lib/onnxjs/ort-schema/protobuf/README.md",
+    "node_modules/onnxruntime-web/lib/onnxjs/ort-schema/flatbuffers/README.md",
+    "node_modules/onnxruntime-web/node_modules/onnxruntime-common/README.md",
+    "node_modules/onnxruntime-web/docs/webgpu-operators.md",
+    "node_modules/onnxruntime-web/docs/webnn-operators.md"
+  ]
+}

@@ -3,10 +3,10 @@ project: AI Fingerprinting / Verification System
 short_name: fingerprint-ai
 status: active
 owner: Dave Dumaresq
-last_updated: 2026-05-23
+last_updated: 2026-05-29
 primary_repo: /Users/dfdumaresq/Projects/Fingerprint
 primary_vault_note: [[AI Fingerprinting - Master Note]]
-phase: Medical MVP & Inclusive Demographics (v1.1.0) / Phase 2 SAE Groundwork
+phase: Medical MVP — PHI Guard Masking Engine (v1.2.0)
 trust_level: experimental (Phase 1 Completed, Phase 2 in progress)
 ---
 
@@ -37,8 +37,8 @@ Definition of done:
 - [x] Robust demographic models including Sex At Birth (with unknown/intersex fallbacks) and Gender Identity in `PatientContext`.
 - [x] SAE Layer 9 visual audit panel categorizing active latent concepts (Critical, Clinical, Cognitive, Structural) by activation strength.
 - [x] Clinician decision overrides and amendments logged as cryptographically anchored ledger entries.
+- [x] Comprehensive automated PHI masking guardrails preventing patient identifiers from reaching the Keccak256 hash chain or blockchain ledger.
 - [ ] Unified "Baseline-then-Audit" UI workflow merging registration and verification into a single clinician screen.
-- [ ] Comprehensive automated PHI masking guardrails in `EventService`.
 
 Out of scope for this phase:
 - Production deployment on mainnet networks (restricted to Sepolia and local simulation environments).
@@ -46,7 +46,7 @@ Out of scope for this phase:
 
 ## 4. Current state
 Active Git Branch:
-- `feat/parallel-semantic-audit` (Completed: Real-time Parallel Semantic Embedding Alignment Audit and Pre-Submission Clinical Contradiction Guardrail)
+- `feat/phi-guard-masking` (3 commits, ready for review and merge)
 
 Confirmed:
 - **Safety-Grade Behavioral Verification**: Fully operational off-chain verification using token-based Jaccard similarity (Bag-of-Words) and canonicalization layers to defeat formatting and whitespace attacks.
@@ -56,11 +56,11 @@ Confirmed:
 - **Parallel Semantic Embedding Alignment Audit**: Fully implemented real-time cosine similarity comparisons against ESI gold-standard sentinel prompts. Runs in parallel with the SAE audit via `Promise.all` in the drawer.
 - **Pre-Submission Clinical Contradiction Guardrail**: Implemented asynchronous semantic validation to intercept and block chest symptom admissions with `0/10` pain score, featuring automatically expanded extended vitals, warning alerts, and safety bypass overrides.
 - **Percentage-Mapped Attention Optimizations**: Implemented under-the-hood prompt formatting to map pain scores to percentages (`Pain 80%` and `Pain 0%`) to force value priority in the model's self-attention layers, resolving the high-frequency numeric token centering bias.
-- **Stable Multi-Worker Test Suite**: Verified full API and frontend compliance; all 26 test suites (208 test cases) pass successfully.
+- **PHI Guard Masking Engine**: Three-tier pipeline (regex battery → keyword prefix scan → local WASM BERT-NER) masks all PHI in `chief_complaint`, `gender_identity`, and `reason_text` before Keccak256 hash computation. Redact-and-proceed design never blocks clinical workflow. Soft UI warning banner surfaced on PHI detection. 31 unit tests, 239/239 total tests passing.
+- **Stable Multi-Worker Test Suite**: All 27 test suites (239 test cases) pass on `feat/phi-guard-masking`.
 
 In progress:
 - **Unified Baseline & Drift Audit View**: Merging `BehavioralRegistration` and `BehavioralVerification` components to simplify clinician interaction under `behavior-audit`.
-- **PHI Masking Engine**: Designing standard regex/dictionary guardrails for the append-only `EventService` ledger ingestion flow.
 
 Blocked:
 - None. Core hardhat contracts, postgres backend, and Express API layers are stable and operational.
@@ -262,6 +262,7 @@ Unresolved threats:
 - **2026-05-22**: Fixed triage UI clinician decision amendments to validate manual inputs relative to active clinician overrides instead of static baselines, and resolved red-flag deduplication.
 - **2026-05-23**: Decided to retain Ollama and live LLM integration as a core requirement. True behavioral auditing, Jaccard drift detection, and SAE neural analysis require a non-deterministic generative model to produce real-world clinical variations. We maintain a dual-mode testing framework: offline deterministic mock mode for developer convenience/testing, and live generative mode (Ollama/APIs) for clinical validation.
 - **2026-05-26**: Recalibrated ESI-1 and ESI-2 safety floor boundaries to `0.65` and implemented percentage-based pain mapping (`Pain: 80%`) to neutralize the high-frequency token centering artifact of raw numeric digits like `0/10` in dense embedding spaces.
+- **2026-05-29**: Implemented three-tier PHI Guard masking engine on `feat/phi-guard-masking`. Design decisions: redact-and-proceed (never block clinical workflow); mask before Keccak256 hash, after AI inference; no cloud NER (cloud NER paradox — can't send PHI to detect PHI); `aggregation_strategy` must be passed at pipeline execution time, not instantiation, in `@huggingface/transformers` WASM runtime.
 
 ## 15. Open questions
 - How to scale offline C2PA verification certificates for hospital environments with intermittent external network connectivity?
@@ -269,16 +270,16 @@ Unresolved threats:
 - What is the optimal ROC calibration curve to minimize false positives in multi-lingual medical triage environments?
 
 ## 16. Next priority tasks
-1. **Unified Baseline-then-Audit Workflow**: Merge `BehavioralRegistration` and `BehavioralVerification` into a single, cohesive React view.
-2. **Automated PHI Masking Engine**: Build automated text parsing guardrails within `EventService` to strip PII before hashing.
+1. **Merge PHI Guard Branch**: Review `feat/phi-guard-masking` and merge to `main`.
+2. **Unified Baseline-then-Audit Workflow**: Merge `BehavioralRegistration` and `BehavioralVerification` into a single, cohesive React view.
 3. **Dynamic Lexical Drift Monitoring (v1)**: Compute continuous per-agent drift scores ($1 - \text{mean Jaccard}$) across historical encounters and graph trends.
-4. **Interactive Evidence Timeline**: Build a beautiful timeline trace in the `MedicalAuditDashboard` for clinicians to explore block-chain anchors and history.
+4. **Interactive Evidence Timeline**: Build a timeline trace in the `MedicalAuditDashboard` for clinicians to explore blockchain anchors and history.
 
 ## 17. Session handoff
 Read first on resume:
 - This file (`PROJECT_MEMORY.md`)
 - [[AI Fingerprinting - Master Note]]
-- The latest progress log in [[02_Log/2026-05-22 - Triage UI Drawer, Decision Amendments, and Layer 9 SAE Panel Overhaul]]
+- The latest progress log in [[02_Log/2026-05-29 - PHI Guard Masking Engine]]
 
 Do not re-open by default unless needed:
 - Older exploratory notes
@@ -286,7 +287,7 @@ Do not re-open by default unless needed:
 - Long-form research digests
 
 Best next action:
-- Consolidate the behavioral registration and drift verification components into a single Unified Baseline & Audit Component under `src/components/`.
+- Merge branch `feat/phi-guard-masking` into `main`, then begin the Unified Baseline-then-Audit UI workflow.
 
 Known “don’t lose this” context:
 - **Homograph Safety**: If homograph characters are detected, the perturbation scorer MUST drop verification confidence to exactly 0%, regardless of similarity percentages.

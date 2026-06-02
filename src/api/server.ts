@@ -176,6 +176,37 @@ app.post('/v1/internal/traits/seed', async (req: Request, res: Response) => {
     
     // 2. Store the raw JSON responses in Redis
     await redis.set(`agent:responses:${fingerprintHash}`, JSON.stringify(responseSet));
+
+    // 3. Update the PostgreSQL database directly as well to sync the trait hash off-chain immediately!
+    await db.query(
+      `UPDATE agents 
+       SET latest_trait_hash = $1, trait_version = $2, trait_updated_at = NOW(), updated_at = NOW()
+       WHERE fingerprint_hash = $3`,
+      [hashResult.hash, hashResult.traitVersion, fingerprintHash]
+    );
+
+    // 4. Update the Redis agent cache so verify pulls the updated profile instantly!
+    const { rows } = await db.query('SELECT * FROM agents WHERE fingerprint_hash = $1', [fingerprintHash]);
+    if (rows.length > 0) {
+      const row = rows[0];
+      const agentProfile = {
+        fingerprintHash: row.fingerprint_hash,
+        agent_id: row.agent_id,
+        name: row.name,
+        provider: row.provider,
+        version: row.version,
+        registeredBy: row.registered_by,
+        createdAt: row.created_at.toISOString(),
+        isRevoked: row.is_revoked,
+        behavioralTrait: {
+          hasTrait: true,
+          latestTraitHash: row.latest_trait_hash,
+          traitVersion: row.trait_version,
+          lastUpdatedAt: new Date().toISOString()
+        }
+      };
+      await redis.set(`agent:${fingerprintHash}`, JSON.stringify(agentProfile));
+    }
     
     res.json({
       success: true,
@@ -239,6 +270,7 @@ app.get('/v1/events', async (req: Request, res: Response) => {
   try {
     const filters = {
       agent_fingerprint_id: req.query.agent_fingerprint_id as string,
+      workflow_type: req.query.workflow_type as string,
       days_back: req.query.days_back ? parseInt(req.query.days_back as string, 10) : undefined
     };
     

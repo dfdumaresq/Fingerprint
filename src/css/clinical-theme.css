@@ -339,3 +339,19 @@ body {
   color: #f1f5f9;
   border: 1px solid #334155;
 }
+
+/* Warning / Amber highlighting for re-baselines */
+.status-warning {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: var(--plasma-warning-amber);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.row-warning {
+  background-color: rgba(245, 158, 11, 0.04) !important;
+}
+
+.row-warning td:first-child {
+  border-left: 3px solid var(--plasma-warning-amber);
+}
+

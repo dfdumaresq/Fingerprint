@@ -63,7 +63,7 @@ Confirmed:
 - **Collapsible Sidebar**: ‹ › toggle collapses sidebar to 60px icon-only rail (0.25s transition). Nav data-driven via `NAV_SECTIONS` array. All inline styles replaced with semantic CSS classes. Version badge shows `v1.3.0`.
 
 In progress:
-- Nothing active. `main` is clean.
+- **Host MVP**: Deploying the current 5-stage behavioral drift audit workflow (Select Agent -> Baseline Status -> Prompt Suite -> Result) to a staging/production hosting environment for early validation and user feedback.
 
 Blocked:
 - None.

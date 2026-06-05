@@ -17,15 +17,14 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
 
 ## High Priority: Clinical Trust & Workflow
 
-1. **Clinician Decision Ledger (Immutable History)**
+1. **Host MVP**
+   - Deploy and host the current MVP to an accessible staging/production environment. The 5-stage behavioral drift audit workflow (Select Agent -> Baseline Status -> Prompt Suite -> Result) is fully operational and ready to demonstrate real value and gather early feedback from clinicians.
+2. **Clinician Decision Ledger (Immutable History)**
    - Implement "Clinician Decision" events to track how human reviewers accept, modify, or override AI recommendations. These must be logged as cryptographically anchored amendments to the original record.
-2. **Interactive Audit Timeline (Evidence Chain Visualization)**
+3. **Interactive Audit Timeline (Evidence Chain Visualization)**
    - Develop a visual timeline for clinicians to trace the "Chain of Evidence." This surfaces underlying Merkle-chain connectivity as intuitive trust signals without requiring deep technical knowledge.
-3. **PHI Masking & Guardrail Engine**
+4. **PHI Masking & Guardrail Engine**
    - Implement automated detection and masking of Protected Health Information (PHI) to ensure that high-integrity audit logs focus on system behavior and decisions rather than patient-specific data.
-4. **Automatic Lexical Drift Monitoring (v1)**
-   - Use existing Jaccard-based trait computation to periodically compare current responses to baseline probes.
-   - Compute a per-agent drift score over time (1 − mean Jaccard) and surface trends in Triage vs. Enforcement modes.
 5. **Unified "Baseline-then-Audit" Workflow**
    - Consolidate the Registration and Verification views into a single, cohesive audit flow. **Goal**: Avoid forcing clinicians to think in terms of "Blockchain Registration" vs. "Verification" steps.
 6. **Demographic & Identity Model Refresh**
@@ -43,27 +42,29 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
 
 ## Medium Priority: Scale & Compliance
 
-6. **Semantic Drift Monitoring (v2, Embeddings)**
+8. **Semantic Drift Monitoring (v2, Embeddings)**
    - Introduce embedding-based similarity (Cosine distance) for the same probe suite to improve resilience against paraphrases and style shifts.
    - Combine lexical and semantic drift into a unified behavioral drift score for advanced enforcement decisions.
-7. **Regulatory Export Service (C2PA-signed PDF Logs)**
+9. **Regulatory Export Service (C2PA-signed PDF Logs)**
    - Create a service to generate non-binding PDF audit certificates proving system integrity for internal or experimental compliance review.
-8. **Integrity Observability (Prometheus/Grafana)**
-   - Establish monitoring for ledger health, automated integrity fault detection, and cross-agent behavioral drift metrics at scale.
-9. **Multi-Agent Comparative Triage (V2)**
-   - Enable side-by-side auditing of different AI models or versions against the same clinical case to streamline model-switchover risk assessments.
-10. **UI Version Tag Management**
-    - Refactor the hardcoded `v1.2.0-stabilized` footer tag in [Sidebar.tsx](file:///Users/dfdumaresq/Projects/Fingerprint/src/components/Sidebar.tsx#L58) to be dynamically managed via the package version, platform config, or environment variables instead of a static string.
+10. **Integrity Observability (Prometheus/Grafana)**
+    - Establish monitoring for ledger health, automated integrity fault detection, and cross-agent behavioral drift metrics at scale.
+11. **Multi-Agent Comparative Triage (V2)**
+    - Enable side-by-side auditing of different AI models or versions against the same clinical case to streamline model-switchover risk assessments.
 
 ## Lower Priority / Deferred
 
+   - **Automatic Lexical Drift Monitoring (v1) & Drift Charts**
+     - *Deferred*: The current 5 working stages are sufficient for the core workflow validation. Periodic/automatic drift charts are important polish but are deferred to prioritize getting user validation on the core workflow.
+   - **UI Version Tag Management**
+     - *Deferred*: Dynamically managing the version tag is a low-impact polish task and is deferred in favor of hosting the MVP.
    - Defer environmental carbon-footprint mapping for blockchain operations until the core clinical integrity MVP is finalized.
    - Defer full EIP-712 signature storage (e.g., LocalStorage / database sidecar) and in-memory Sandbox signing to make the signature verification flow functional on lookup.
 
 ## Next Immediate Actions
 
-1. **Unified Audit Workflow**: Merge `BehavioralRegistration` and `BehavioralVerification` components into a single "Establish Baseline & Audit" interface.
-2. **PHI Masking Engine**: Audit the current event logging structure (`EventService`) to identify where masking guardrails are most critical.
+1. **Host MVP**: Set up hosting infrastructure and deploy the application to allow clinicians to interact with the core 5-stage drift audit workflow.
+2. **Clinician Decision Ledger**: Connect database override actions to update the ledger with parent-child cryptographic amendments.
 
 ## Design Considerations
 - **Regulatory Frameworks**: While not yet promising formal compliance, designs should consider **HIPAA** logging expectations and **EU AI Act** transparency obligations regarding auditability.

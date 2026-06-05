@@ -33,6 +33,9 @@
 # Deployment — certbot certificates (server-side only, never commit)
 certbot/
 
+# Production secrets files — never commit
+fullhost.ini
+
 # Editor directories and files
 .idea
 .vscode

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { REASONING_TEST_SUITE_V1 } from '../tests/behavioralTestSuite';
 
 export type StepperMode = 'baseline' | 'audit';
@@ -57,6 +57,10 @@ export const PromptStepper: React.FC<PromptStepperProps> = ({
   const [fixtureBannerDismissed, setFixtureBannerDismissed] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [clearStatus, setClearStatus] = useState<'idle' | 'clearing' | 'cleared'>('idle');
+
+  // Client-side import state & input ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
 
   const currentPrompt = prompts[step];
@@ -152,6 +156,79 @@ export const PromptStepper: React.FC<PromptStepperProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  // ── Export current prompt responses as JSON download ────────────────────────
+  const handleExportCurrentResponses = () => {
+    const exportData = {
+      fingerprintHash: agentFingerprintHash || 'custom-hash',
+      agentName: agentName || 'custom-agent',
+      suiteVersion: suiteVersion || REASONING_TEST_SUITE_V1.version,
+      responses: responses,
+      savedAt: new Date().toISOString(),
+    };
+    const filename = `fixture-${(agentName || 'agent').replace(/\s+/g, '-').toLowerCase()}-current-${new Date().toISOString().slice(0, 10)}.json`;
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Import fixture file input trigger ────────────────────────────────────────
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // ── Handle file import change and validation ────────────────────────────────
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        
+        let importedResponses: string[] = [];
+        if (Array.isArray(parsed)) {
+          importedResponses = parsed;
+        } else if (parsed && Array.isArray(parsed.responses)) {
+          importedResponses = parsed.responses;
+        } else {
+          throw new Error('Invalid fixture structure: missing "responses" array');
+        }
+
+        if (importedResponses.length !== prompts.length) {
+          throw new Error(`Invalid response count: expected ${prompts.length}, got ${importedResponses.length}`);
+        }
+
+        if (!importedResponses.every(r => typeof r === 'string')) {
+          throw new Error('All responses in the fixture must be strings');
+        }
+
+        setResponses(importedResponses);
+        setStep(0);
+        setImportError(null);
+
+        // If the imported file has metadata, optionally set it as fixture
+        if (parsed.savedAt && parsed.responses) {
+          setFixture(parsed);
+          setFixtureBannerDismissed(false);
+        }
+      } catch (err: any) {
+        setImportError(err.message || 'Failed to parse JSON file');
+      }
+    };
+    reader.onerror = () => {
+      setImportError('Error reading file');
+    };
+    reader.readAsText(file);
+    // Clear input value so selecting the same file again triggers change event
+    e.target.value = '';
+  };
+
 
   const handleChange = (value: string) => {
     const next = [...responses];
@@ -173,6 +250,55 @@ export const PromptStepper: React.FC<PromptStepperProps> = ({
 
   return (
     <div className="prompt-stepper">
+      {/* Hidden file input for importing fixtures */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".json"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+
+      {/* ── Import Error Banner ── */}
+      {importError && (
+        <div style={{
+          marginBottom: '20px',
+          padding: '14px 16px',
+          background: 'rgba(239, 68, 68, 0.07)',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
+          borderRadius: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--plasma-integrity-red)', fontSize: '1.1rem' }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--plasma-integrity-red)', marginBottom: '2px' }}>
+                Import Failed
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--plasma-text-secondary)' }}>
+                {importError}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setImportError(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--plasma-text-muted)',
+              cursor: 'pointer',
+              fontSize: '1.2rem',
+              lineHeight: 1,
+              padding: '0 4px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* ── Fixture Banner (baseline mode + fixture exists + not dismissed) ── */}
       {canLoadFixture && !fixtureLoading && fixture && !fixtureBannerDismissed && (
@@ -236,10 +362,50 @@ export const PromptStepper: React.FC<PromptStepperProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '10px',
+          flexWrap: 'wrap',
+          gap: '12px',
         }}>
-          <span className="text-secondary" style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Prompt {step + 1} of {prompts.length}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <span className="text-secondary" style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Prompt {step + 1} of {prompts.length}
+            </span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={handleImportClick}
+                className="secondary-btn"
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600,
+                }}
+                disabled={disabled}
+                title="Import responses from JSON file"
+              >
+                <span>📥</span> Import JSON
+              </button>
+              <button
+                type="button"
+                onClick={handleExportCurrentResponses}
+                className="secondary-btn"
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600,
+                }}
+                disabled={disabled}
+                title="Export current responses to JSON file"
+              >
+                <span>📤</span> Export JSON
+              </button>
+            </div>
+          </div>
           <span className="status-pill" style={{
             background: 'var(--plasma-surface)',
             border: '1px solid var(--plasma-border)',

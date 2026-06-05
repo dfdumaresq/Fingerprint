@@ -18,7 +18,7 @@ echo "==> Ensuring nginx is running (must serve port 80 for ACME challenge)..."
 docker compose -f "$APP_DIR/docker-compose.yml" up -d nginx
 
 echo "==> Requesting Let's Encrypt certificate for $DOMAIN and www.$DOMAIN..."
-docker compose -f "$APP_DIR/docker-compose.yml" run --rm certbot certonly \
+docker compose -f "$APP_DIR/docker-compose.yml" run --rm --entrypoint "" certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
   --email "$EMAIL" \

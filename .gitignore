@@ -26,8 +26,12 @@
 .env.local
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
 .env*.local
+
+# Deployment — certbot certificates (server-side only, never commit)
+certbot/
 
 # Editor directories and files
 .idea

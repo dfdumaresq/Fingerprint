@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+dist/
+cache/
+.git/
+.env
+.env.production
+.obsidian/
+02_Log/
+artifacts/
+jest-output.json
+*.log

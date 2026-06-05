@@ -1,0 +1,85 @@
+version: '3.9'
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: fingerprint_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       fingerprint
+      POSTGRES_USER:     fingerprint
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U fingerprint"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: fingerprint_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:     ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── Express API ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context:    .
+      dockerfile: Dockerfile
+    image: fingerprint-api:latest
+    container_name: fingerprint_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV:            production
+      PORT:                3000
+      DATABASE_URL:        postgresql://fingerprint:${POSTGRES_PASSWORD}@postgres:5432/fingerprint
+      REDIS_URL:           redis://:${REDIS_PASSWORD}@redis:6379
+      API_KEY:             ${API_KEY}
+      SEPOLIA_URL:         ${SEPOLIA_URL}
+      PRIVATE_KEY:         ${PRIVATE_KEY}
+      MASTER_KEY_PASSWORD: ${MASTER_KEY_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "3000"
+
+  # ── Nginx + React frontend ───────────────────────────────────────────────────
+  nginx:
+    build:
+      context:    .
+      dockerfile: Dockerfile.nginx
+      args:
+        # Frontend calls the API via same-origin Nginx proxy — no CORS needed
+        REACT_APP_API_GATEWAY_URL: ""
+        API_KEY:                   ${API_KEY}
+    image: fingerprint-nginx:latest
+    container_name: fingerprint_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    volumes:
+      # Certbot SSL certificates (populated after first cert issuance)
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+
+volumes:
+  postgres_data:
+  redis_data:

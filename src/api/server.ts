@@ -728,11 +728,46 @@ app.post('/v1/agents/:fingerprintHash/sae/verify', async (req: Request, res: Res
     }
 
     // 3. Spawn conda runner child process asynchronously without blocking event loop
-    const { spawn } = require('child_process');
+    // Guard: if conda is not available in this environment (e.g. production Docker),
+    // return a graceful offline/mock response rather than crashing the process with ENOENT.
+    const { spawn, execFile } = require('child_process');
+    const whichConda = await new Promise<boolean>((resolve) => {
+      execFile('which', ['conda'], (err: any) => resolve(!err));
+    });
+
+    if (!whichConda) {
+      console.warn('[SAE] conda not available in this environment — returning offline mock response.');
+      res.json({
+        success: true,
+        fingerprintHash,
+        layer,
+        sparsity: 0,
+        active_features: [],
+        mock: true,
+        offline: true,
+        note: 'SAE pipeline unavailable in this environment (conda/MLX not installed). Returning safe offline response.'
+      });
+      return;
+    }
+
     const child = spawn('conda', args);
 
     let stdout = '';
     let stderr = '';
+
+    // CRITICAL: handle spawn error (e.g. ENOENT) to prevent process crash
+    child.on('error', (spawnErr: NodeJS.ErrnoException) => {
+      console.error('[SAE] Failed to spawn conda process:', spawnErr.message);
+      if (!res.headersSent) {
+        res.status(503).json({
+          error: {
+            code: 'sae_unavailable',
+            message: 'SAE activation pipeline is not available in this environment.',
+            details: spawnErr.message
+          }
+        });
+      }
+    });
 
     child.stdout.on('data', (data: Buffer) => {
       stdout += data.toString();
@@ -743,6 +778,7 @@ app.post('/v1/agents/:fingerprintHash/sae/verify', async (req: Request, res: Res
     });
 
     child.on('close', (code: number) => {
+      if (res.headersSent) return; // Already responded via error handler
       if (code !== 0) {
         console.error(`Python extraction script failed with code ${code}. Stderr: ${stderr}`);
         res.status(500).json({

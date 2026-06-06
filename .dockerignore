@@ -10,3 +10,4 @@ cache/
 artifacts/
 jest-output.json
 *.log
+certbot/

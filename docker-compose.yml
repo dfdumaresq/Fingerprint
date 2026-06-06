@@ -49,10 +49,10 @@ services:
       SEPOLIA_URL:           ${SEPOLIA_URL}
       PRIVATE_KEY:           ${PRIVATE_KEY}
       MASTER_KEY_PASSWORD:   ${MASTER_KEY_PASSWORD}
-      # Triage agent — override to switch providers without rebuilding the image
       TRIAGE_AGENT_PROVIDER: ${TRIAGE_AGENT_PROVIDER:-rules}
       TRIAGE_AGENT_SLUG:     ${TRIAGE_AGENT_SLUG:-rules-engine-v1}
       TRIAGE_AGENT_NAME:     ${TRIAGE_AGENT_NAME:-Clinical Rules Engine}
+      TRIAGE_AGENT_MODEL:    ${TRIAGE_AGENT_MODEL:-tinydolphin}
       OLLAMA_ENDPOINT:       ${OLLAMA_ENDPOINT:-http://localhost:11434}
     depends_on:
       postgres:

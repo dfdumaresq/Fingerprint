@@ -161,6 +161,61 @@ function runRuleEngine(input: ClinicalInput): TriageResult {
   let acuity = 3;
   const reasons: string[] = [];
   const { age_years, sex_at_birth } = input.patient_context.demographics;
+  const complaint = (input.chief_complaint || '').toLowerCase();
+
+  // ── Complaint-pattern rules (clinical knowledge, not just vitals) ─────────
+  // These handle high-acuity presentations where vitals may appear deceptively
+  // stable but the clinical context demands urgent workup.
+
+  // DVT / VTE: Unilateral limb swelling + immobility risk context
+  // Proxies for Wells Score ≥ 2 (high probability)
+  const dvtKeywords = ['calf swelling', 'leg swelling', 'swelling in', 'swollen leg', 'swollen calf', 'calf pain', 'dvt', 'blood clot', 'deep vein'];
+  const immobilityKeywords = ['flight', 'travel', 'long journey', 'immobil', 'bed rest', 'prolonged sitting', 'car ride', 'bus ride'];
+  const hasDvtComplaint = dvtKeywords.some(k => complaint.includes(k));
+  const hasImmobilityContext = immobilityKeywords.some(k => complaint.includes(k));
+
+  if (hasDvtComplaint) {
+    // Unilateral swelling alone → urgent (workup required)
+    acuity = Math.min(acuity, 3);
+    reasons.push('Possible DVT: unilateral limb swelling requiring urgent vascular assessment');
+
+    if (hasImmobilityContext) {
+      // Immobility + swelling → high Wells Score proxy → emergent
+      acuity = Math.min(acuity, 2);
+      reasons.push('High DVT/VTE risk: limb swelling following prolonged immobility (Wells Score elevated)');
+    }
+
+    // Age ≥ 60 + female = additional VTE risk amplifier
+    if (age_years >= 60 && (sex_at_birth === 'female' || sex_at_birth === 'unknown')) {
+      acuity = Math.min(acuity, 2);
+      reasons.push(`Elevated VTE risk profile (age ${age_years}, ${sex_at_birth})`);
+    }
+  }
+
+  // Stroke / TIA: FAST symptoms or sudden neurological deficit
+  const strokeKeywords = ['facial droop', 'face droop', 'arm weakness', 'speech difficulty', 'slurred speech', 'sudden weakness', 'sudden numbness', 'stroke', 'tia', 'vision loss', 'sudden headache'];
+  const hasStrokeComplaint = strokeKeywords.some(k => complaint.includes(k));
+
+  if (hasStrokeComplaint) {
+    acuity = Math.min(acuity, 2);
+    reasons.push('Possible stroke/TIA: time-critical neurological assessment required (FAST positive)');
+    if (age_years >= 55) {
+      acuity = Math.min(acuity, 1);
+      reasons.push(`High stroke risk profile (age ${age_years}) — resuscitation bay assessment`);
+    }
+  }
+
+  // Sepsis / SIRS: Infection source + systemic signs
+  // (Vitals-based checks below will also catch HR/RR thresholds)
+  const sepsisKeywords = ['fever with', 'infection', 'sepsis', 'unwell with fever', 'rigors', 'shaking', 'chills with'];
+  const hasSepsisComplaint = sepsisKeywords.some(k => complaint.includes(k));
+
+  if (hasSepsisComplaint && (input.vitals.hr > 100 || input.vitals.rr > 20 || input.vitals.temp > 38.3)) {
+    acuity = Math.min(acuity, 2);
+    reasons.push('Possible sepsis/SIRS: fever with systemic response requires urgent assessment');
+  }
+
+  // ── Vitals-threshold rules ────────────────────────────────────────────────
 
   if (input.vitals.hr > 120) { acuity = Math.min(acuity, 2); reasons.push(`Tachycardia (HR ${input.vitals.hr})`); }
   if (input.vitals.spo2 < 92) { acuity = Math.min(acuity, 2); reasons.push(`Hypoxia (SpO₂ ${input.vitals.spo2}%)`); }
@@ -184,6 +239,7 @@ function runRuleEngine(input: ClinicalInput): TriageResult {
   if (reasons.length === 0) reasons.push(`Stable presentation — ${input.chief_complaint}`);
   return { acuity, reasons };
 }
+
 
 async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageResult, provider: string }> {
   if (TRIAGE_AGENT.provider === 'ollama') {

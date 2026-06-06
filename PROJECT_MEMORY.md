@@ -61,9 +61,10 @@ Confirmed:
 - **Baseline Fixture Record & Replay**: Admin responses stored server-side in `baseline_fixtures` table (PostgreSQL JSONB). One-click Load Responses in both baseline and audit modes. Save & Finalize records to server on first run. Export as JSON for backup.
 - **Integrity Score 100/100**: Clean audit pass (match=true, no suspicious patterns) now returns 100/100. Hard zero enforced for suspicious perturbations. Mismatch scaled by similarity.
 - **Collapsible Sidebar**: ‹ › toggle collapses sidebar to 60px icon-only rail (0.25s transition). Nav data-driven via `NAV_SECTIONS` array. All inline styles replaced with semantic CSS classes. Version badge shows `v1.3.0`.
+- **Host MVP**: Deployed the full behavioral verification platform and clinical triage queue to the production environment (`https://clinicianledger.ca`) over secure HTTPS, successfully integrating a local host-bound `tinydolphin` Ollama agent for CPU-based inference.
 
 In progress:
-- **Host MVP**: Deploying the current 5-stage behavioral drift audit workflow (Select Agent -> Baseline Status -> Prompt Suite -> Result) to a staging/production hosting environment for early validation and user feedback.
+- None.
 
 Blocked:
 - None.

@@ -48,6 +48,10 @@ interface ClinicalData {
   gender?: string;  // legacy fallback
   red_flags?: string[];
   ai_recommendation?: { acuity: number; reasons: string[] };
+  /** Clinical rules engine result, always run in parallel with the AI model */
+  rules_recommendation?: { acuity: number; reasons: string[] };
+  /** |ai_acuity - rules_acuity|: 0=aligned, 1=discrepancy, ≥2=conflict */
+  acuity_divergence?: number;
   ai_provider?: string;
   state: string;
 }
@@ -1757,6 +1761,100 @@ export const TriageDashboard: React.FC = () => {
                         </div>
                       )}
 
+                      {/* Rule Conflict Indicator: surfaces divergence between AI output and clinical rules engine */}
+                      {(() => {
+                        const aiAcuity = selectedEncounter.clinical?.ai_recommendation?.acuity;
+                        const rulesAcuity = selectedEncounter.clinical?.rules_recommendation?.acuity;
+                        const divergence = selectedEncounter.clinical?.acuity_divergence;
+                        const rulesReasons = selectedEncounter.clinical?.rules_recommendation?.reasons || [];
+                        const semanticScore = semanticData?.similarity;
+
+                        // Only render when we have both values and they differ
+                        if (aiAcuity == null || rulesAcuity == null || divergence == null || divergence === 0) return null;
+
+                        // Classify severity:
+                        // divergence ≥ 2 + high semantic = most dangerous (silent failure)
+                        // divergence ≥ 2 + low semantic  = both signals flagging (more detectable)
+                        // divergence = 1                 = minor discrepancy
+                        const isSilentFailure = divergence >= 2 && semanticScore != null && semanticScore >= 0.70;
+                        const isSignificant = divergence >= 2;
+
+                        const borderColor = isSilentFailure ? 'rgba(251, 191, 36, 0.5)' : isSignificant ? 'rgba(239, 68, 68, 0.35)' : 'rgba(251, 191, 36, 0.2)';
+                        const bgColor = isSilentFailure ? 'linear-gradient(135deg, rgba(251,191,36,0.10) 0%, rgba(239,68,68,0.06) 100%)' : isSignificant ? 'linear-gradient(135deg, rgba(239,68,68,0.10) 0%, rgba(239,68,68,0.04) 100%)' : 'linear-gradient(135deg, rgba(251,191,36,0.07) 0%, rgba(0,0,0,0) 100%)';
+                        const labelColor = isSilentFailure ? '#fde68a' : isSignificant ? '#fca5a5' : '#fef3c7';
+                        const icon = isSilentFailure ? '⚡' : isSignificant ? '🔴' : '🟡';
+                        const label = isSilentFailure
+                          ? 'Silent Failure Risk — High Semantic + Logic Conflict'
+                          : isSignificant
+                          ? 'Significant Rule Conflict Detected'
+                          : 'Minor Rule Discrepancy';
+
+                        return (
+                          <div style={{
+                            background: bgColor,
+                            border: `1px solid ${borderColor}`,
+                            borderRadius: '8px',
+                            padding: '14px 16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px',
+                            marginTop: '2px'
+                          }}>
+                            {/* Header row */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: labelColor, display: 'flex', alignItems: 'center', gap: '7px' }}>
+                                {icon} {label}
+                              </span>
+                              <span style={{
+                                background: 'rgba(0,0,0,0.3)',
+                                color: labelColor,
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                fontFamily: 'monospace'
+                              }}>
+                                Δ{divergence} level{divergence !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+
+                            {/* Acuity comparison */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px', alignItems: 'center' }}>
+                              <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>AI Decision</div>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: aiAcuity <= 2 ? '#f87171' : aiAcuity === 3 ? '#fbbf24' : '#9ca3af', fontFamily: 'monospace', lineHeight: 1 }}>L{aiAcuity}</div>
+                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>{['','Resuscitation','Emergent','Urgent','Less Urgent','Non-Urgent'][aiAcuity]}</div>
+                              </div>
+                              <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: '1.1rem' }}>≠</div>
+                              <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Rules Engine</div>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: rulesAcuity <= 2 ? '#f87171' : rulesAcuity === 3 ? '#fbbf24' : '#9ca3af', fontFamily: 'monospace', lineHeight: 1 }}>L{rulesAcuity}</div>
+                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>{['','Resuscitation','Emergent','Urgent','Less Urgent','Non-Urgent'][rulesAcuity]}</div>
+                              </div>
+                            </div>
+
+                            {/* Rules engine reasoning */}
+                            {rulesReasons.length > 0 && (
+                              <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '6px', padding: '8px 10px' }}>
+                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Rules Engine Triggered On</div>
+                                <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  {rulesReasons.map((r: string, i: number) => (
+                                    <li key={i} style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: 1.4 }}>{r}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Silent failure explanation */}
+                            {isSilentFailure && (
+                              <div style={{ fontSize: '0.75rem', color: '#fde68a', lineHeight: 1.5, borderTop: '1px solid rgba(251,191,36,0.15)', paddingTop: '8px' }}>
+                                <strong>⚡ Silent Failure Pattern:</strong> The AI's language representation aligns well semantically ({semanticScore != null ? `${(semanticScore * 100).toFixed(0)}%` : '--'}) but the clinical logic diverges significantly. The model produced a fluent, internally coherent response that is clinically incorrect. Clinician review is essential.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {/* 2. Technical Audit Trail: Complete roster of sentinel baseline prompt vector data */}
                       {showSemanticTechnical && (
                         <div className="sae-technical-audit-trail" style={{
@@ -1809,6 +1907,13 @@ export const TriageDashboard: React.FC = () => {
                               <div><span style={{ opacity: 0.5 }}>Cosine Sim:</span> <span style={{ color: semanticData.status === 'aligned' ? '#10b981' : '#ef4444' }}>{semanticData.similarity.toFixed(6)}</span></div>
                               <div><span style={{ opacity: 0.5 }}>ESI Floor:</span> <span style={{ color: '#fff' }}>{semanticData.threshold.toFixed(2)}</span></div>
                               <div><span style={{ opacity: 0.5 }}>Compliance:</span> <span style={{ color: semanticData.status === 'aligned' ? '#10b981' : '#ef4444', textTransform: 'uppercase', fontWeight: 'bold' }}>{semanticData.status}</span></div>
+                              {selectedEncounter.clinical?.acuity_divergence != null && (
+                                <>
+                                  <div><span style={{ opacity: 0.5 }}>AI Acuity:</span> <span style={{ color: '#a78bfa' }}>L{selectedEncounter.clinical.ai_recommendation?.acuity}</span></div>
+                                  <div><span style={{ opacity: 0.5 }}>Rules Acuity:</span> <span style={{ color: selectedEncounter.clinical.acuity_divergence >= 2 ? '#fbbf24' : '#2ed573' }}>L{selectedEncounter.clinical.rules_recommendation?.acuity}</span></div>
+                                  <div style={{ gridColumn: '1 / -1' }}><span style={{ opacity: 0.5 }}>Acuity Divergence:</span> <span style={{ color: selectedEncounter.clinical.acuity_divergence >= 2 ? '#fbbf24' : selectedEncounter.clinical.acuity_divergence === 1 ? '#f97316' : '#2ed573', fontWeight: 'bold' }}>Δ{selectedEncounter.clinical.acuity_divergence} {selectedEncounter.clinical.acuity_divergence >= 2 ? '⚡ CONFLICT' : selectedEncounter.clinical.acuity_divergence === 1 ? '⚠ DISCREPANCY' : '✓ ALIGNED'}</span></div>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>

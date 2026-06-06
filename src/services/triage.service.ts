@@ -100,6 +100,14 @@ export interface ClinicalData {
   gender?: string;  // legacy fallback
   red_flags?: string[];
   ai_recommendation?: TriageResult;
+  /** Always present for new encounters: the clinical rules engine output run in parallel with the AI */
+  rules_recommendation?: TriageResult;
+  /**
+   * Absolute difference in acuity level between AI and rules engine outputs.
+   * 0 = aligned, 1 = minor discrepancy, ≥2 = significant conflict (possible silent failure).
+   * High divergence + high semantic alignment score = most dangerous category.
+   */
+  acuity_divergence?: number;
   clinician_acuity?: number;
   ai_provider?: string;
   state: string;
@@ -241,7 +249,12 @@ function runRuleEngine(input: ClinicalInput): TriageResult {
 }
 
 
-async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageResult, provider: string }> {
+async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageResult, provider: string, rules_check: TriageResult }> {
+  // Rules engine always runs — both as a safety net and as a divergence reference.
+  // When Ollama is active, this provides the independent check we compare against.
+  // When Ollama fails, this becomes the primary result (provider: 'rules').
+  const rulesResult = runRuleEngine(input);
+
   if (TRIAGE_AGENT.provider === 'ollama') {
     try {
       const response = await fetch(`${TRIAGE_AGENT.endpoint}/api/generate`, {
@@ -254,12 +267,14 @@ async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageRes
         })
       });
       const data = await response.json();
-      return { result: safeParseTriageJson(data.response), provider: 'ollama' };
+      const aiResult = safeParseTriageJson(data.response);
+      return { result: aiResult, provider: 'ollama', rules_check: rulesResult };
     } catch (e) {
       console.warn("Ollama failed, falling back to rule engine:", e);
     }
   }
-  return { result: runRuleEngine(input), provider: 'rules' };
+  // Rules-only path: rules_check mirrors result (divergence = 0 by definition)
+  return { result: rulesResult, provider: 'rules', rules_check: rulesResult };
 }
 
 function buildTriagePrompt(input: ClinicalInput): string {
@@ -390,7 +405,9 @@ export class TriageService {
     // 2. Run AI triage — uses ORIGINAL text intentionally.
     //    The Ollama prompt is transient (wire-only, never stored or hashed).
     //    All ledger-bound fields are masked in step 3 before hash computation.
-    const { result: recommendation, provider } = await runTriageAgent(input);
+    //    Rules engine always runs in parallel for divergence computation.
+    const { result: recommendation, provider, rules_check } = await runTriageAgent(input);
+    const acuityDivergence = Math.abs(recommendation.acuity - rules_check.acuity);
 
     // 3. PHI masking — runs BEFORE clinicalData assembly and hash computation.
     //    Redact-and-proceed: masking never blocks the clinical workflow.
@@ -435,6 +452,8 @@ export class TriageService {
       },
       red_flags: input.red_flags,
       ai_recommendation: recommendation,
+      rules_recommendation: rules_check,
+      acuity_divergence: acuityDivergence,
       ai_provider: provider,
       state: 'waiting'
     };

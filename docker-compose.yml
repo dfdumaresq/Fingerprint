@@ -71,6 +71,9 @@ services:
         # Frontend calls the API via same-origin Nginx proxy — no CORS needed
         REACT_APP_API_GATEWAY_URL: ""
         API_KEY:                   ${API_KEY}
+        REACT_APP_SEPOLIA_RPC_URL:           ${REACT_APP_SEPOLIA_RPC_URL}
+        REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
+        REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
     image: fingerprint-nginx:latest
     container_name: fingerprint_nginx
     restart: unless-stopped

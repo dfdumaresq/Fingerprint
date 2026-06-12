@@ -259,13 +259,18 @@ async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageRes
     try {
       const response = await fetch(`${TRIAGE_AGENT.endpoint}/api/generate`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: TRIAGE_AGENT.model,
           prompt: buildTriagePrompt(input),
           stream: false,
           format: 'json'
-        })
+        }),
+        signal: AbortSignal.timeout(90000)
       });
+      if (!response.ok) {
+        throw new Error(`Ollama returned status ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
       const aiResult = safeParseTriageJson(data.response);
       return { result: aiResult, provider: 'ollama', rules_check: rulesResult };
@@ -467,7 +472,7 @@ export class TriageService {
        input_ref: 'clinical_admission_form',
        output_ref: 'ai_triage_audit',
        // policy_id uses masked complaint so it is also safe to store
-       policy_id: `live::${maskedComplaint}::${input.vitals.hr}::${input.vitals.bp_sys}/${input.vitals.bp_dia}::${recommendation.acuity}::${recommendation.reasons.join('|')}`,
+       policy_id: `live::${maskedComplaint}::${input.vitals.hr}::${input.vitals.bp_sys}/${input.vitals.bp_dia}::${recommendation.acuity}::${recommendation.reasons.join('|')}`.substring(0, 512),
        clinical_data: clinicalData,
        reason_code: 'initial_decision'
     });
@@ -837,7 +842,9 @@ export class TriageService {
       return { success: true, available: true, state: 'nominal', provider: 'rules', model: 'built-in' };
     }
     try {
-      const res = await fetch(`${TRIAGE_AGENT.endpoint}/api/tags`);
+      const res = await fetch(`${TRIAGE_AGENT.endpoint}/api/tags`, {
+        signal: AbortSignal.timeout(10000)
+      });
       if (!res.ok) {
         return {
           success: true,

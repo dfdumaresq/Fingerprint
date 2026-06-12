@@ -81,19 +81,24 @@ app.use('/v1', authenticate);
 app.get('/v1/agents', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
-    // For MVP, simplistic ordering by creation date
     const { rows } = await db.query(
-      'SELECT fingerprint_hash, name, provider, is_revoked, latest_trait_hash IS NOT NULL as has_behavioral_trait FROM agents ORDER BY created_at DESC LIMIT $1',
+      'SELECT * FROM agents ORDER BY created_at DESC LIMIT $1',
       [limit]
     );
 
     res.json({
       data: rows.map(r => ({
-        fingerprintHash: r.fingerprint_hash,
+        id: r.agent_id,
         name: r.name,
         provider: r.provider,
-        isRevoked: r.is_revoked,
-        hasBehavioralTrait: r.has_behavioral_trait
+        version: r.version,
+        fingerprintHash: r.fingerprint_hash,
+        createdAt: r.created_at ? Math.floor(new Date(r.created_at).getTime() / 1000) : 0,
+        revoked: r.is_revoked,
+        revokedAt: r.revoked_at ? Math.floor(new Date(r.revoked_at).getTime() / 1000) : 0,
+        revokedBy: r.revoked_by,
+        behavioralTraitHash: r.latest_trait_hash,
+        behavioralTraitVersion: r.trait_version
       })),
       has_more: false,
       next_cursor: null,
@@ -873,7 +878,8 @@ async function getEmbedding(prompt: string): Promise<number[]> {
     const response = await fetch(`${endpoint}/api/embed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, input: prompt })
+      body: JSON.stringify({ model, input: prompt }),
+      signal: AbortSignal.timeout(30000)
     });
     
     if (response.ok) {
@@ -893,7 +899,8 @@ async function getEmbedding(prompt: string): Promise<number[]> {
     const response = await fetch(`${endpoint}/api/embeddings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt })
+      body: JSON.stringify({ model, prompt }),
+      signal: AbortSignal.timeout(30000)
     });
     
     if (response.ok) {

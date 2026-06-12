@@ -107,19 +107,22 @@ describe("Behavioral Verification", function () {
     });
 
     it("Should emit BehavioralTraitRegistered event", async function () {
-      await expect(
-        contract.connect(addr1).registerBehavioralTrait(
-          sampleAgent.fingerprintHash,
-          sampleTrait.traitHash,
-          sampleTrait.traitVersion
-        )
-      ).to.emit(contract, "BehavioralTraitRegistered")
+      const tx = await contract.connect(addr1).registerBehavioralTrait(
+        sampleAgent.fingerprintHash,
+        sampleTrait.traitHash,
+        sampleTrait.traitVersion
+      );
+      const receipt = await tx.wait();
+      const block = await ethers.provider.getBlock(receipt.blockNumber);
+
+      await expect(tx)
+        .to.emit(contract, "BehavioralTraitRegistered")
         .withArgs(
           sampleAgent.fingerprintHash,
           sampleTrait.traitHash,
           sampleTrait.traitVersion,
           await addr1.getAddress(),
-          (await ethers.provider.getBlock('latest')).timestamp + 1
+          block.timestamp
         );
     });
   });
@@ -176,20 +179,23 @@ describe("Behavioral Verification", function () {
     });
 
     it("Should emit BehavioralTraitUpdated event", async function () {
-      await expect(
-        contract.connect(addr1).updateBehavioralTrait(
-          sampleAgent.fingerprintHash,
-          updatedTrait.traitHash,
-          updatedTrait.traitVersion
-        )
-      ).to.emit(contract, "BehavioralTraitUpdated")
+      const tx = await contract.connect(addr1).updateBehavioralTrait(
+        sampleAgent.fingerprintHash,
+        updatedTrait.traitHash,
+        updatedTrait.traitVersion
+      );
+      const receipt = await tx.wait();
+      const block = await ethers.provider.getBlock(receipt.blockNumber);
+
+      await expect(tx)
+        .to.emit(contract, "BehavioralTraitUpdated")
         .withArgs(
           sampleAgent.fingerprintHash,
           sampleTrait.traitHash,
           updatedTrait.traitHash,
           updatedTrait.traitVersion,
           await addr1.getAddress(),
-          (await ethers.provider.getBlock('latest')).timestamp + 1
+          block.timestamp
         );
     });
   });

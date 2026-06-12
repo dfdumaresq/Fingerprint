@@ -44,6 +44,7 @@ Definition of done:
 Out of scope for this phase:
 - Production deployment on mainnet networks (restricted to Sepolia and local simulation environments).
 - Dynamic, automated context-drift tracking or real-time continuous learning adjustments (deferred to Phase 3).
+- Direct production verification of the divergence signal (postponed to post-MVP; policy enforces local dev verification first prior to server deployment).
 
 ## 4. Current state
 Active Git Branch:
@@ -270,7 +271,7 @@ Unresolved threats:
 - **2026-06-01**: Completed unified Behavioral Baseline & Drift Audit workflow. Fixed two missing PostgreSQL enum values (`behavior_rebaseline`, `rebaselined`). Added server-side baseline fixture record/replay (`baseline_fixtures` table + 3 API endpoints). Fixture loading enabled in both baseline and audit modes; saving restricted to baseline mode only. Integrity Score changed from confidence-weighted (95) to binary clean-pass (100) — perturbation score reflects natural linguistic texture, not an attack, and should not penalise a clean match.
 - **2026-06-02**: Merged all feature branches to `main`. Collapsible sidebar (‹ › toggle, 60px icon-only rail, 0.25s transition). Nav refactored to data-driven `NAV_SECTIONS` array. All inline styles in `Sidebar.tsx` and `PlatformLayout.tsx` replaced with semantic CSS classes. Version bumped to `v1.3.0`. Deferred off-chain storage for EIP-712 registration signatures and Sandbox mock signing flows (TODOs added). Swapped active triage agent to MiniMax. Integrated registry 'Verify Baseline' button to route to Behavioral Drift Audit stepper with pre-selection support via sessionStorage. Implemented local Jaccard audit verification fallback in BehaviorAuditView.tsx to allow auditing browser-cached sandbox agents without hitting backend 404s.
 - **2026-06-05**: Fixed production API url resolution in `webpack.config.js`. Corrected the hardcoded baking of `"http://localhost:3000"` for `REACT_APP_API_URL` and `REACT_APP_API_GATEWAY_URL` to fallback to environment variables or empty strings, enabling same-origin relative URLs proxying by Nginx. This resolved the "AI Assistance Paused: Local Rules Backup Active" registry resolution issue.
-
+- **2026-06-06**: Postponed direct production verification of the divergence signal to post-MVP. Mandated verification policy requiring all testing and verification of the divergence signal to be executed in the local development environment (dev) first before promoting to production (prod).
 
 ## 15. Open questions
 - How to scale offline C2PA verification certificates for hospital environments with intermittent external network connectivity?
@@ -314,7 +315,22 @@ Known "don't lose this" context:
 - [[AI Fingerprinting - Decision Log]]
 - [[AI Fingerprinting - Latest Log]]
 
-## 19. Antigravity operating rules
+## 19. Local Docker Intentions
+Our intention for using Docker locally on the Mac mini M4 is centered on three goals:
+
+### 1. Build and Compilation Offloading
+The remote VPS is highly constrained (1 CPU, 4GB RAM). Performing Webpack or TypeScript compilation directly on the VPS would starve CPU cores and trigger Out-of-Memory (OOM) failures.
+* **Intention**: We build, compile, and package the final container images locally using the M4’s hardware. The remote VPS only has to pull and launch these pre-built images.
+
+### 2. Sandbox Parity Testing
+The application relies on Nginx proxying relative URLs to the Express container, which in turn connects to PostgreSQL and Redis. Testing these components natively on macOS can mask connection or pathing bugs.
+* **Intention**: We run the full container network locally prior to a deployment to guarantee that the multi-container topology, Nginx routing, and database migration sequences behave exactly the same way they will on the remote VPS.
+
+### 3. Unconstrained Development
+Local Docker runs without the memory (`mem_limit`) and CPU caps enforced on the VPS. 
+* **Intention**: This allows you to run intensive tasks—like executing the full 277-test suite, loading heavier LLMs on your local GPU-backed Ollama instance, and running rapid rebuild cycles—without hitting resource ceilings during development.
+
+## 20. Antigravity operating rules
 When working on this project:
 - Read this file first.
 - Restate what is being verified before proposing architecture.

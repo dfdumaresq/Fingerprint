@@ -4,7 +4,11 @@ let KeyManager, KeyType;
 // Try to load the secure key management
 try {
   // First try the compiled version (dist)
-  ({ KeyManager, KeyType } = require("../dist/security"));
+  try {
+    ({ KeyManager, KeyType } = require("../dist/security"));
+  } catch (err) {
+    ({ KeyManager, KeyType } = require("../dist/src/security"));
+  }
 } catch (error) {
   try {
     // Fall back to source version using ts-node

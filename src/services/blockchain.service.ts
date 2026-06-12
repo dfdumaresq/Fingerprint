@@ -60,6 +60,7 @@ declare global {
 export class BlockchainService {
   private provider!: ethers.JsonRpcProvider;
   public contract!: ethers.Contract; // Changed to public to allow checking method existence
+  private readContract!: ethers.Contract; // Read-only provider-bound contract instance
   private isConnected: boolean = false;
   private config: BlockchainConfig;
   private isSandbox: boolean = false;
@@ -102,6 +103,7 @@ export class BlockchainService {
         ABI,
         this.provider,
       );
+      this.readContract = this.contract;
       this.isConnected = true;
       console.log("Connected to blockchain network");
     } catch (error) {
@@ -155,7 +157,7 @@ export class BlockchainService {
 
           // Create a new contract instance with the signer that can make write transactions
           this.contract = new ethers.Contract(
-            this.contract.target,
+            this.readContract.target,
             ABI,
             signer,
           );
@@ -212,7 +214,11 @@ export class BlockchainService {
       const signer = await provider.getSigner();
 
       // Create a new contract instance with the signer that can make write transactions
-      this.contract = new ethers.Contract(this.contract.target, ABI, signer);
+      this.contract = new ethers.Contract(
+        this.readContract.target,
+        ABI,
+        signer,
+      );
 
       const address = await signer.getAddress();
       console.log("Connected wallet address:", address);
@@ -335,7 +341,7 @@ export class BlockchainService {
 
     try {
       // Try to call verifyFingerprintExtended with a dummy hash to see if it exists
-      await this.contract.verifyFingerprintExtended(
+      await this.readContract.verifyFingerprintExtended(
         "0x0000000000000000000000000000000000000000000000000000000000000000",
       );
       return true;
@@ -380,7 +386,7 @@ export class BlockchainService {
 
     try {
       console.log("Verifying fingerprint:", fingerprintHash);
-      console.log("Contract address:", this.contract.target);
+      console.log("Contract address:", this.readContract.target);
       console.log("Provider connected:", this.isConnected);
 
       // Check feature support
@@ -393,7 +399,7 @@ export class BlockchainService {
       );
 
       // For read operations, we can use our existing provider
-      const contract = this.contract;
+      const contract = this.readContract;
       let result;
       let isExtendedVerificationUsed = false;
 
@@ -537,12 +543,13 @@ export class BlockchainService {
 
     try {
       const registeredFilter =
-        this.contract.filters.BehavioralTraitRegistered();
-      const updatedFilter = this.contract.filters.BehavioralTraitUpdated();
+        this.readContract.filters.BehavioralTraitRegistered();
+      const updatedFilter = this.readContract.filters.BehavioralTraitUpdated();
 
+      const startBlock = this.config.chainId === 11155111 ? this.config.chainId - 757111 : 0;
       const [registeredEvents, updatedEvents] = await Promise.all([
-        this.contract.queryFilter(registeredFilter),
-        this.contract.queryFilter(updatedFilter),
+        this.readContract.queryFilter(registeredFilter, startBlock, "latest"),
+        this.readContract.queryFilter(updatedFilter, startBlock, "latest"),
       ]);
 
       const history = [];
@@ -651,7 +658,7 @@ export class BlockchainService {
       // Try to call isRevoked function with a dummy hash to see if it exists
       // We're catching the error here but not acting on it
       // We only care if the method exists and can be called
-      await this.contract.isRevoked(
+      await this.readContract.isRevoked(
         "0x0000000000000000000000000000000000000000000000000000000000000000",
       );
       return true;
@@ -697,7 +704,7 @@ export class BlockchainService {
 
       // Try to check revocation status
       try {
-        const result = await this.contract.isRevoked(fingerprintHash);
+        const result = await this.readContract.isRevoked(fingerprintHash);
         const [revoked, revokedAt, revokedBy] = result;
 
         if (revoked) {
@@ -1054,7 +1061,7 @@ export class BlockchainService {
     }
 
     try {
-      const result = await this.contract.getBehavioralTraitData(
+      const result = await this.readContract.getBehavioralTraitData(
         fingerprintHash,
       );
       const [exists, traitHash, traitVersion, registeredAt, lastUpdatedAt] =
@@ -1104,7 +1111,7 @@ export class BlockchainService {
         throw new Error("No behavioral trait registered for this fingerprint");
       }
 
-      const matches = await this.contract.verifyBehavioralMatch(
+      const matches = await this.readContract.verifyBehavioralMatch(
         fingerprintHash,
         currentTraitHash,
       );
@@ -1167,18 +1174,31 @@ export class BlockchainService {
     }
 
     try {
-      const filter = this.contract.filters.FingerprintRegistered();
-      const events = await this.contract.queryFilter(filter);
-      
+      const filter = this.readContract.filters.FingerprintRegistered();
+      const startBlock = this.config.chainId === 11155111 ? this.config.chainId - 757111 : 0;
+      const events = await this.readContract.queryFilter(
+        filter,
+        startBlock,
+        "latest",
+      );
+
       const agents: Agent[] = [];
       for (const event of events) {
         if ("args" in event && event.args) {
-          const [fingerprintHash, id, name, provider_name, version, registeredBy, createdAt] = event.args;
-          
+          const [
+            fingerprintHash,
+            id,
+            name,
+            provider_name,
+            version,
+            registeredBy,
+            createdAt,
+          ] = event.args;
+
           let revoked = false;
           let revokedAt = 0;
           let revokedBy = undefined;
-          
+
           try {
             const revocation = await this.isRevoked(fingerprintHash);
             if (revocation) {
@@ -1194,7 +1214,8 @@ export class BlockchainService {
           let behavioralTraitHash = undefined;
           let behavioralTraitVersion = undefined;
           try {
-            const [exists, traitHash, traitVersion] = await this.contract.getBehavioralTraitData(fingerprintHash);
+            const [exists, traitHash, traitVersion] =
+              await this.readContract.getBehavioralTraitData(fingerprintHash);
             if (exists) {
               behavioralTraitHash = traitHash;
               behavioralTraitVersion = traitVersion;
@@ -1225,4 +1246,3 @@ export class BlockchainService {
     }
   }
 }
-

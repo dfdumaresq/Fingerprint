@@ -6,9 +6,10 @@ const securityExports = {};
 
 // Load the secure key management
 try {
-  // We'll try to use the compiled files first
-  const { KeyProviderFactory, KeyProviderType } = require("./dist/security/KeyProviderFactory");
-  const { KeyManager, KeyType } = require("./dist/security/KeyManager");
+  // Register ts-node to load source TypeScript files directly
+  require("ts-node").register();
+  const { KeyProviderFactory, KeyProviderType } = require("./src/security/KeyProviderFactory");
+  const { KeyManager, KeyType } = require("./src/security/KeyManager");
   
   // Initialize the key manager
   const keyManager = KeyManager.getInstance();

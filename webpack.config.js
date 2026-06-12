@@ -56,5 +56,12 @@ module.exports = {
     },
     port: 8080,
     hot: true,
+    proxy: [
+      {
+        context: ['/v1', '/health', '/api-docs'],
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      }
+    ]
   },
 };

@@ -338,6 +338,42 @@ export const BehaviorAuditView: React.FC = () => {
 
     try {
       await c2paService.initializeIdentity(activeHash);
+
+      // ── Step 0: Ensure the fingerprint is registered on-chain first ──────
+      // The contract enforces: registerFingerprint() must precede registerBehavioralTrait().
+      // Agents loaded from the DB cache may not be on-chain yet, so we check and
+      // auto-register if necessary before attempting to commit the baseline.
+      if (!isSandbox) {
+        let isOnChain = false;
+        try {
+          const onChainAgent = await service.verifyFingerprint(activeHash);
+          isOnChain = onChainAgent !== null;
+        } catch (checkErr) {
+          console.warn('Could not verify on-chain registration, will attempt to register:', checkErr);
+        }
+
+        if (!isOnChain) {
+          // Resolve agent metadata from the loaded dropdown list
+          const agentMeta = agents.find(a => a.fingerprintHash === activeHash);
+          if (!agentMeta) {
+            throw new Error(
+              'This fingerprint is not registered on-chain and its metadata could not be found. ' +
+              'Please register the agent via Agent Governance → Register New Agent first.'
+            );
+          }
+
+          console.log('Fingerprint not on-chain — auto-registering before baseline commit...');
+          await service.registerFingerprint({
+            id: activeHash,            // use the hash as the canonical ID
+            name: agentMeta.name,
+            provider: agentMeta.provider,
+            version: hashResult.traitVersion,
+            fingerprintHash: activeHash,
+          });
+          console.log('Fingerprint registered on-chain successfully.');
+        }
+      }
+
       const result = await service.registerBehavioralTrait(
         activeHash,
         hashResult.hash,

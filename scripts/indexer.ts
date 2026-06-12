@@ -21,7 +21,7 @@ const db = new Pool({
 const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 
 const BATCH_SIZE = 1000; // Increased batch size for faster catch-up
-const STARTING_BLOCK = 10398000; // Closer to the actual contract deployment block on Sepolia
+const STARTING_BLOCK = chainId === 11155111 ? chainId - 757111 : 0;
 
 /**
  * Main Indexer Sync Loop

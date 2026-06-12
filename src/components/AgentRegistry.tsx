@@ -37,6 +37,8 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
         if (!service) return;
         setLoadingAgents(true);
         try {
+            let list: Agent[] = [];
+
             // 1. Fetch active agent status from API to see which agent is the designated active one
             let activeHash = '';
             try {
@@ -52,37 +54,52 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                 console.warn("Failed to fetch active triage agent status:", statusError);
             }
 
-            if (typeof service.getRegisteredAgents === 'function') {
-                const list = await service.getRegisteredAgents();
-                // Sort by registration date descending (newest first)
-                list.sort((a, b) => b.createdAt - a.createdAt);
-                setAgents(list);
-
-                // Initialize all heartbeats as checking
-                const initialHeartbeats: Record<string, 'checking' | 'active' | 'idle' | 'revoked'> = {};
-                list.forEach(agent => {
-                    initialHeartbeats[agent.fingerprintHash] = 'checking';
+            // 2. Try to fetch from backend API first (synced PG cache)
+            try {
+                const apiRes = await fetch(`${REACT_APP_API_URL}/v1/agents`, {
+                    headers: { 'Authorization': `Bearer ${REACT_APP_API_KEY}` }
                 });
-                setHeartbeats(initialHeartbeats);
-
-                // Fallback active hash in case API is down or not running yet:
-                // We default the first non-revoked agent in the list to active
-                const resolvedActiveHash = activeHash || (list.find(a => !a.revoked)?.fingerprintHash || '');
-                if (!activeHash && resolvedActiveHash) {
-                    setActiveAgentHash(resolvedActiveHash);
+                const apiData = await apiRes.json();
+                if (apiData && Array.isArray(apiData.data)) {
+                    list = apiData.data;
                 }
-
-                // Trigger animated simulated heartbeat checks
-                list.forEach(agent => {
-                    setTimeout(() => {
-                        const isThisActive = agent.fingerprintHash === (activeHash || resolvedActiveHash);
-                        setHeartbeats(prev => ({
-                            ...prev,
-                            [agent.fingerprintHash]: agent.revoked ? 'revoked' : (isThisActive ? 'active' : 'idle')
-                        }));
-                    }, 500 + Math.random() * 800); // Random delay between 500ms and 1300ms
-                });
+            } catch (apiError) {
+                console.warn("Failed to fetch agents from API backend, falling back to blockchain:", apiError);
             }
+
+            // 3. Fallback to direct blockchain query if backend API failed or returned empty list
+            if (list.length === 0 && typeof service.getRegisteredAgents === 'function') {
+                list = await service.getRegisteredAgents();
+            }
+
+            // Sort by registration date descending (newest first)
+            list.sort((a, b) => b.createdAt - a.createdAt);
+            setAgents(list);
+
+            // Initialize all heartbeats as checking
+            const initialHeartbeats: Record<string, 'checking' | 'active' | 'idle' | 'revoked'> = {};
+            list.forEach(agent => {
+                initialHeartbeats[agent.fingerprintHash] = 'checking';
+            });
+            setHeartbeats(initialHeartbeats);
+
+            // Fallback active hash in case API is down or not running yet:
+            // We default the first non-revoked agent in the list to active
+            const resolvedActiveHash = activeHash || (list.find(a => !a.revoked)?.fingerprintHash || '');
+            if (!activeHash && resolvedActiveHash) {
+                setActiveAgentHash(resolvedActiveHash);
+            }
+
+            // Trigger animated simulated heartbeat checks
+            list.forEach(agent => {
+                setTimeout(() => {
+                    const isThisActive = agent.fingerprintHash === (activeHash || resolvedActiveHash);
+                    setHeartbeats(prev => ({
+                        ...prev,
+                        [agent.fingerprintHash]: agent.revoked ? 'revoked' : (isThisActive ? 'active' : 'idle')
+                    }));
+                }, 500 + Math.random() * 800); // Random delay between 500ms and 1300ms
+            });
         } catch (error) {
             console.error("Failed to load agents:", error);
         } finally {

@@ -1,11 +1,16 @@
 const hre = require("hardhat");
 const { ethers } = require("hardhat");
+require("dotenv").config();
 
 async function main() {
   console.log("Starting verification on Sepolia...");
 
   // Contract address from deployment
-  const CONTRACT_ADDRESS = "0x262bbFF34A58fBff943a0aA939fFA9B26B81A8ab";
+  const CONTRACT_ADDRESS = process.env.REACT_APP_SEPOLIA_CONTRACT_ADDRESS;
+  if (!CONTRACT_ADDRESS) {
+    console.error("Error: REACT_APP_SEPOLIA_CONTRACT_ADDRESS is not defined in .env");
+    process.exit(1);
+  }
   
   // Get signer
   const [signer] = await ethers.getSigners();

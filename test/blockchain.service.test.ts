@@ -26,7 +26,7 @@ describe('BlockchainService', () => {
         };
 
         // Basic mock to prevent constructor from throwing
-        jest.doMock('ethers', () => ({
+        const mockEthers = {
             JsonRpcProvider: jest.fn().mockImplementation(() => ({
                 _network: { chainId: 11155111 },
                 getNetwork: (jest.fn() as any).mockResolvedValue({ chainId: 11155111 }),
@@ -34,6 +34,10 @@ describe('BlockchainService', () => {
             Contract: jest.fn().mockImplementation(() => mockContract),
             toUtf8Bytes: jest.fn((s: string) => Buffer.from(s)),
             keccak256: jest.fn(() => "0xhash"),
+        };
+        jest.doMock('ethers', () => ({
+            ...mockEthers,
+            ethers: mockEthers,
         }));
 
         const mod = await import('../src/services/blockchain.service');
@@ -50,6 +54,7 @@ describe('BlockchainService', () => {
         
         // MANUALLY OVERWRITE THE PUBLIC PROPERTIES FOR ABSOLUTE CONTROL
         service.contract = mockContract;
+        (service as any).readContract = mockContract;
         Object.defineProperty(service, 'isConnected', { value: true, writable: true });
         
         // Stub feature detection on the instance

@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  postgres:
+    mem_limit: 1g
+    cpus: "0.5"
+
+  redis:
+    mem_limit: 512m
+    cpus: "0.25"
+
+  api:
+    mem_limit: 1500m
+    cpus: "0.75"
+
+  nginx:
+    mem_limit: 256m
+    cpus: "0.25"

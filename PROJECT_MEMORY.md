@@ -63,9 +63,12 @@ Confirmed:
 - **Integrity Score 100/100**: Clean audit pass (match=true, no suspicious patterns) now returns 100/100. Hard zero enforced for suspicious perturbations. Mismatch scaled by similarity.
 - **Collapsible Sidebar**: ‹ › toggle collapses sidebar to 60px icon-only rail (0.25s transition). Nav data-driven via `NAV_SECTIONS` array. All inline styles replaced with semantic CSS classes. Version badge shows `v1.3.0`.
 - **Host MVP**: Deployed the full behavioral verification platform and clinical triage queue to the production environment (`https://clinicianledger.ca`) over secure HTTPS, successfully integrating a local host-bound `tinydolphin` Ollama agent for CPU-based inference.
+- **Local & Prod Docker Deployment Architecture**: Multi-container Docker Compose configuration built and tested locally (PostgreSQL, Redis, Express API, Nginx with same-origin relative API gateway proxies, and Certbot for SSL). Baked Sepolia contract variables into client bundles at build time.
+- **Robust Blockchain Test Harness**: Upgraded behavioral verification contract event tests to dynamically query the mined transaction's block timestamp, preventing race conditions or timing-based unit test failures.
 
 In progress:
-- None.
+- **Verify Remote Deploy Pipeline**: Build local Docker images, compress and copy them via SSH pipe to `162.223.226.119` (clinicianledger.ca), reload the images, and restart/verify the remote compose stack.
+- **Baseline Recalibration**: Run the 5-prompt suite with the active `llama3:8b` model and register the new baseline on Sepolia to clear the similarity mismatch warning.
 
 Blocked:
 - None.

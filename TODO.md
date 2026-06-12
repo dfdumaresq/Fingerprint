@@ -14,6 +14,8 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
    - ✅ README overhaul establishing "Clinical UX Goals" and the pivot to a high-integrity medical audit narrative.
 5. **Secure Key Management & Audit Logging**
    - ✅ Implemented OWASP-aligned key management and comprehensive security auditing for blockchain interactions.
+6. **Docker Deployment and Branch Merge**
+   - ✅ Committed all docker deployment changes, fixed brittle hardhat test timing errors, and merged `feature/docker-deployment` into `main`.
 
 ## High Priority: Clinical Trust & Workflow
 
@@ -46,9 +48,7 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
      - **Recalibrate** action per agent: one-click re-run of prompt suite + commit new baseline to ledger.
      - **Active model indicator**: show which `TRIAGE_AGENT_SLUG` is currently wired to the API.
      - **Model health check**: surface Ollama connectivity and model availability status inline in governance.
-10. **Commit & Merge Branch** *(added 2026-06-12)*
-    - Commit all outstanding changes on `feature/docker-deployment` and merge to `main`. Includes: Dockerfile.nginx env-var fixes, BehaviorAuditView auto-registration guard, docker-compose Sepolia build args, and webpack config corrections.
-11. **Prune PROJECT_MEMORY.md** *(added 2026-06-12)*
+10. **Prune PROJECT_MEMORY.md** *(added 2026-06-12)*
     - Remove stale entries and update `current state`, `active branch`, and `in progress` sections to reflect the current MVP deployment state.
 
 ## Medium Priority: Scale & Compliance
@@ -80,11 +80,10 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
 
 ## Next Immediate Actions
 
-1. **Commit & Merge**: Commit all outstanding local changes and merge `feature/docker-deployment` → `main`.
-2. **Verify Remote Deploy Pipeline**: Test the Docker image promotion to `clinicianledger.ca` and confirm the live demo is healthy.
-3. **Prune PROJECT_MEMORY.md**: Update current state, branch, and in-progress sections to reflect MVP deployment.
-4. **Baseline Recalibration**: Re-run the 5-prompt suite with `llama3:8b` as the active model and commit a fresh on-chain baseline to eliminate the cross-model semantic mismatch warning.
-5. **Clinician Decision Ledger**: Connect database override actions to update the ledger with parent-child cryptographic amendments.
+1. **Verify Remote Deploy Pipeline**: Test the Docker image promotion to `clinicianledger.ca` and confirm the live demo is healthy.
+2. **Prune PROJECT_MEMORY.md**: Update current state, branch, and in-progress sections to reflect MVP deployment.
+3. **Baseline Recalibration**: Re-run the 5-prompt suite with `llama3:8b` as the active model and commit a fresh on-chain baseline to eliminate the cross-model semantic mismatch warning.
+4. **Clinician Decision Ledger**: Connect database override actions to update the ledger with parent-child cryptographic amendments.
 
 ## Design Considerations
 - **Regulatory Frameworks**: While not yet promising formal compliance, designs should consider **HIPAA** logging expectations and **EU AI Act** transparency obligations regarding auditability.

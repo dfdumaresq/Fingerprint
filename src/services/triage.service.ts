@@ -295,7 +295,12 @@ Respond ONLY with JSON. No explanation, no markdown. Ensure "clinical_analysis" 
 
 function safeParseTriageJson(raw: string): TriageResult {
   try {
-    const data = JSON.parse(raw);
+    let clean = raw.trim();
+    // Strip markdown code block wraps (e.g. ```json ... ```)
+    if (clean.startsWith('```')) {
+      clean = clean.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+    }
+    const data = JSON.parse(clean);
     const reasons = Array.isArray(data.reasons) ? data.reasons : [];
     if (data.clinical_analysis) {
       reasons.unshift(data.clinical_analysis);

@@ -284,21 +284,38 @@ async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageRes
 
 function buildTriagePrompt(input: ClinicalInput): string {
   const demographics = input.patient_context.demographics;
-  return `You are a clinical triage AI. Respond with ONLY valid JSON matching this exact schema: {"acuity": \u003c1-5\u003e, "reasons": ["\u003creason1\u003e", "\u003creason2\u003e"]}.
-Acuity scale: 1=Resuscitation, 2=Emergent, 3=Urgent, 4=Less Urgent, 5=Non-Urgent.
+  return `You are a clinical triage AI. Respond with ONLY valid JSON matching this exact schema: {"clinical_analysis": "<step-by-step triage reasoning>", "acuity": <1-5>, "reasons": ["<reason1>", "<reason2>"]}.
+
+Use the following Emergency Severity Index (ESI) triage guidelines:
+- Acuity 1 (Resuscitation): Patient requires immediate life-saving intervention (e.g., severe airway/respiratory distress, cardiac/respiratory arrest, unresponsive/AVPU 'U', SpO2 < 90%).
+- Acuity 2 (Emergent): High-risk situations where delay is dangerous, new onset confusion/lethargy, or severe pain (e.g., chest pain with risk factors, possible stroke/neurological deficits, possible sepsis/SIRS, possible deep vein thrombosis (DVT)/VTE due to unilateral leg swelling and prolonged travel/immobility).
+- Acuity 3 (Urgent): Patient has stable vitals but requires multiple resources (e.g., both labs and imaging like ultrasound/CT, or IV medications/fluids).
+- Acuity 4 (Less Urgent): Patient has stable vitals and requires a single resource (e.g., simple X-ray only, simple lab test only, or minor suturing).
+- Acuity 5 (Non-Urgent): Patient requires no resources (e.g., prescription refill, simple wound check, suture removal).
+
 Patient: ${input.chief_complaint}. Age: ${demographics.age_years}, Sex (at birth): ${demographics.sex_at_birth}${demographics.gender_identity ? `, Gender Identity: ${demographics.gender_identity}` : ''}.
 Vitals: HR ${input.vitals.hr}, BP ${input.vitals.bp_sys}/${input.vitals.bp_dia}, RR ${input.vitals.rr}, SpO2 ${input.vitals.spo2}% (${input.vitals.spo2_support || 'room air'}), Temp ${input.vitals.temp}°C (${input.vitals.temp_method || 'oral'}), Pain ${input.vitals.pain_score}/10.
 History: Allergies: ${input.patient_context.clinical?.allergies?.map(a => a.substance).join(', ') || 'NKDA'}, Meds: ${input.patient_context.clinical?.medications?.map(m => m.name).join(', ') || 'none'}, PMH: ${input.patient_context.clinical?.comorbidities?.map(c => c.description).join(', ') || 'none'}.
 Red flags: ${input.red_flags?.join(', ') || 'none'}.
-Respond ONLY with JSON. No explanation, no markdown.`;
+
+Respond ONLY with JSON. No explanation, no markdown. Ensure "clinical_analysis" is the first property in the JSON so you perform reasoning before choosing acuity.`;
 }
 
 function safeParseTriageJson(raw: string): TriageResult {
   try {
-    const data = JSON.parse(raw);
+    let clean = raw.trim();
+    // Strip markdown code block wraps (e.g. ```json ... ```)
+    if (clean.startsWith('```')) {
+      clean = clean.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+    }
+    const data = JSON.parse(clean);
+    const reasons = Array.isArray(data.reasons) ? data.reasons : [];
+    if (data.clinical_analysis) {
+      reasons.unshift(data.clinical_analysis);
+    }
     return {
       acuity: Number(data.acuity) || 3,
-      reasons: Array.isArray(data.reasons) ? data.reasons : ['AI provided triage recommendation']
+      reasons: reasons.length > 0 ? reasons : ['AI provided triage recommendation']
     };
   } catch {
     return { acuity: 3, reasons: ['Error parsing AI response'] };

@@ -65,10 +65,11 @@ Confirmed:
 - **Host MVP**: Deployed the full behavioral verification platform and clinical triage queue to the production environment (`https://clinicianledger.ca`) over secure HTTPS, successfully integrating a local host-bound `tinydolphin` Ollama agent for CPU-based inference.
 - **Local & Prod Docker Deployment Architecture**: Multi-container Docker Compose configuration built and tested locally (PostgreSQL, Redis, Express API, Nginx with same-origin relative API gateway proxies, and Certbot for SSL). Baked Sepolia contract variables into client bundles at build time.
 - **Robust Blockchain Test Harness**: Upgraded behavioral verification contract event tests to dynamically query the mined transaction's block timestamp, preventing race conditions or timing-based unit test failures.
+- **Remote Production Deployment**: Built AMD64 Docker images locally with the separate production API key baked into Nginx, loaded them on the VPS at `clinicianledger.ca`, and restarted the containers. Verifications show the system is fully healthy.
+- **Baseline Recalibration**: Registered a fresh on-chain baseline signature for the production `tinydolphin` agent on the Sepolia smart contract ledger, successfully clearing cross-model drift warnings.
 
 In progress:
-- **Verify Remote Deploy Pipeline**: Build local Docker images, compress and copy them via SSH pipe to `162.223.226.119` (clinicianledger.ca), reload the images, and restart/verify the remote compose stack.
-- **Baseline Recalibration**: Run the 5-prompt suite with the active `llama3:8b` model and register the new baseline on Sepolia to clear the similarity mismatch warning.
+- None.
 
 Blocked:
 - None.
@@ -350,4 +351,3 @@ When working on this project:
 	  - Perfect!
 	  - Prepare to be fascinated:
 	  - the results are spectacular.
-

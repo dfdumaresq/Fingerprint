@@ -16,11 +16,15 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
    - ✅ Implemented OWASP-aligned key management and comprehensive security auditing for blockchain interactions.
 6. **Docker Deployment and Branch Merge**
    - ✅ Committed all docker deployment changes, fixed brittle hardhat test timing errors, and merged `feature/docker-deployment` into `main`.
+7. **Remote Server Deployment Pipeline**
+   - ✅ Verified build of local AMD64 images, compressed file transfer, loaded onto VPS at `clinicianledger.ca`, and confirmed container stack health.
+8. **Baseline Recalibration**
+   - ✅ Registered a fresh on-chain baseline for the production `tinydolphin` agent on the Sepolia smart contract ledger, clearing cross-model drift warnings.
 
 ## High Priority: Clinical Trust & Workflow
 
 1. **Host MVP**
-   - Deploy and host the current MVP to an accessible staging/production environment. The 5-stage behavioral drift audit workflow (Select Agent -> Baseline Status -> Prompt Suite -> Result) is fully operational and ready to demonstrate real value and gather early feedback from clinicians.
+   - ✅ Deployed the container network to production at `clinicianledger.ca`, verified relative path API routing under same-origin Nginx proxy, database migration, and HTTPS SSL certificates. The 5-stage behavioral drift audit workflow is live and ready.
 2. **Clinician Decision Ledger (Immutable History)**
    - Implement "Clinician Decision" events to track how human reviewers accept, modify, or override AI recommendations. These must be logged as cryptographically anchored amendments to the original record.
 3. **Interactive Audit Timeline (Evidence Chain Visualization)**
@@ -64,8 +68,6 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
     - Enable side-by-side auditing of different AI models or versions against the same clinical case to streamline model-switchover risk assessments.
 16. **Fix PhiGuard BERT-NER Pipeline** *(added 2026-06-12)*
     - The `onnxruntime-node` ARM64 native binding fails to load inside the Docker container on Apple Silicon (`ld-linux-aarch64.so.1` not found). NER tier is disabled; regex + keyword tiers remain active as fallback. Fix options: (a) build a multi-platform image with the correct `onnxruntime` Linux ARM64 binary, or (b) replace with a pure-JS NER alternative. **Non-blocking for MVP** — regex/keyword PHI masking is active.
-17. **Verify Remote Server Docker Pull & Update Pipeline** *(added 2026-06-12)*
-    - Test and verify the full image promotion pipeline to `clinicianledger.ca`: SSH pipe (`docker save | gzip | ssh ... docker load`) or registry-based pull. Confirm containers restart cleanly and DB migrations run without data loss on the live demo server.
 
 ## Lower Priority / Deferred
 
@@ -80,10 +82,7 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
 
 ## Next Immediate Actions
 
-1. **Verify Remote Deploy Pipeline**: Test the Docker image promotion to `clinicianledger.ca` and confirm the live demo is healthy.
-2. **Prune PROJECT_MEMORY.md**: Update current state, branch, and in-progress sections to reflect MVP deployment.
-3. **Baseline Recalibration**: Re-run the 5-prompt suite with `llama3:8b` as the active model and commit a fresh on-chain baseline to eliminate the cross-model semantic mismatch warning.
-4. **Clinician Decision Ledger**: Connect database override actions to update the ledger with parent-child cryptographic amendments.
+1. **Clinician Decision Ledger**: Connect database override actions to update the ledger with parent-child cryptographic amendments.
 
 ## Design Considerations
 - **Regulatory Frameworks**: While not yet promising formal compliance, designs should consider **HIPAA** logging expectations and **EU AI Act** transparency obligations regarding auditability.

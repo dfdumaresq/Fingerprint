@@ -284,21 +284,25 @@ async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageRes
 
 function buildTriagePrompt(input: ClinicalInput): string {
   const demographics = input.patient_context.demographics;
-  return `You are a clinical triage AI. Respond with ONLY valid JSON matching this exact schema: {"acuity": \u003c1-5\u003e, "reasons": ["\u003creason1\u003e", "\u003creason2\u003e"]}.
+  return `You are a clinical triage AI. Respond with ONLY valid JSON matching this exact schema: {"clinical_analysis": "<step-by-step triage reasoning>", "acuity": <1-5>, "reasons": ["<reason1>", "<reason2>"]}.
 Acuity scale: 1=Resuscitation, 2=Emergent, 3=Urgent, 4=Less Urgent, 5=Non-Urgent.
 Patient: ${input.chief_complaint}. Age: ${demographics.age_years}, Sex (at birth): ${demographics.sex_at_birth}${demographics.gender_identity ? `, Gender Identity: ${demographics.gender_identity}` : ''}.
 Vitals: HR ${input.vitals.hr}, BP ${input.vitals.bp_sys}/${input.vitals.bp_dia}, RR ${input.vitals.rr}, SpO2 ${input.vitals.spo2}% (${input.vitals.spo2_support || 'room air'}), Temp ${input.vitals.temp}°C (${input.vitals.temp_method || 'oral'}), Pain ${input.vitals.pain_score}/10.
 History: Allergies: ${input.patient_context.clinical?.allergies?.map(a => a.substance).join(', ') || 'NKDA'}, Meds: ${input.patient_context.clinical?.medications?.map(m => m.name).join(', ') || 'none'}, PMH: ${input.patient_context.clinical?.comorbidities?.map(c => c.description).join(', ') || 'none'}.
 Red flags: ${input.red_flags?.join(', ') || 'none'}.
-Respond ONLY with JSON. No explanation, no markdown.`;
+Respond ONLY with JSON. No explanation, no markdown. Ensure "clinical_analysis" is the first property in the JSON so you perform reasoning before choosing acuity.`;
 }
 
 function safeParseTriageJson(raw: string): TriageResult {
   try {
     const data = JSON.parse(raw);
+    const reasons = Array.isArray(data.reasons) ? data.reasons : [];
+    if (data.clinical_analysis) {
+      reasons.unshift(data.clinical_analysis);
+    }
     return {
       acuity: Number(data.acuity) || 3,
-      reasons: Array.isArray(data.reasons) ? data.reasons : ['AI provided triage recommendation']
+      reasons: reasons.length > 0 ? reasons : ['AI provided triage recommendation']
     };
   } catch {
     return { acuity: 3, reasons: ['Error parsing AI response'] };

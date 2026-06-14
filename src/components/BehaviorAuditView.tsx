@@ -42,6 +42,7 @@ interface AgentListItem {
   provider: string;
   isRevoked: boolean;
   hasBehavioralTrait: boolean;
+  hasFixture?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,7 +127,15 @@ export const BehaviorAuditView: React.FC = () => {
       });
       const data = await res.json();
       if (data.data) {
-        const list: AgentListItem[] = data.data.filter((a: AgentListItem) => !a.isRevoked);
+        const list: AgentListItem[] = data.data
+          .filter((a: any) => !a.revoked)
+          .map((a: any) => ({
+            fingerprintHash: a.fingerprintHash,
+            name: a.name,
+            provider: a.provider,
+            isRevoked: !!a.revoked,
+            hasBehavioralTrait: !!a.behavioralTraitHash || !!a.hasFixture,
+          }));
         setAgents(list);
         // Pre-select first if available and nothing already chosen
         if (list.length > 0 && !selectedHash) {

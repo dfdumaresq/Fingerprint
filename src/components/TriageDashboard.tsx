@@ -221,6 +221,7 @@ export const TriageDashboard: React.FC = () => {
 
   // Pre-submission validation states
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [validationWarningType, setValidationWarningType] = useState<'contradiction' | 'infrastructure_degraded' | null>(null);
   const [painInputConflict, setPainInputConflict] = useState(false);
   const [preAuditLoading, setPreAuditLoading] = useState(false);
 
@@ -406,11 +407,14 @@ export const TriageDashboard: React.FC = () => {
     fetchStatus();
   }, [fetchEncounters, fetchStatus]);
 
-  // Poll to keep queue fresh when form is closed
+  // Poll to keep queue fresh when form is closed and no heavyweight verification is in progress
   useEffect(() => {
+    if (preAuditLoading || submitting || saeLoading || semanticLoading || loading) {
+      return; // Pause polling to reduce server contention
+    }
     const interval = setInterval(fetchEncounters, 15000);
     return () => clearInterval(interval);
-  }, [fetchEncounters]);
+  }, [fetchEncounters, preAuditLoading, submitting, saeLoading, semanticLoading, loading]);
 
   // Dismiss panels on Escape
   useEffect(() => {
@@ -424,6 +428,7 @@ export const TriageDashboard: React.FC = () => {
   }, [selectedEncounter, showNewForm]);
 
   const submitEncounter = async () => {
+    if (submitting || preAuditLoading) return;
     if (!form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia) return;
 
     const enteredPain = Number(form.pain_score || 0);
@@ -433,6 +438,7 @@ export const TriageDashboard: React.FC = () => {
     if (enteredPain === 0 && !bypassSafety && hash) {
       setPreAuditLoading(true);
       setValidationWarning(null);
+      setValidationWarningType(null);
       setPainInputConflict(false);
 
       // Build intermediate patient presentation context for semantic verification
@@ -458,7 +464,8 @@ export const TriageDashboard: React.FC = () => {
         
         // If Qwen recognizes the case as high ESI-2 emergent (similarity >= 0.70) but Pain is 0/10!
         if (data.success && data.similarity >= 0.70) {
-          setValidationWarning("Clinical contradiction detected: The patient's presentation aligns semantically with an emergent ESI-2 condition, but the Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+          setValidationWarning("The patient's presentation aligns semantically with an emergent ESI-2 condition, but the Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+          setValidationWarningType('contradiction');
           setPainInputConflict(true);
           setShowExtendedVitals(true); // Automatically reveal the extended vitals section
           setPreAuditLoading(false);
@@ -472,7 +479,8 @@ export const TriageDashboard: React.FC = () => {
         const hasHighRiskKeywords = complaintLower.includes('chest') || complaintLower.includes('pain') || complaintLower.includes('pressure') || complaintLower.includes('tightness') || complaintLower.includes('tearing') || complaintLower.includes('dissection') || complaintLower.includes('angina');
         
         if (hasHighRiskKeywords) {
-          setValidationWarning("Clinical contradiction detected: Chief complaint describes high-risk symptoms, but Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+          setValidationWarning("Chief complaint describes high-risk symptoms, but Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+          setValidationWarningType('infrastructure_degraded');
           setPainInputConflict(true);
           setShowExtendedVitals(true);
           setPreAuditLoading(false);
@@ -484,6 +492,7 @@ export const TriageDashboard: React.FC = () => {
 
     // Reset warnings if validation checks pass
     setValidationWarning(null);
+    setValidationWarningType(null);
     setPainInputConflict(false);
 
     setSubmitting(true);
@@ -530,6 +539,8 @@ export const TriageDashboard: React.FC = () => {
           return flag ? flag.label.toLowerCase() !== resolvedComplaint?.trim().toLowerCase() : true;
         }),
         clinician_name: form.clinician_name || 'clinician',
+        safety_warning_triggered: validationWarningType || 'none',
+        safety_warning_bypassed: bypassSafety
       };
 
       const res = await fetch(`${REACT_APP_API_URL}/v1/triage/encounters`, {
@@ -935,11 +946,11 @@ export const TriageDashboard: React.FC = () => {
 
           {validationWarning && (
             <div style={{
-              background: 'rgba(245, 158, 11, 0.1)',
-              border: '1px solid #f59e0b',
+              background: validationWarningType === 'infrastructure_degraded' ? 'rgba(154, 166, 189, 0.08)' : 'rgba(245, 158, 11, 0.1)',
+              border: validationWarningType === 'infrastructure_degraded' ? '1px solid var(--plasma-border)' : '1px solid #f59e0b',
               borderRadius: '8px',
               padding: '12px',
-              color: '#fbbf24',
+              color: validationWarningType === 'infrastructure_degraded' ? 'var(--plasma-text-secondary)' : '#fbbf24',
               fontSize: '0.82rem',
               lineHeight: 1.4,
               marginBottom: '16px',
@@ -947,8 +958,10 @@ export const TriageDashboard: React.FC = () => {
               flexDirection: 'column',
               gap: '8px'
             }}>
-              <div>⚠️ {validationWarning}</div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', cursor: 'pointer', color: '#fbbf24', fontWeight: 600 }}>
+              <div>
+                <strong>{validationWarningType === 'infrastructure_degraded' ? '🤖 AI Verification Unavailable' : '⚠️ Clinical Contradiction Detected'}</strong>: {validationWarning}
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', cursor: 'pointer', color: validationWarningType === 'infrastructure_degraded' ? 'var(--plasma-text-muted)' : '#fbbf24', fontWeight: 600 }}>
                 <input 
                   type="checkbox" 
                   checked={bypassSafety} 
@@ -961,10 +974,16 @@ export const TriageDashboard: React.FC = () => {
 
           <button
             className="submit-btn"
-            disabled={submitting || !form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia}
+            disabled={submitting || preAuditLoading || !form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia}
             onClick={submitEncounter}
+            aria-busy={submitting || preAuditLoading}
           >
-            {submitting ? '⏳ Running AI Triage…' : '→ Submit & Triage'}
+            {submitting || preAuditLoading ? (
+              <span className="btn-loading-container">
+                <span className="spinner btn-spinner" aria-hidden="true" />
+                <span>{preAuditLoading ? 'Analyzing Presentation…' : 'Running AI Triage…'}</span>
+              </span>
+            ) : '→ Submit & Triage'}
           </button>
         </div>
       )}
@@ -1036,7 +1055,14 @@ export const TriageDashboard: React.FC = () => {
             </td></tr>
           )}
           {loading && (
-            <tr><td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>Loading queue…</td></tr>
+            <tr>
+              <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span className="spinner" aria-hidden="true" style={{ borderColor: 'rgba(255,255,255,0.1)', borderTopColor: 'var(--plasma-clinical-blue)' }} />
+                  <span>Loading queue…</span>
+                </div>
+              </td>
+            </tr>
           )}
         </tbody>
       </table>
@@ -1231,18 +1257,39 @@ export const TriageDashboard: React.FC = () => {
                     <div className="action-btn-group">
                       <button className="action-btn action-accept"
                         disabled={!!actionLoading || pendingAction !== null}
-                        onClick={() => dispatchAction('accepted', selectedEncounter.clinical?.ai_recommendation?.acuity)}>
-                        {actionLoading === 'accepted' ? '…' : '✓ Accept'}
+                        onClick={() => dispatchAction('accepted', selectedEncounter.clinical?.ai_recommendation?.acuity)}
+                        aria-busy={actionLoading === 'accepted'}
+                      >
+                        {actionLoading === 'accepted' ? (
+                          <span className="btn-loading-container">
+                            <span className="spinner btn-spinner" aria-hidden="true" />
+                            <span>Accepting…</span>
+                          </span>
+                        ) : '✓ Accept'}
                       </button>
                       <button className="action-btn action-downgrade"
                         disabled={!!actionLoading || pendingAction !== null}
-                        onClick={() => setPendingAction('downgraded')}>
-                        {actionLoading === 'downgraded' ? '…' : '↓ Downgrade'}
+                        onClick={() => setPendingAction('downgraded')}
+                        aria-busy={actionLoading === 'downgraded'}
+                      >
+                        {actionLoading === 'downgraded' ? (
+                          <span className="btn-loading-container">
+                            <span className="spinner btn-spinner" aria-hidden="true" />
+                            <span>Downgrading…</span>
+                          </span>
+                        ) : '↓ Downgrade'}
                       </button>
                       <button className="action-btn action-escalate"
                         disabled={!!actionLoading || pendingAction !== null}
-                        onClick={() => setPendingAction('escalated')}>
-                        {actionLoading === 'escalated' ? '…' : '↑ Escalate'}
+                        onClick={() => setPendingAction('escalated')}
+                        aria-busy={actionLoading === 'escalated'}
+                      >
+                        {actionLoading === 'escalated' ? (
+                          <span className="btn-loading-container">
+                            <span className="spinner btn-spinner" aria-hidden="true" />
+                            <span>Escalating…</span>
+                          </span>
+                        ) : '↑ Escalate'}
                       </button>
                     </div>
                     {pendingAction && (
@@ -1295,10 +1342,22 @@ export const TriageDashboard: React.FC = () => {
                                 disabled={isBtnDisabled}
                                 onClick={() => dispatchAction(pendingAction, level)}
                                 className={`acuity-badge acuity-${level}`}
-                                style={{ width: 40, height: 40, opacity: isBtnDisabled ? 0.3 : 1, cursor: isBtnDisabled ? 'not-allowed' : 'pointer', border: 'none' }}
+                                style={{ 
+                                  width: 40, 
+                                  height: 40, 
+                                  opacity: isBtnDisabled ? 0.3 : 1, 
+                                  cursor: isBtnDisabled ? 'not-allowed' : 'pointer', 
+                                  border: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
                                 title={isBtnDisabled ? (isRestrictedDowngrade ? 'Requires active emergency bypass confirmation' : `Invalid for ${pendingAction}`) : `Assign Acuity ${level}`}
+                                aria-busy={actionLoading === pendingAction}
                               >
-                                {level}
+                                {actionLoading === pendingAction ? (
+                                  <span className="spinner" aria-hidden="true" style={{ width: '14px', height: '14px', borderWidth: '1.5px' }} />
+                                ) : level}
                               </button>
                             );
                           })}

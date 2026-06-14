@@ -348,10 +348,25 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                           fontSize: '1rem',
                           background: isAlreadyAudited ? 'var(--plasma-surface-2)' : (hasResult || isStale ? 'var(--plasma-warning-amber)' : undefined),
                           color: isAlreadyAudited ? 'var(--plasma-text-muted)' : (hasResult || isStale ? 'black' : undefined),
-                          cursor: (isAlreadyAudited) ? 'default' : 'pointer'
+                          cursor: (isAlreadyAudited) ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
                       }}
+                      aria-busy={isVerifying}
                     >
-                      {isAlreadyAudited ? '✓ ' : ''}{label}
+                      {isVerifying ? (
+                        <span className="btn-loading-container">
+                          <span className="spinner btn-spinner" aria-hidden="true" />
+                          <span>{label}</span>
+                        </span>
+                      ) : (
+                        <>
+                          {isAlreadyAudited ? '✓ ' : ''}
+                          <span>{label}</span>
+                        </>
+                      )}
                     </button>
                 );
             })()}

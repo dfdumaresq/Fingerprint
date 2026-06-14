@@ -500,3 +500,35 @@ body {
 .row-warning td:first-child {
   border-left: 3px solid var(--plasma-warning-amber);
 }
+
+/* Spinner utilities for async operations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  border-top-color: currentColor;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+.btn-spinner {
+  margin-right: 8px;
+}
+
+.btn-loading-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+

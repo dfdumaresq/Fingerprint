@@ -68,6 +68,8 @@ export interface ClinicalInput {
   };
   patient_context: PatientContext;
   red_flags?: string[];
+  safety_warning_triggered?: 'none' | 'clinical_contradiction' | 'infrastructure_degraded';
+  safety_warning_bypassed?: boolean;
 }
 
 export interface ClinicalData {
@@ -111,6 +113,8 @@ export interface ClinicalData {
   clinician_acuity?: number;
   ai_provider?: string;
   state: string;
+  safety_warning_triggered?: 'none' | 'clinical_contradiction' | 'infrastructure_degraded';
+  safety_warning_bypassed?: boolean;
 }
 
 export interface TriageResult {
@@ -477,7 +481,9 @@ export class TriageService {
       rules_recommendation: rules_check,
       acuity_divergence: acuityDivergence,
       ai_provider: provider,
-      state: 'waiting'
+      state: 'waiting',
+      safety_warning_triggered: input.safety_warning_triggered,
+      safety_warning_bypassed: input.safety_warning_bypassed
     };
 
     // 5. Write the event referencing pointers (never raw PHI — masking enforced above)

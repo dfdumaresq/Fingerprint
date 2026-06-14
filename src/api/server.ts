@@ -1,5 +1,7 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
+import * as crypto from 'crypto';
+
 
 // @ts-ignore
 import express, { Request, Response, NextFunction } from 'express';
@@ -361,11 +363,45 @@ app.get('/v1/triage/status', async (req: Request, res: Response) => {
  * Clinician-driven: create a new encounter, get AI triage recommendation, log to ledger.
  */
 app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
+  let lockKey = '';
   try {
-    const { chief_complaint, vitals, patient_context, red_flags, clinician_name } = req.body;
+    const { chief_complaint, vitals, patient_context, red_flags, clinician_name, safety_warning_triggered, safety_warning_bypassed } = req.body;
 
     if (!chief_complaint || !vitals?.hr || !vitals?.bp_sys || !vitals?.bp_dia || !patient_context?.demographics) {
       res.status(400).json({ error: { code: 'bad_request', message: 'chief_complaint, vitals(hr,bp_sys,bp_dia), and patient_context.demographics are required' } });
+      return;
+    }
+
+    // Backend request deduplication / idempotency
+    const keyData = JSON.stringify({
+      chief_complaint,
+      vitals: { hr: vitals.hr, bp_sys: vitals.bp_sys, bp_dia: vitals.bp_dia },
+      patient_context: { demographics: patient_context.demographics }
+    });
+    const requestHash = crypto.createHash('sha256').update(keyData).digest('hex');
+    lockKey = `dedupe:lock:encounter:${requestHash}`;
+    const resultKey = `dedupe:result:encounter:${requestHash}`;
+
+    // 1. Check if we already finished creating this exact encounter recently
+    const cachedResult = await redis.get(resultKey);
+    if (cachedResult) {
+      res.status(201).json(JSON.parse(cachedResult));
+      return;
+    }
+
+    // 2. Check if a concurrent request is already creating it
+    const isLocked = await redis.set(lockKey, 'in-flight', 'PX', 30000, 'NX');
+    if (!isLocked) {
+      // Poll every 500ms for up to 25 seconds
+      for (let i = 0; i < 50; i++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const currentResult = await redis.get(resultKey);
+        if (currentResult) {
+          res.status(201).json(JSON.parse(currentResult));
+          return;
+        }
+      }
+      res.status(409).json({ error: { code: 'conflict', message: 'A concurrent triage request is still in progress. Please retry.' } });
       return;
     }
 
@@ -374,13 +410,24 @@ app.post('/v1/triage/encounters', async (req: Request, res: Response) => {
         chief_complaint, 
         vitals, 
         patient_context,
-        red_flags
+        red_flags,
+        safety_warning_triggered,
+        safety_warning_bypassed
       },
       clinician_name || 'clinician'
     );
 
-    res.status(201).json({ success: true, data: encounter, phi_scan: encounter.phi_scan ?? null });
+    const responseData = { success: true, data: encounter, phi_scan: encounter.phi_scan ?? null };
+    
+    // Cache the completed encounter for 10 seconds to handle client-side retries
+    await redis.set(resultKey, JSON.stringify(responseData), 'EX', 10);
+    await redis.del(lockKey);
+
+    res.status(201).json(responseData);
   } catch (error: any) {
+    if (lockKey) {
+      await redis.del(lockKey).catch(() => {});
+    }
     if (error instanceof AgentNotAvailableError) {
       res.status(503).json({ 
         error: { 
@@ -927,6 +974,7 @@ async function getEmbedding(prompt: string): Promise<number[]> {
  * the ESI Gold Standard sentinel baseline corresponding to the predicted acuity level.
  */
 app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: Request, res: Response) => {
+  let lockKey = '';
   try {
     const { fingerprintHash } = req.params;
     const { prompt, acuityLevel } = req.body;
@@ -942,6 +990,35 @@ app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: Request, res
       return;
     }
 
+    // Backend request deduplication / idempotency
+    const keyData = JSON.stringify({ prompt, acuityLevel });
+    const requestHash = crypto.createHash('sha256').update(fingerprintHash + ':' + keyData).digest('hex');
+    lockKey = `dedupe:lock:verify:${requestHash}`;
+    const resultKey = `dedupe:result:verify:${requestHash}`;
+
+    // 1. Check if we already computed this verify recently
+    const cachedResult = await redis.get(resultKey);
+    if (cachedResult) {
+      res.json(JSON.parse(cachedResult));
+      return;
+    }
+
+    // 2. Check if a concurrent request is already computing it
+    const isLocked = await redis.set(lockKey, 'in-flight', 'PX', 40000, 'NX');
+    if (!isLocked) {
+      // Poll every 500ms for up to 35 seconds
+      for (let i = 0; i < 70; i++) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const currentResult = await redis.get(resultKey);
+        if (currentResult) {
+          res.json(JSON.parse(currentResult));
+          return;
+        }
+      }
+      res.status(409).json({ error: { code: 'conflict', message: 'A concurrent verification request is still in progress. Please retry.' } });
+      return;
+    }
+
     // 1. Verify agent exists
     const cached = await redis.get(`agent:${fingerprintHash}`);
     let agentExists = !!cached;
@@ -951,6 +1028,7 @@ app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: Request, res
     }
 
     if (!agentExists) {
+      await redis.del(lockKey);
       res.status(404).json({ error: { code: 'agent_not_found', message: 'No agent found for the provided fingerprintHash.' } });
       return;
     }
@@ -997,7 +1075,7 @@ app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: Request, res
     const floor = floors[level];
     const status = similarity >= floor ? 'aligned' : 'mismatch';
 
-    res.json({
+    const responseData = {
       success: true,
       fingerprintHash,
       similarity,
@@ -1005,8 +1083,17 @@ app.post('/v1/agents/:fingerprintHash/semantic/verify', async (req: Request, res
       status,
       acuityLevel: level,
       sentinelPromptUsed: baselinePrompt
-    });
+    };
+
+    // Cache the verification result for 15 seconds to cover UI polling/refreshes
+    await redis.set(resultKey, JSON.stringify(responseData), 'EX', 15);
+    await redis.del(lockKey);
+
+    res.json(responseData);
   } catch (error: any) {
+    if (lockKey) {
+      await redis.del(lockKey).catch(() => {});
+    }
     console.error('Error running semantic alignment verification:', error);
     res.status(500).json({ error: { code: 'internal_error', message: 'An internal error occurred during semantic alignment verification', details: error.message } });
   }

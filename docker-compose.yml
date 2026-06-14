@@ -56,6 +56,7 @@ services:
       OLLAMA_ENDPOINT:       ${OLLAMA_ENDPOINT:-http://localhost:11434}
       REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
       REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
+      DISABLE_NER:                         ${DISABLE_NER:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,6 +81,7 @@ services:
       SEPOLIA_URL:                        ${SEPOLIA_URL}
       REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
       REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
+      DISABLE_NER:                        ${DISABLE_NER:-false}
     depends_on:
       postgres:
         condition: service_healthy

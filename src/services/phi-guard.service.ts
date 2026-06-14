@@ -208,6 +208,11 @@ let nerInitError: Error | null = null;
  *  - We only act on PER (person names)
  */
 async function getNerPipeline(): Promise<NERPipeline | null> {
+  if (process.env.DISABLE_NER === 'true') {
+    nerInitialised = true;
+    nerPipeline = null;
+    return null;
+  }
   if (nerInitialised) return nerPipeline;
 
   try {

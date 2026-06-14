@@ -1031,7 +1031,35 @@ export const BehaviorAuditView: React.FC = () => {
                     color: exportStatus.type === 'success' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)',
                     border: `1px solid ${exportStatus.type === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
                   }}>
-                    {exportStatus.type === 'success' ? '✅' : '❌'} {exportStatus.message}
+                    <div style={{ marginBottom: exportStatus.type === 'error' && (exportStatus.message.includes('signing key') || exportStatus.message.includes('re-key')) ? '8px' : '0px' }}>
+                      {exportStatus.type === 'success' ? '✅' : '❌'} {exportStatus.message}
+                    </div>
+                    {exportStatus.type === 'error' && (exportStatus.message.includes('signing key') || exportStatus.message.includes('re-key')) && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            setExportStatus({ type: 'success', message: 'Generating identity keypair...' });
+                            await c2paService.initializeIdentity(activeHash);
+                            setExportStatus({ type: 'success', message: '🔑 Baseline keypair initialized! Click Export again.' });
+                          } catch (err: any) {
+                            setExportStatus({ type: 'error', message: `Re-key failed: ${err.message}` });
+                          }
+                        }}
+                        className="primary-btn"
+                        style={{ 
+                          padding: '6px 12px', 
+                          fontSize: '0.8rem', 
+                          marginTop: '4px',
+                          background: 'var(--plasma-clinical-blue)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🔑 Perform Re-key Operation
+                      </button>
+                    )}
                   </div>
                 )}
 

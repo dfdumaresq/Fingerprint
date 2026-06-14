@@ -16,3 +16,8 @@ services:
   nginx:
     mem_limit: 256m
     cpus: "0.25"
+
+  indexer:
+    mem_limit: 256m
+    cpus: "0.25"
+

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { isValidFingerprintFormat } from '../utils/fingerprint.utils';
 import { useBlockchain } from '../contexts/BlockchainContext';
 
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL || '';
+const REACT_APP_API_KEY = process.env.REACT_APP_API_KEY || 'sk_test_123';
+
 interface RevokeFingerprintProps {
   blockchainService?: any; 
   onSuccess: () => void;
@@ -67,7 +70,21 @@ const RevokeFingerprint: React.FC<RevokeFingerprintProps> = ({ blockchainService
       if (!service) throw new Error('Blockchain service not available');
       
       const agent = await service.verifyFingerprint(fingerprintHash);
-      if (!agent) throw new Error('Fingerprint does not exist');
+      if (!agent) {
+        // Check if it's cached in the local DB
+        const localDbCheck = await fetch(`${REACT_APP_API_URL}/v1/agents/${fingerprintHash}`, {
+          headers: { 'Authorization': `Bearer ${REACT_APP_API_KEY}` }
+        });
+        if (localDbCheck.status === 200) {
+          const dbAgent = await localDbCheck.json();
+          if (dbAgent && dbAgent.fingerprintHash) {
+            throw new Error(
+              `Sync Error: Agent "${dbAgent.name}" exists in the local database but is not registered on the blockchain. You must register it on-chain first before it can be revoked.`
+            );
+          }
+        }
+        throw new Error('Fingerprint does not exist on the blockchain registry.');
+      }
       if (agent.revoked) throw new Error('Fingerprint is already revoked');
 
       const ok = await service.revokeFingerprint(fingerprintHash);

@@ -395,17 +395,21 @@ export class TriageService {
     this.eventService = new EventService(dbPool);
   }
 
-  /**
-   * Resolve the active fingerprint ID from the database based on a logical slug.
-   * Logic: matching slug, not revoked, latest created.
-   */
   async resolveActiveAgent(slug: string): Promise<string> {
-    const res = await this.db.query(
-      `SELECT fingerprint_hash FROM agents 
-       WHERE agent_id = $1 AND is_revoked = false 
-       ORDER BY created_at DESC LIMIT 1`,
-      [slug]
+    // 1. Try to find the agent explicitly marked active
+    let res = await this.db.query(
+      'SELECT fingerprint_hash FROM agents WHERE is_active = true AND is_revoked = false LIMIT 1'
     );
+    
+    // 2. Fallback to default slug if none is explicitly marked active
+    if (res.rows.length === 0) {
+      res = await this.db.query(
+        `SELECT fingerprint_hash FROM agents 
+         WHERE agent_id = $1 AND is_revoked = false 
+         ORDER BY created_at DESC LIMIT 1`,
+        [slug]
+      );
+    }
 
     if (res.rows.length === 0) {
       throw new AgentNotAvailableError(slug);
@@ -849,12 +853,20 @@ export class TriageService {
   }
 
   async getActiveAgent(slug: string): Promise<any> {
-    const res = await this.db.query(
-      `SELECT * FROM agents 
-       WHERE agent_id = $1 AND is_revoked = false 
-       ORDER BY created_at DESC LIMIT 1`,
-      [slug]
+    // 1. Try to find the agent explicitly marked active
+    let res = await this.db.query(
+      'SELECT * FROM agents WHERE is_active = true AND is_revoked = false LIMIT 1'
     );
+    
+    // 2. Fallback to default slug if none is explicitly marked active
+    if (res.rows.length === 0) {
+      res = await this.db.query(
+        `SELECT * FROM agents 
+         WHERE agent_id = $1 AND is_revoked = false 
+         ORDER BY created_at DESC LIMIT 1`,
+        [slug]
+      );
+    }
 
     if (res.rows.length === 0) return null;
     return res.rows[0];
@@ -903,5 +915,146 @@ export class TriageService {
         details: { error_code: 'connection_timeout', message: `Connection to local Ollama agent failed. Falling back to rule engine.` }
       };
     }
+  }
+
+  async activateAgentWithAudit(params: {
+    targetFingerprintHash: string;
+    actor: { userId: string; displayName: string; role: string; type: string };
+    source: string;
+    requestId: string;
+    reason?: string;
+  }): Promise<{ eventId: number; occurredAt: string; agent: any }> {
+    const client = await this.db.connect();
+    
+    let targetAgent: any = null;
+    let prevAgent: any = null;
+    let inTransaction = false;
+
+    try {
+      // 1. Resolve target agent details to verify it exists and is not revoked
+      const targetAgentRes = await client.query(
+        'SELECT agent_id, name, provider, version, is_revoked FROM agents WHERE fingerprint_hash = $1',
+        [params.targetFingerprintHash]
+      );
+      if (targetAgentRes.rows.length === 0) {
+        throw new Error(`Agent not found with fingerprint hash ${params.targetFingerprintHash}`);
+      }
+      targetAgent = targetAgentRes.rows[0];
+      if (targetAgent.is_revoked) {
+        throw new Error(`Cannot activate revoked agent ${targetAgent.agent_id}`);
+      }
+
+      // 2. Resolve current active agent (if any) for before/after diff tracking
+      const currentActiveRes = await client.query(
+        'SELECT agent_id, fingerprint_hash FROM agents WHERE is_active = true AND is_revoked = false LIMIT 1'
+      );
+      prevAgent = currentActiveRes.rows[0] || null;
+
+      await client.query('BEGIN');
+      inTransaction = true;
+
+      // 3. Perform activation state switch
+      await client.query('UPDATE agents SET is_active = false');
+      const updateRes = await client.query(
+        'UPDATE agents SET is_active = true WHERE fingerprint_hash = $1 RETURNING fingerprint_hash',
+        [params.targetFingerprintHash]
+      );
+      if (updateRes.rows.length === 0) {
+        throw new Error('Failed to update agent active status.');
+      }
+
+      // 4. Ingest success audit log
+      const auditRes = await client.query(
+        `INSERT INTO audit.agent_activation_events (
+          actor_type, actor_id, actor_display_name, actor_role, event_type,
+          target_agent_id, target_fingerprint_hash,
+          previous_agent_id, previous_fingerprint_hash,
+          source, request_id, reason, outcome, metadata
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         RETURNING id, occurred_at`,
+        [
+          params.actor.type,
+          params.actor.userId,
+          params.actor.displayName,
+          params.actor.role,
+          'activation_attempt',
+          targetAgent.agent_id,
+          params.targetFingerprintHash,
+          prevAgent ? prevAgent.agent_id : null,
+          prevAgent ? prevAgent.fingerprint_hash : null,
+          params.source,
+          params.requestId,
+          params.reason || null,
+          'success',
+          JSON.stringify({ target_name: targetAgent.name })
+        ]
+      );
+
+      await client.query('COMMIT');
+      inTransaction = false;
+      return {
+        eventId: auditRes.rows[0].id,
+        occurredAt: auditRes.rows[0].occurred_at.toISOString(),
+        agent: {
+          slug: targetAgent.agent_id,
+          name: targetAgent.name,
+          provider: targetAgent.provider,
+          version: targetAgent.version,
+          fingerprintHash: params.targetFingerprintHash
+        }
+      };
+    } catch (err: any) {
+      if (inTransaction) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackErr) {
+          console.error('Failed to rollback transaction:', rollbackErr);
+        }
+      }
+
+      // 5. Ingest failure audit log in a separate, non-rolled-back database context
+      try {
+        await this.db.query(
+          `INSERT INTO audit.agent_activation_events (
+            actor_type, actor_id, actor_display_name, actor_role, event_type,
+            target_agent_id, target_fingerprint_hash,
+            previous_agent_id, previous_fingerprint_hash,
+            source, request_id, reason, outcome, metadata
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+          [
+            params.actor.type,
+            params.actor.userId,
+            params.actor.displayName,
+            params.actor.role,
+            'activation_attempt',
+            targetAgent ? targetAgent.agent_id : 'unknown',
+            params.targetFingerprintHash,
+            prevAgent ? prevAgent.agent_id : null,
+            prevAgent ? prevAgent.fingerprint_hash : null,
+            params.source,
+            params.requestId,
+            params.reason || null,
+            'failure',
+            JSON.stringify({ error: err.message })
+          ]
+        );
+      } catch (logErr) {
+        console.error('Failed to log activation failure audit:', logErr);
+      }
+
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async getActivationAuditTrail(limit: number = 50): Promise<any[]> {
+    const { rows } = await this.db.query(
+      `SELECT * FROM audit.agent_activation_events 
+       ORDER BY occurred_at DESC 
+       LIMIT $1`,
+      [limit]
+    );
+    return rows;
   }
 }

@@ -30,8 +30,24 @@ export const isValidFingerprintFormat = (hash: string): boolean => {
  * @param timestamp UNIX timestamp in seconds
  * @returns Formatted date string
  */
-export const formatTimestamp = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000);
+export const formatTimestamp = (timestamp: number | string | Date): string => {
+  let date: Date;
+  if (timestamp instanceof Date) {
+    date = timestamp;
+  } else if (typeof timestamp === 'number') {
+    // If it's a Unix timestamp in seconds (10 digits or less), multiply by 1000.
+    // Otherwise, treat as milliseconds.
+    const isSeconds = timestamp < 9999999999;
+    date = new Date(isSeconds ? timestamp * 1000 : timestamp);
+  } else {
+    // It's a string (e.g. ISO string)
+    date = new Date(timestamp);
+  }
+
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
+
   return date.toLocaleString(undefined, {
     year: 'numeric',
     month: 'long',

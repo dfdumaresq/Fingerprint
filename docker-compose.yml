@@ -54,6 +54,8 @@ services:
       TRIAGE_AGENT_NAME:     ${TRIAGE_AGENT_NAME:-Clinical Rules Engine}
       TRIAGE_AGENT_MODEL:    ${TRIAGE_AGENT_MODEL:-tinydolphin}
       OLLAMA_ENDPOINT:       ${OLLAMA_ENDPOINT:-http://localhost:11434}
+      REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
+      REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,6 +63,28 @@ services:
         condition: service_healthy
     expose:
       - "3000"
+
+  # ── Blockchain Indexer ──────────────────────────────────────────────────────
+  indexer:
+    build:
+      context:    .
+      dockerfile: Dockerfile
+    image: fingerprint-api:latest
+    container_name: fingerprint_indexer
+    restart: unless-stopped
+    command: ["npx", "ts-node", "scripts/indexer.ts"]
+    environment:
+      NODE_ENV:                           production
+      DATABASE_URL:                       postgresql://fingerprint:${POSTGRES_PASSWORD}@postgres:5432/fingerprint
+      REDIS_URL:                          redis://:${REDIS_PASSWORD}@redis:6379
+      SEPOLIA_URL:                        ${SEPOLIA_URL}
+      REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
+      REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # ── Nginx + React frontend ───────────────────────────────────────────────────
   nginx:

@@ -2,16 +2,32 @@ import { ethers } from 'ethers';
 import { Pool } from 'pg';
 import Redis from 'ioredis';
 import * as dotenv from 'dotenv';
-import AIFingerprintABI from '../artifacts/contracts/AIFingerprint.sol/AIFingerprint.json';
 
 dotenv.config();
+
+const ABI = [
+  "function registerFingerprint(string id, string name, string provider, string version, string fingerprintHash) external",
+  "function verifyFingerprint(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt)",
+  "function revokeFingerprint(string fingerprintHash) external",
+  "function isRevoked(string fingerprintHash) external view returns (bool revoked, uint256 revokedAt, address revokedBy)",
+  "function verifyFingerprintExtended(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt, bool revoked, uint256 revokedAt)",
+  "function registerBehavioralTrait(string fingerprintHash, string traitHash, string traitVersion) external",
+  "function updateBehavioralTrait(string fingerprintHash, string newTraitHash, string traitVersion) external",
+  "function getBehavioralTraitData(string fingerprintHash) external view returns (bool exists, string traitHash, string traitVersion, uint256 registeredAt, uint256 lastUpdatedAt)",
+  "function verifyBehavioralMatch(string fingerprintHash, string currentTraitHash) external view returns (bool matches)",
+  "event FingerprintRegistered(string fingerprintHash, string id, string name, string provider, string version, address registeredBy, uint256 createdAt)",
+  "event FingerprintRevoked(string fingerprintHash, address revokedBy, uint256 revokedAt)",
+  "event BehavioralTraitRegistered(string fingerprintHash, string traitHash, string traitVersion, address registeredBy, uint256 registeredAt)",
+  "event BehavioralTraitUpdated(string fingerprintHash, string oldTraitHash, string newTraitHash, string traitVersion, address updatedBy, uint256 updatedAt)",
+  "event FingerprintOwnershipTransferred(string fingerprintHash, address previousOwner, address newOwner, uint256 transferredAt)"
+];
 
 // 1. Initialize Connections
 const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_URL);
 const contractAddress = process.env.REACT_APP_SEPOLIA_CONTRACT_ADDRESS || '';
 const chainId = parseInt(process.env.REACT_APP_SEPOLIA_CHAIN_ID || '11155111', 10);
 
-const contract = new ethers.Contract(contractAddress, AIFingerprintABI.abi, provider);
+const contract = new ethers.Contract(contractAddress, ABI, provider);
 
 const db = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -20,7 +36,7 @@ const db = new Pool({
 // Connect to local or remote Redis
 const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 
-const BATCH_SIZE = 1000; // Increased batch size for faster catch-up
+const BATCH_SIZE = 10000; // Increased batch size for faster catch-up
 const STARTING_BLOCK = chainId === 11155111 ? chainId - 757111 : 0;
 
 /**
@@ -84,8 +100,12 @@ async function syncEvents() {
       await redis.hset('system:health', 'lastProcessedBlock', toBlock);
       await redis.hset('system:health', 'chainHead', currentBlock);
 
-      // Sleep a bit to avoid RPC rate limits (e.g. 1 request per second for free tiers)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Sleep a bit to avoid RPC rate limits. Sleep less (100ms) when catching up, and more (2000ms) when synced.
+      if (toBlock < currentBlock - 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
 
     } catch (error) {
       console.error('Indexer Loop Failed. Retrying in 5s...', error);

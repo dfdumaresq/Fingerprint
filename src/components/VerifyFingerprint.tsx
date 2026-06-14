@@ -123,8 +123,15 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
               type="submit" 
               className="primary-btn"
               disabled={verifying || (fingerprintHash.length > 0 && !isInputValid)}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              aria-busy={verifying}
             >
-              {verifying ? 'Verifying...' : 'Search Ledger'}
+              {verifying ? (
+                <span className="btn-loading-container">
+                  <span className="spinner btn-spinner" aria-hidden="true" />
+                  <span>Verifying...</span>
+                </span>
+              ) : 'Search Ledger'}
             </button>
           </div>
               <p className="text-secondary" style={{ fontSize: '0.85rem', marginTop: '8px' }}>

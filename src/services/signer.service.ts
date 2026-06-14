@@ -87,15 +87,15 @@ export class ProvenanceSigner {
   ): Promise<ProvenanceManifest> {
     const keyPair = await this.keyStore.getKey(identityId);
     if (!keyPair) {
-      throw new Error(`Identity key ${identityId} not found`);
+      throw new Error(
+        `This browser does not hold the signing key for this agent baseline; export requires the original signing key or a deliberate re-key operation.`
+      );
     }
-
-    const crypto = getCrypto();
-    // Prepare data for signing (simplified manifest structure)
-    // In actual C2PA, this would be encoded as JUMBF
     const manifestData = JSON.stringify({ label, assertions });
     const dataEncoder = new TextEncoder();
     const dataBytes = dataEncoder.encode(manifestData);
+
+    const crypto = getCrypto();
 
     const signature = await crypto.subtle.sign(
       {

@@ -57,6 +57,7 @@ services:
       REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
       REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
       DISABLE_NER:                         ${DISABLE_NER:-false}
+      NODE_OPTIONS:                        --max-old-space-size=1200
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,6 +83,7 @@ services:
       REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
       REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
       DISABLE_NER:                        ${DISABLE_NER:-false}
+      NODE_OPTIONS:                       --max-old-space-size=1200
     depends_on:
       postgres:
         condition: service_healthy

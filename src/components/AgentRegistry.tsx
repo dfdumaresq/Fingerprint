@@ -16,7 +16,7 @@ interface AgentRegistryProps {
 
 export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) => {
     const { service } = useBlockchain();
-    const [subView, setSubView] = useState<'list' | 'register' | 'verify' | 'revoke'>('list');
+    const [subView, setSubView] = useState<'list' | 'register' | 'verify' | 'revoke' | 'activation'>('list');
     const [registrationSuccess, setRegistrationSuccess] = useState(false);
     const [registeredAgent, setRegisteredAgent] = useState<Omit<Agent, 'createdAt'> | null>(null);
     const [selectedHash, setSelectedHash] = useState<string>('');
@@ -26,6 +26,14 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
     const [loadingAgents, setLoadingAgents] = useState(false);
     const [heartbeats, setHeartbeats] = useState<Record<string, 'checking' | 'active' | 'idle' | 'revoked'>>({});
     const [activeAgentHash, setActiveAgentHash] = useState<string>('');
+
+    // Activation Audit Trail states
+    const [auditLog, setAuditLog] = useState<any[]>([]);
+    const [loadingAudit, setLoadingAudit] = useState(false);
+    const [showActivationModal, setShowActivationModal] = useState(false);
+    const [agentToActivate, setAgentToActivate] = useState<Agent | null>(null);
+    const [activationReason, setActivationReason] = useState('');
+    const [activationSuccessBanner, setActivationSuccessBanner] = useState<{ occurredAt: string; eventId: number; requestId: string; agentName: string } | null>(null);
 
     const handleRegistrationSuccess = (agent: Omit<Agent, 'createdAt'>) => {
         setRegistrationSuccess(true);
@@ -113,6 +121,29 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
             fetchAgents();
         }
     }, [subView, service, fetchAgents]);
+
+    const fetchAuditLog = useCallback(async () => {
+        setLoadingAudit(true);
+        try {
+            const res = await fetch(`${REACT_APP_API_URL}/v1/agents/activation-history`, {
+                headers: { 'Authorization': `Bearer ${REACT_APP_API_KEY}` }
+            });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data)) {
+                setAuditLog(data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch activation audit history:", error);
+        } finally {
+            setLoadingAudit(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (subView === 'activation') {
+            fetchAuditLog();
+        }
+    }, [subView, fetchAuditLog]);
 
     // Trigger individual heartbeat re-check
     const triggerHeartbeatRecheck = () => {
@@ -319,6 +350,20 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                     border-color: #ef4444;
                     color: #fff;
                 }
+                .card-action-btn.btn-activate {
+                    color: var(--plasma-clinical-blue, #4a6bff);
+                }
+                .card-action-btn.btn-activate:hover {
+                    background: rgba(14, 165, 233, 0.05);
+                    border-color: var(--plasma-clinical-blue, #4a6bff);
+                    color: #fff;
+                }
+                .card-action-btn.btn-activate.active-btn {
+                    color: var(--plasma-integrity-green, #10b981);
+                    background: rgba(16, 185, 129, 0.08);
+                    border-color: var(--plasma-integrity-green, #10b981);
+                    cursor: not-allowed;
+                }
                 .btn-recheck {
                     background: transparent;
                     border: 1px solid var(--plasma-border, rgba(255, 255, 255, 0.08));
@@ -345,6 +390,39 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                     Manage the lifecycle of AI agent identities. Register new fingerprints, verify blockchain clinical integrity, or revoke compromised identities.
                 </p>
             </div>
+
+            {activationSuccessBanner && (
+                <div style={{
+                    background: 'rgba(16, 185, 129, 0.08)',
+                    border: '1px solid var(--plasma-integrity-green)',
+                    borderRadius: '6px',
+                    padding: '16px 20px',
+                    marginBottom: '24px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '16px'
+                }}>
+                    <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: '0 0 4px 0', color: 'var(--plasma-integrity-green)', fontWeight: 600 }}>
+                            🟢 Active Agent Swapped Successfully
+                        </h4>
+                        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--plasma-text-primary)' }}>
+                            Agent <strong style={{ color: 'var(--plasma-clinical-blue)' }}>{activationSuccessBanner.agentName}</strong> was activated by <strong>System Dashboard</strong> at <strong>{formatTimestamp(activationSuccessBanner.occurredAt || Date.now())}</strong>.
+                        </p>
+                        <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--plasma-text-secondary)', display: 'flex', gap: '16px' }}>
+                            <span><strong>Audit ID:</strong> #{activationSuccessBanner.eventId}</span>
+                            <span><strong>Request ID:</strong> <code style={{ color: 'var(--plasma-clinical-blue)' }}>{activationSuccessBanner.requestId}</code></span>
+                        </div>
+                    </div>
+                    <button 
+                        style={{ background: 'transparent', border: 'none', color: 'var(--plasma-text-secondary)', cursor: 'pointer', fontSize: '1.2rem', padding: '0 4px' }}
+                        onClick={() => setActivationSuccessBanner(null)}
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -375,6 +453,13 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                         onClick={() => { setSelectedHash(''); setSubView('revoke'); }}
                     >
                         Revoke Access
+                    </button>
+                    <button 
+                        className={`nav-item ${subView === 'activation' ? 'active' : ''}`}
+                        style={{ borderRadius: '4px', border: '1px solid var(--plasma-border)', padding: '10px 20px', background: subView === 'activation' ? 'var(--plasma-surface-2)' : 'transparent', fontWeight: 600 }}
+                        onClick={() => { setSelectedHash(''); setSubView('activation'); }}
+                    >
+                        Activation Trail
                     </button>
                 </div>
 
@@ -494,7 +579,18 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                                                             }
                                                         }}
                                                     >
-                                                        🔍 Verify Baseline
+                                                        🔍 Verify
+                                                    </button>
+                                                    <button 
+                                                        className={`card-action-btn btn-activate ${agent.fingerprintHash === activeAgentHash ? 'active-btn' : ''}`}
+                                                        disabled={agent.fingerprintHash === activeAgentHash}
+                                                        onClick={() => {
+                                                            setAgentToActivate(agent);
+                                                            setShowActivationModal(true);
+                                                            setActivationReason('');
+                                                        }}
+                                                    >
+                                                        {agent.fingerprintHash === activeAgentHash ? '🟢 Active' : '⚡ Activate'}
                                                     </button>
                                                     <button 
                                                         className="card-action-btn btn-revoke"
@@ -503,7 +599,7 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                                                             setSubView('revoke');
                                                         }}
                                                     >
-                                                        ⚠️ Revoke Access
+                                                        ⚠️ Revoke
                                                     </button>
                                                 </div>
                                             ) : (
@@ -573,6 +669,274 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                             }}
                             initialHash={selectedHash}
                         />
+                    </div>
+                )}
+
+                {subView === 'activation' && (
+                    <div className="plasma-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <div>
+                                <h3 style={{ margin: '0 0 4px 0', color: 'var(--plasma-text-primary)', fontWeight: 600 }}>
+                                    Agent Activation Audit Trail
+                                </h3>
+                                <p className="text-secondary" style={{ margin: 0, fontSize: '0.85rem' }}>
+                                    Append-only ledger of all agent routing changes, failures, and clinician-asserted justifications.
+                                </p>
+                            </div>
+                            <button 
+                                onClick={fetchAuditLog} 
+                                className="btn-recheck"
+                                style={{ margin: 0 }}
+                                disabled={loadingAudit}
+                            >
+                                {loadingAudit ? '⏳ Syncing...' : '🔄 Refresh Trail'}
+                            </button>
+                        </div>
+
+                        {loadingAudit ? (
+                            <div style={{ textAlign: 'center', padding: '60px' }}>
+                                <div style={{ fontSize: '2rem', marginBottom: '16px', animation: 'spin 1.5s infinite linear' }}>🔄</div>
+                                <h4 style={{ color: 'var(--plasma-text-secondary)', fontWeight: 500 }}>Reading Ledger Chain...</h4>
+                            </div>
+                        ) : auditLog.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--plasma-text-secondary)' }}>
+                                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>📋</div>
+                                <p>No activation audit events found in the ledger.</p>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="triage-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid var(--plasma-border)' }}>
+                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Timestamp (UTC)</th>
+                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Authenticated Actor</th>
+                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Action / Target</th>
+                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Audit Details</th>
+                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Outcome</th>
+                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Correlation Context</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {auditLog.map((event) => {
+                                            const isSuccess = event.outcome === 'success';
+                                            return (
+                                                <tr key={event.id} style={{ borderBottom: '1px solid var(--plasma-border)', background: isSuccess ? 'transparent' : 'rgba(239, 68, 68, 0.02)' }}>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                                                        <span className="tabular-nums" style={{ fontSize: '0.85rem', color: 'var(--plasma-text-primary)', display: 'block' }}>
+                                                            {formatTimestamp(event.occurred_at)}
+                                                        </span>
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--plasma-text-secondary)' }}>
+                                                            ID: #{event.id}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--plasma-text-primary)' }}>
+                                                            {event.actor_display_name}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.72rem', color: 'var(--plasma-text-secondary)' }}>
+                                                            {event.actor_role} ({event.actor_type})
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                                                        <div style={{ fontSize: '0.85rem' }}>
+                                                            <span style={{ color: 'var(--plasma-text-secondary)' }}>Target: </span>
+                                                            <strong style={{ color: 'var(--plasma-clinical-blue)' }}>{event.target_agent_id}</strong>
+                                                        </div>
+                                                        {event.previous_agent_id && (
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--plasma-text-secondary)', marginTop: '2px' }}>
+                                                                Prev: {event.previous_agent_id}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top', maxWidth: '300px' }}>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--plasma-text-primary)', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                                                            {event.reason || <em style={{ color: 'var(--plasma-text-secondary)' }}>No justification provided</em>}
+                                                        </div>
+                                                        {!isSuccess && event.metadata?.error && (
+                                                            <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '6px', background: 'rgba(239, 68, 68, 0.05)', padding: '6px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                                                                Error: {event.metadata.error}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                                                        <span 
+                                                            className="card-badge"
+                                                            style={{
+                                                                background: isSuccess ? 'rgba(74, 222, 128, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                                color: isSuccess ? 'var(--plasma-integrity-green)' : '#ef4444',
+                                                                borderColor: isSuccess ? 'rgba(74, 222, 128, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600
+                                                            }}
+                                                        >
+                                                            {isSuccess ? '✅ Success' : '❌ Failed'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            <div>
+                                                                <span className="text-muted" style={{ fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Request ID</span>
+                                                                <code style={{ fontSize: '0.75rem', color: 'var(--plasma-clinical-blue)', wordBreak: 'break-all' }}>{event.request_id}</code>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-muted" style={{ fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Source</span>
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--plasma-text-primary)' }}>{event.source}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── Agent Activation Confirmation Modal ── */}
+                {showActivationModal && agentToActivate && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(15, 19, 32, 0.85)',
+                        backdropFilter: 'blur(8px)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 1000,
+                        padding: '20px',
+                    }}>
+                        <div className="plasma-card" style={{
+                            maxWidth: '500px',
+                            width: '100%',
+                            border: '1px solid var(--plasma-clinical-blue)',
+                            boxShadow: '0 8px 32px rgba(14, 165, 233, 0.15)',
+                            background: 'var(--plasma-surface)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                <span style={{ fontSize: '1.8rem' }}>⚡</span>
+                                <h3 style={{ margin: 0, color: 'var(--plasma-clinical-blue)', fontSize: '1.2rem', fontWeight: 700 }}>
+                                    Authorize Triage Agent Activation
+                                </h3>
+                            </div>
+                            
+                            <p className="text-secondary" style={{ fontSize: '0.9rem', lineHeight: '1.6', marginBottom: '20px' }}>
+                                You are activating a new AI model for patient triage. This action changes the active clinical routing logic and will be logged to the audit ledger.
+                            </p>
+
+                            <div style={{
+                                background: 'var(--plasma-surface-2)',
+                                border: '1px solid var(--plasma-border)',
+                                padding: '12px 16px',
+                                borderRadius: '6px',
+                                marginBottom: '20px',
+                            }}>
+                                <span className="text-muted" style={{ fontSize: '0.72rem', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Target Agent</span>
+                                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--plasma-text-primary)' }}>
+                                    {agentToActivate.name} (v{agentToActivate.version})
+                                </div>
+                                <code style={{ fontSize: '0.78rem', color: 'var(--plasma-clinical-blue)', wordBreak: 'break-all' }}>
+                                    {agentToActivate.fingerprintHash}
+                                </code>
+                            </div>
+
+                            <div className="form-group" style={{ marginBottom: '24px' }}>
+                                <label htmlFor="activation-reason" style={{ color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem', marginBottom: '8px', display: 'block' }}>
+                                    Reason for Change (Required for Clinical Auditing):
+                                </label>
+                                <textarea
+                                    id="activation-reason"
+                                    rows={3}
+                                    value={activationReason}
+                                    onChange={e => setActivationReason(e.target.value)}
+                                    placeholder="e.g. Updating to model version with improved cardiac symptom triage metrics."
+                                    className="form-input"
+                                    style={{
+                                        width: '100%',
+                                        background: 'var(--plasma-surface-2)',
+                                        border: '1px solid var(--plasma-border)',
+                                        color: '#fff',
+                                        borderRadius: '4px',
+                                        padding: '10px',
+                                        fontSize: '0.9rem',
+                                        resize: 'vertical'
+                                    }}
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                <button
+                                    className="card-action-btn"
+                                    style={{ background: 'transparent', border: '1px solid var(--plasma-border)', color: 'var(--plasma-text-secondary)', width: 'auto', flex: 'none' }}
+                                    onClick={() => {
+                                        setShowActivationModal(false);
+                                        setAgentToActivate(null);
+                                        setActivationReason('');
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="card-action-btn"
+                                    style={{
+                                        background: 'var(--plasma-clinical-blue)',
+                                        color: '#fff',
+                                        cursor: !activationReason.trim() ? 'not-allowed' : 'pointer',
+                                        opacity: !activationReason.trim() ? 0.6 : 1,
+                                        width: 'auto',
+                                        flex: 'none'
+                                    }}
+                                    disabled={!activationReason.trim()}
+                                    onClick={async () => {
+                                        try {
+                                            const res = await fetch(`${REACT_APP_API_URL}/v1/agents/activate`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Authorization': `Bearer ${REACT_APP_API_KEY}`,
+                                                    'Content-Type': 'application/json',
+                                                    'X-Source': 'ui'
+                                                },
+                                                body: JSON.stringify({
+                                                    fingerprintHash: agentToActivate.fingerprintHash,
+                                                    reason: activationReason
+                                                })
+                                            });
+                                            const data = await res.json();
+                                            if (data.success) {
+                                                setActivationSuccessBanner({
+                                                    occurredAt: data.data.occurredAt,
+                                                    eventId: data.data.eventId,
+                                                    requestId: data.data.requestId,
+                                                    agentName: data.data.agent.name
+                                                });
+                                                await fetchAgents();
+                                                setTimeout(() => {
+                                                    setActivationSuccessBanner(null);
+                                                }, 10000);
+                                            } else {
+                                                alert(`Failed to activate agent: ${data.error?.message || 'Unknown error'}`);
+                                            }
+                                        } catch (error: any) {
+                                            console.error("Activation request failed:", error);
+                                            alert(`Activation request failed: ${error.message}`);
+                                        } finally {
+                                            setShowActivationModal(false);
+                                            setAgentToActivate(null);
+                                            setActivationReason('');
+                                        }
+                                    }}
+                                >
+                                    Confirm Activation
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

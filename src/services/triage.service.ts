@@ -926,29 +926,32 @@ export class TriageService {
   }): Promise<{ eventId: number; occurredAt: string; agent: any }> {
     const client = await this.db.connect();
     
-    // 1. Resolve target agent details to verify it exists and is not revoked
-    const targetAgentRes = await client.query(
-      'SELECT agent_id, name, provider, version, is_revoked FROM agents WHERE fingerprint_hash = $1',
-      [params.targetFingerprintHash]
-    );
-    if (targetAgentRes.rows.length === 0) {
-      client.release();
-      throw new Error(`Agent not found with fingerprint hash ${params.targetFingerprintHash}`);
-    }
-    const targetAgent = targetAgentRes.rows[0];
-    if (targetAgent.is_revoked) {
-      client.release();
-      throw new Error(`Cannot activate revoked agent ${targetAgent.agent_id}`);
-    }
-
-    // 2. Resolve current active agent (if any) for before/after diff tracking
-    const currentActiveRes = await client.query(
-      'SELECT agent_id, fingerprint_hash FROM agents WHERE is_active = true AND is_revoked = false LIMIT 1'
-    );
-    const prevAgent = currentActiveRes.rows[0] || null;
+    let targetAgent: any = null;
+    let prevAgent: any = null;
+    let inTransaction = false;
 
     try {
+      // 1. Resolve target agent details to verify it exists and is not revoked
+      const targetAgentRes = await client.query(
+        'SELECT agent_id, name, provider, version, is_revoked FROM agents WHERE fingerprint_hash = $1',
+        [params.targetFingerprintHash]
+      );
+      if (targetAgentRes.rows.length === 0) {
+        throw new Error(`Agent not found with fingerprint hash ${params.targetFingerprintHash}`);
+      }
+      targetAgent = targetAgentRes.rows[0];
+      if (targetAgent.is_revoked) {
+        throw new Error(`Cannot activate revoked agent ${targetAgent.agent_id}`);
+      }
+
+      // 2. Resolve current active agent (if any) for before/after diff tracking
+      const currentActiveRes = await client.query(
+        'SELECT agent_id, fingerprint_hash FROM agents WHERE is_active = true AND is_revoked = false LIMIT 1'
+      );
+      prevAgent = currentActiveRes.rows[0] || null;
+
       await client.query('BEGIN');
+      inTransaction = true;
 
       // 3. Perform activation state switch
       await client.query('UPDATE agents SET is_active = false');
@@ -988,6 +991,7 @@ export class TriageService {
       );
 
       await client.query('COMMIT');
+      inTransaction = false;
       return {
         eventId: auditRes.rows[0].id,
         occurredAt: auditRes.rows[0].occurred_at.toISOString(),
@@ -1000,7 +1004,13 @@ export class TriageService {
         }
       };
     } catch (err: any) {
-      await client.query('ROLLBACK');
+      if (inTransaction) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackErr) {
+          console.error('Failed to rollback transaction:', rollbackErr);
+        }
+      }
 
       // 5. Ingest failure audit log in a separate, non-rolled-back database context
       try {
@@ -1017,7 +1027,7 @@ export class TriageService {
             params.actor.displayName,
             params.actor.role,
             'activation_attempt',
-            targetAgent.agent_id,
+            targetAgent ? targetAgent.agent_id : 'unknown',
             params.targetFingerprintHash,
             prevAgent ? prevAgent.agent_id : null,
             prevAgent ? prevAgent.fingerprint_hash : null,

@@ -22,6 +22,10 @@ async function run() {
     await client.query('CREATE SCHEMA IF NOT EXISTS audit;');
     console.log('   Schema "audit" created/verified.');
 
+    // 1.5. Add is_active column to agents table if not exists
+    await client.query('ALTER TABLE agents ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE;');
+    console.log('   Column "is_active" added/verified on "agents" table.');
+
     // 2. Create audit table
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit.agent_activation_events (

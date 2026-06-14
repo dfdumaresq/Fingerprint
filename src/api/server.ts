@@ -82,7 +82,11 @@ app.get('/v1/agents', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
     const { rows } = await db.query(
-      'SELECT * FROM agents ORDER BY created_at DESC LIMIT $1',
+      `SELECT a.*,
+              (bf.fingerprint_hash IS NOT NULL) AS has_fixture
+       FROM agents a
+       LEFT JOIN baseline_fixtures bf ON bf.fingerprint_hash = a.fingerprint_hash
+       ORDER BY a.created_at DESC LIMIT $1`,
       [limit]
     );
 
@@ -98,7 +102,8 @@ app.get('/v1/agents', async (req: Request, res: Response) => {
         revokedAt: r.revoked_at ? Math.floor(new Date(r.revoked_at).getTime() / 1000) : 0,
         revokedBy: r.revoked_by,
         behavioralTraitHash: r.latest_trait_hash,
-        behavioralTraitVersion: r.trait_version
+        behavioralTraitVersion: r.trait_version,
+        hasFixture: r.has_fixture,   // true when a baseline_fixtures row exists for this agent
       })),
       has_more: false,
       next_cursor: null,

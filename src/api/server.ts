@@ -46,6 +46,14 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY || 'sk_test_123';
 
 // --- Middleware ---
+// Correlation/Request ID Middleware - run early to catch all routes and error states
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const requestId = (req.headers['x-request-id'] as string) || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  req.headers['x-request-id'] = requestId;
+  res.setHeader('X-Request-ID', requestId);
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
 
@@ -74,12 +82,68 @@ const authenticate = (req: Request, res: Response, next: NextFunction) => {
 
 app.use('/v1', authenticate);
 
-// --- Routes ---
+/**
+ * GET /v1/agents/activation-history
+ * Returns the audit log of all agent activation events, newest first.
+ */
+app.get('/v1/agents/activation-history', async (req: Request, res: Response) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+    const history = await triageService.getActivationAuditTrail(limit);
+    res.json({ success: true, data: history });
+  } catch (error: any) {
+    console.error('Error fetching activation history:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
 
 /**
- * GET /v1/agents
- * List all globally registered agents (with basic pagination via cursor in the future)
+ * POST /v1/agents/activate
+ * Sets the agent with the given fingerprintHash as active, generating an audit log entry.
  */
+app.post('/v1/agents/activate', async (req: Request, res: Response) => {
+  try {
+    const { fingerprintHash, reason } = req.body;
+    if (!fingerprintHash) {
+      res.status(400).json({ error: { code: 'bad_request', message: 'fingerprintHash is required' } });
+      return;
+    }
+
+    const requestId = req.headers['x-request-id'] as string;
+    const source = (req.headers['x-source'] as string) || 'ui';
+
+    // Derive server-side actor identity strictly from the system auth token context.
+    const actor = {
+      type: 'system',
+      userId: 'system_dashboard',
+      displayName: 'System Dashboard',
+      role: 'System Service',
+    };
+
+    const result = await triageService.activateAgentWithAudit({
+      targetFingerprintHash: fingerprintHash,
+      actor,
+      source,
+      requestId,
+      reason,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        eventId: result.eventId,
+        occurredAt: result.occurredAt,
+        requestId,
+        message: `Agent successfully activated by ${actor.displayName}.`,
+        agent: result.agent
+      },
+    });
+  } catch (error: any) {
+    console.error('Error activating agent:', error);
+    res.status(500).json({ error: { code: 'internal_error', message: error.message } });
+  }
+});
+
 app.get('/v1/agents', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
@@ -1220,6 +1284,22 @@ app.delete('/v1/fixtures/:fingerprintHash', async (req: Request, res: Response) 
     console.error('Error deleting fixture:', error);
     res.status(500).json({ error: { code: 'internal_error', message: 'Failed to delete fixture.' } });
   }
+});
+
+// Global Error Handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Uncaught application error:', err);
+  const requestId = req.headers['x-request-id'] as string;
+  if (requestId) {
+    res.setHeader('X-Request-ID', requestId);
+  }
+  res.status(500).json({
+    error: {
+      code: 'internal_error',
+      message: err.message || 'An unexpected error occurred.',
+      requestId
+    }
+  });
 });
 
 // Start the server

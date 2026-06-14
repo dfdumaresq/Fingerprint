@@ -3,10 +3,10 @@ project: AI Fingerprinting / Verification System
 short_name: fingerprint-ai
 status: active
 owner: Dave Dumaresq
-last_updated: 2026-06-02
+last_updated: 2026-06-14
 primary_repo: /Users/dfdumaresq/Projects/Fingerprint
 primary_vault_note: [[AI Fingerprinting - Master Note]]
-phase: Medical MVP — Unified Behavioral Audit & Fixture Replay (v1.3.0)
+phase: Medical MVP — UI Hardening, Deduplication & VPS Operations (v1.3.1)
 trust_level: experimental (Phase 1 Completed, Phase 2 in progress)
 ---
 
@@ -28,10 +28,10 @@ Why this matters:
 
 ## 3. Current phase
 Phase:
-- Medical MVP — Unified Behavioral Audit & Fixture Replay (v1.3.0)
+- Medical MVP — UI Hardening, Deduplication & VPS Operations (v1.3.1)
 
 Phase objective:
-- Harden behavioral verification, complete the clinician-facing triage queue (with structured PatientContext and decision logging), and lay the groundwork for Phase 2 Sparse Autoencoder (SAE) neurological latent concept auditing.
+- Prevent double-submissions and duplicate backend work, add visual loading feedback to all async actions, distinguish infrastructure outages from true clinical contradiction warnings, and establish a repeatable cross-platform VPS rebuild operations workflow.
 
 Definition of done:
 - [x] Robust demographic models including Sex At Birth (with unknown/intersex fallbacks) and Gender Identity in `PatientContext`.
@@ -67,6 +67,11 @@ Confirmed:
 - **Robust Blockchain Test Harness**: Upgraded behavioral verification contract event tests to dynamically query the mined transaction's block timestamp, preventing race conditions or timing-based unit test failures.
 - **Remote Production Deployment**: Built AMD64 Docker images locally with the separate production API key baked into Nginx, loaded them on the VPS at `clinicianledger.ca`, and restarted the containers. Verifications show the system is fully healthy.
 - **Baseline Recalibration**: Registered a fresh on-chain baseline signature for the production `tinydolphin` agent on the Sepolia smart contract ledger, successfully clearing cross-model drift warnings.
+- **Backend Request Deduplication**: Redis-based idempotency locks on `POST /v1/triage/encounters` and `POST /v1/agents/:hash/semantic/verify` serialize concurrent duplicate requests, preventing duplicate LLM/embedding work and duplicate DB rows. SHA-256 hashes of request payloads are used as deduplication keys.
+- **Infrastructure vs. Clinical Warning Distinction**: Separated frontend warning alerts into two types: `contradiction` (bright yellow, clinical mismatch confirmed by AI) and `infrastructure_degraded` (neutral, AI service timeout/unavailable). Corresponding `safety_warning_triggered` and `safety_warning_bypassed` fields recorded in the ledger.
+- **Visual Loading Spinners & A11y Hardening**: CSS keyframe spinner added globally in `clinical-theme.css`. All async action buttons (Submit & Triage, Accept/Escalate/Downgrade, Safety-Grade Audit, Search Ledger) disabled with `aria-busy="true"` during in-flight requests; spinner element uses `aria-hidden="true"`.
+- **Background Poller Pause**: 15-second triage queue polling loop in `TriageDashboard.tsx` is suspended during any heavyweight async operation (submission, verification, drawer loading) to reduce VPS server contention.
+- **VPS Rebuild Runbook**: Documented complete cross-platform image build, package, transfer, load, and deploy procedure as a repeatable 9-step operational runbook.
 
 In progress:
 - None.
@@ -276,6 +281,7 @@ Unresolved threats:
 - **2026-06-02**: Merged all feature branches to `main`. Collapsible sidebar (‹ › toggle, 60px icon-only rail, 0.25s transition). Nav refactored to data-driven `NAV_SECTIONS` array. All inline styles in `Sidebar.tsx` and `PlatformLayout.tsx` replaced with semantic CSS classes. Version bumped to `v1.3.0`. Deferred off-chain storage for EIP-712 registration signatures and Sandbox mock signing flows (TODOs added). Swapped active triage agent to MiniMax. Integrated registry 'Verify Baseline' button to route to Behavioral Drift Audit stepper with pre-selection support via sessionStorage. Implemented local Jaccard audit verification fallback in BehaviorAuditView.tsx to allow auditing browser-cached sandbox agents without hitting backend 404s.
 - **2026-06-05**: Fixed production API url resolution in `webpack.config.js`. Corrected the hardcoded baking of `"http://localhost:3000"` for `REACT_APP_API_URL` and `REACT_APP_API_GATEWAY_URL` to fallback to environment variables or empty strings, enabling same-origin relative URLs proxying by Nginx. This resolved the "AI Assistance Paused: Local Rules Backup Active" registry resolution issue.
 - **2026-06-06**: Postponed direct production verification of the divergence signal to post-MVP. Mandated verification policy requiring all testing and verification of the divergence signal to be executed in the local development environment (dev) first before promoting to production (prod).
+- **2026-06-14**: Implemented v1.3.1 UI Hardening & Backend Deduplication (PR #17, merged to `main`). Root cause of false clinical contradiction alerts identified: CPU saturation on VPS caused Ollama embedding timeouts; the frontend fallback to lexical rules incorrectly surfaced a keyword match as a clinical contradiction. Fixes: Redis deduplication for POST endpoints; split infrastructure vs. clinical alert types; submit button disabled during in-flight work; background poller paused during heavy operations; visual CSS spinners + aria-busy/aria-hidden accessibility. 239/239 Jest tests passing. Rebuilt and deployed AMD64 Docker images to VPS. Established repeatable VPS rebuild runbook.
 
 ## 15. Open questions
 - How to scale offline C2PA verification certificates for hospital environments with intermittent external network connectivity?
@@ -292,7 +298,7 @@ Unresolved threats:
 Read first on resume:
 - This file (`PROJECT_MEMORY.md`)
 - [[AI Fingerprinting - Master Note]]
-- The latest progress log in [[02_Log/2026-06-02 - Branch Merges, Collapsible Sidebar, CSS Cleanup]]
+- The latest progress log in [[02_Log/2026-06-14 - UI Hardening, Deduplication, and VPS Rebuild]]
 
 Do not re-open by default unless needed:
 - Older exploratory notes

@@ -17,6 +17,7 @@ const db = new Pool({
 const SEED_AGENTS = [
   {
     fingerprintHash: hashMessage("TriageBot-v2.1"),
+    agentId: "triagebot-v2.1",
     name: "TriageBot",
     provider: "OpenAI",
     version: "v2.1",
@@ -26,6 +27,7 @@ const SEED_AGENTS = [
   },
   {
     fingerprintHash: hashMessage("NoteGen-Pro"),
+    agentId: "notegen-pro",
     name: "NoteGen-Pro",
     provider: "Anthropic",
     version: "pro-latest",
@@ -63,7 +65,7 @@ async function seedAgents() {
       
       await client.query(insertQuery, [
         agent.fingerprintHash,
-        agent.fingerprintHash, // mock agent_id
+        agent.agentId, // human-readable agent_id
         agent.name,
         agent.provider,
         agent.version,

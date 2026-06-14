@@ -705,15 +705,15 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                             </div>
                         ) : (
                             <div style={{ overflowX: 'auto' }}>
-                                <table className="triage-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <table className="plasma-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '2px solid var(--plasma-border)' }}>
-                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Timestamp (UTC)</th>
-                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Authenticated Actor</th>
-                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Action / Target</th>
-                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Audit Details</th>
-                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Outcome</th>
-                                            <th style={{ padding: '12px 16px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem' }}>Correlation Context</th>
+                                            <th style={{ padding: '12px 10px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem', width: '13%' }}>Timestamp (UTC)</th>
+                                            <th style={{ padding: '12px 10px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem', width: '15%' }}>Authenticated Actor</th>
+                                            <th style={{ padding: '12px 10px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem', width: '18%' }}>Action / Target</th>
+                                            <th style={{ padding: '12px 10px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem', width: '22%' }}>Audit Details</th>
+                                            <th style={{ padding: '12px 10px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem', width: '10%', textAlign: 'center' }}>Outcome</th>
+                                            <th style={{ padding: '12px 10px', color: 'var(--plasma-text-secondary)', fontWeight: 600, fontSize: '0.82rem', width: '22%' }}>Correlation Context</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -721,44 +721,44 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                                             const isSuccess = event.outcome === 'success';
                                             return (
                                                 <tr key={event.id} style={{ borderBottom: '1px solid var(--plasma-border)', background: isSuccess ? 'transparent' : 'rgba(239, 68, 68, 0.02)' }}>
-                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top', whiteSpace: 'nowrap' }}>
-                                                        <span className="tabular-nums" style={{ fontSize: '0.85rem', color: 'var(--plasma-text-primary)', display: 'block' }}>
+                                                    <td style={{ padding: '14px 10px', verticalAlign: 'top' }}>
+                                                        <span className="tabular-nums" style={{ fontSize: '0.82rem', color: 'var(--plasma-text-primary)', display: 'block', wordBreak: 'break-word', lineHeight: '1.3' }}>
                                                             {formatTimestamp(event.occurred_at)}
                                                         </span>
-                                                        <span style={{ fontSize: '0.7rem', color: 'var(--plasma-text-secondary)' }}>
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--plasma-text-secondary)', marginTop: '4px', display: 'block' }}>
                                                             ID: #{event.id}
                                                         </span>
                                                     </td>
-                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
-                                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--plasma-text-primary)' }}>
+                                                    <td style={{ padding: '14px 10px', verticalAlign: 'top' }}>
+                                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--plasma-text-primary)', wordBreak: 'break-word' }}>
                                                             {event.actor_display_name}
                                                         </div>
-                                                        <div style={{ fontSize: '0.72rem', color: 'var(--plasma-text-secondary)' }}>
+                                                        <div style={{ fontSize: '0.72rem', color: 'var(--plasma-text-secondary)', marginTop: '2px', wordBreak: 'break-word' }}>
                                                             {event.actor_role} ({event.actor_type})
                                                         </div>
                                                     </td>
-                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
-                                                        <div style={{ fontSize: '0.85rem' }}>
+                                                    <td style={{ padding: '14px 10px', verticalAlign: 'top', wordBreak: 'break-all' }}>
+                                                        <div style={{ fontSize: '0.82rem', lineHeight: '1.3' }}>
                                                             <span style={{ color: 'var(--plasma-text-secondary)' }}>Target: </span>
                                                             <strong style={{ color: 'var(--plasma-clinical-blue)' }}>{event.target_agent_id}</strong>
                                                         </div>
                                                         {event.previous_agent_id && (
-                                                            <div style={{ fontSize: '0.75rem', color: 'var(--plasma-text-secondary)', marginTop: '2px' }}>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--plasma-text-secondary)', marginTop: '4px', lineHeight: '1.3' }}>
                                                                 Prev: {event.previous_agent_id}
                                                             </div>
                                                         )}
                                                     </td>
-                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top', maxWidth: '300px' }}>
-                                                        <div style={{ fontSize: '0.85rem', color: 'var(--plasma-text-primary)', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                                                    <td style={{ padding: '14px 10px', verticalAlign: 'top' }}>
+                                                        <div style={{ fontSize: '0.82rem', color: 'var(--plasma-text-primary)', wordBreak: 'break-word', lineHeight: '1.4' }}>
                                                             {event.reason || <em style={{ color: 'var(--plasma-text-secondary)' }}>No justification provided</em>}
                                                         </div>
                                                         {!isSuccess && event.metadata?.error && (
-                                                            <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '6px', background: 'rgba(239, 68, 68, 0.05)', padding: '6px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                                                            <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '6px', background: 'rgba(239, 68, 68, 0.05)', padding: '6px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.1)', wordBreak: 'break-word' }}>
                                                                 Error: {event.metadata.error}
                                                             </div>
                                                         )}
                                                     </td>
-                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                                                    <td style={{ padding: '14px 10px', verticalAlign: 'top', textAlign: 'center' }}>
                                                         <span 
                                                             className="card-badge"
                                                             style={{
@@ -767,15 +767,17 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                                                                 borderColor: isSuccess ? 'rgba(74, 222, 128, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                                                                 padding: '4px 8px',
                                                                 borderRadius: '4px',
-                                                                fontSize: '0.75rem',
-                                                                fontWeight: 600
+                                                                fontSize: '0.72rem',
+                                                                fontWeight: 600,
+                                                                display: 'inline-block',
+                                                                textAlign: 'center'
                                                             }}
                                                         >
-                                                            {isSuccess ? '✅ Success' : '❌ Failed'}
+                                                            {isSuccess ? 'Success' : 'Failed'}
                                                         </span>
                                                     </td>
-                                                    <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <td style={{ padding: '14px 10px', verticalAlign: 'top' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                                             <div>
                                                                 <span className="text-muted" style={{ fontSize: '0.68rem', textTransform: 'uppercase', display: 'block' }}>Request ID</span>
                                                                 <code style={{ fontSize: '0.75rem', color: 'var(--plasma-clinical-blue)', wordBreak: 'break-all' }}>{event.request_id}</code>

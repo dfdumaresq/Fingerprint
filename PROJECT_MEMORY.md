@@ -72,6 +72,10 @@ Confirmed:
 - **Visual Loading Spinners & A11y Hardening**: CSS keyframe spinner added globally in `clinical-theme.css`. All async action buttons (Submit & Triage, Accept/Escalate/Downgrade, Safety-Grade Audit, Search Ledger) disabled with `aria-busy="true"` during in-flight requests; spinner element uses `aria-hidden="true"`.
 - **Background Poller Pause**: 15-second triage queue polling loop in `TriageDashboard.tsx` is suspended during any heavyweight async operation (submission, verification, drawer loading) to reduce VPS server contention.
 - **VPS Rebuild Runbook**: Documented complete cross-platform image build, package, transfer, load, and deploy procedure as a repeatable 9-step operational runbook.
+- **Blockchain Event Indexer Docker Integration**: Added the `fingerprint_indexer` container as a managed background service to both `docker-compose.yml` and `docker-compose.prod.yml`, ensuring that on-chain events (like registrations and revocations) are automatically synced to the Postgres database cache in real-time in both development and production.
+- **Dynamic Entrypoint Command Forwarding**: Updated `docker-entrypoint.sh` to check if arguments are present and execute them, enabling containers to run custom scripts (like `scripts/indexer.ts`) while sharing the same base image and initial database migration logic.
+- **Decoupled Indexer ABI Compilation**: Replaced the Hardhat JSON ABI import in `scripts/indexer.ts` with a human-readable ABI array, allowing the indexer to build and execute within Docker containers where compiled build artifacts are ignored by `.dockerignore`.
+- **Indexer Catch-Up Performance Optimization**: Tuned the indexer catch-up query settings (increased batch size from `1000` to `10000` blocks and added conditional sleep intervals: `100ms` when catching up, `2000ms` when synced), reducing the event synchronization catch-up lag on Sepolia from ~22 minutes to under 10 seconds.
 
 In progress:
 - None.

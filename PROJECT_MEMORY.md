@@ -48,7 +48,7 @@ Out of scope for this phase:
 
 ## 4. Current state
 Active Git Branch:
-- `main` — all feature branches merged and up to date.
+- `feat/agent-activation-audit-trail` — fully built, tested, and deployed to production.
 
 Confirmed:
 - **Safety-Grade Behavioral Verification**: Fully operational off-chain verification using token-based Jaccard similarity (Bag-of-Words) and canonicalization layers to defeat formatting and whitespace attacks.
@@ -57,7 +57,7 @@ Confirmed:
 - **Layer 9 SAE Latent Concept Panel**: UI dashboard organizes active SAE concepts (Critical, Clinical, Cognitive, Structural) and renders floating-point strengths alongside dynamic visual activation bars.
 - **Parallel Semantic Embedding Alignment Audit**: Fully implemented real-time cosine similarity comparisons against ESI gold-standard sentinel prompts. Runs in parallel with the SAE audit via `Promise.all` in the drawer.
 - **Pre-Submission Clinical Contradiction Guardrail**: Implemented asynchronous semantic validation to intercept and block chest symptom admissions with `0/10` pain score, featuring automatically expanded extended vitals, warning alerts, and safety bypass overrides.
-- **PHI Guard Masking Engine**: Three-tier pipeline (regex battery → keyword prefix scan → local WASM BERT-NER) masks all PHI before Keccak256 hash computation. Redact-and-proceed design. 239/239 tests passing.
+- **PHI Guard Masking Engine**: Three-tier pipeline (regex battery → keyword prefix scan → local WASM BERT-NER) masks all PHI before Keccak256 hash computation. Redact-and-proceed design. 243/243 tests passing.
 - **Unified Behavioral Baseline & Drift Audit**: Single guided stepper workflow (Select Agent → Baseline Status → Prompt Suite → Result). Supports initial baseline, re-baseline with REPLACE confirmation modal, and drift audit. Audit log events written to `agent_events` with `behavior_rebaseline` workflow type and `rebaselined` clinician action.
 - **Baseline Fixture Record & Replay**: Admin responses stored server-side in `baseline_fixtures` table (PostgreSQL JSONB). One-click Load Responses in both baseline and audit modes. Save & Finalize records to server on first run. Export as JSON for backup.
 - **Integrity Score 100/100**: Clean audit pass (match=true, no suspicious patterns) now returns 100/100. Hard zero enforced for suspicious perturbations. Mismatch scaled by similarity.
@@ -73,9 +73,11 @@ Confirmed:
 - **Background Poller Pause**: 15-second triage queue polling loop in `TriageDashboard.tsx` is suspended during any heavyweight async operation (submission, verification, drawer loading) to reduce VPS server contention.
 - **VPS Rebuild Runbook**: Documented complete cross-platform image build, package, transfer, load, and deploy procedure as a repeatable 9-step operational runbook.
 - **Blockchain Event Indexer Docker Integration**: Added the `fingerprint_indexer` container as a managed background service to both `docker-compose.yml` and `docker-compose.prod.yml`, ensuring that on-chain events (like registrations and revocations) are automatically synced to the Postgres database cache in real-time in both development and production.
-- **Dynamic Entrypoint Command Forwarding**: Updated `docker-entrypoint.sh` to check if arguments are present and execute them, enabling containers to run custom scripts (like `scripts/indexer.ts`) while sharing the same base image and initial database migration logic.
+- **Dynamic Entrypoint Command Forwarding**: Updated `docker-entrypoint.sh` to dynamic-forward CLI arguments if passed (letting the indexer container run the sync script while the API container runs the server).
 - **Decoupled Indexer ABI Compilation**: Replaced the Hardhat JSON ABI import in `scripts/indexer.ts` with a human-readable ABI array, allowing the indexer to build and execute within Docker containers where compiled build artifacts are ignored by `.dockerignore`.
 - **Indexer Catch-Up Performance Optimization**: Tuned the indexer catch-up query settings (increased batch size from `1000` to `10000` blocks and added conditional sleep intervals: `100ms` when catching up, `2000ms` when synced), reducing the event synchronization catch-up lag on Sepolia from ~22 minutes to under 10 seconds.
+- **C2PA Signer Continuity Warnings & Audit Logs**: Implemented visual warning alerts in `BehavioralVerification.tsx` and `BehaviorAuditView.tsx` explaining cryptographic continuity breaks when exporting certificates on browsers lacking private keys. Re-key generation registers a P-256 WebCrypto key pair and writes a `key_rotation` event with action `rekey` to the database events queue.
+- **Decoupled Postgres migrations at boot**: Decoupled pg migrations and DB table creations in `docker-entrypoint.sh` to run only on arguments-less API server starts, resolving deadlocks with concurrently starting container services (like the indexer).
 
 In progress:
 - None.

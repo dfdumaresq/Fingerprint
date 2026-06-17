@@ -39,12 +39,16 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 const BATCH_SIZE = 10000; // Increased batch size for faster catch-up
 const STARTING_BLOCK = chainId === 11155111 ? chainId - 757111 : 0;
 
+const POLL_INTERVAL_SYNCED = parseInt(process.env.INDEXER_POLL_INTERVAL_SYNCED || '60000', 10);
+const POLL_INTERVAL_CHECK = parseInt(process.env.INDEXER_POLL_INTERVAL_CHECK || '10000', 10);
+
 /**
  * Main Indexer Sync Loop
  */
 async function syncEvents() {
   console.log(`Starting AI Fingerprint Indexer on Chain ID: ${chainId}...`);
   console.log(`Listening to Contract: ${contractAddress}`);
+  console.log(`Synced poll interval: ${POLL_INTERVAL_SYNCED}ms, check interval: ${POLL_INTERVAL_CHECK}ms`);
 
   while (true) {
     try {
@@ -58,8 +62,8 @@ async function syncEvents() {
       let toBlock = Math.min(fromBlock + BATCH_SIZE, currentBlock);
       
       if (fromBlock > toBlock) {
-        // Fully Synced! Wait 12s for the next block.
-        await new Promise(resolve => setTimeout(resolve, 12000));
+        // Fully Synced! Wait for the configured poll interval.
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_SYNCED));
         continue;
       }
 
@@ -100,11 +104,11 @@ async function syncEvents() {
       await redis.hset('system:health', 'lastProcessedBlock', toBlock);
       await redis.hset('system:health', 'chainHead', currentBlock);
 
-      // Sleep a bit to avoid RPC rate limits. Sleep less (100ms) when catching up, and more (2000ms) when synced.
+      // Sleep a bit to avoid RPC rate limits. Sleep less (100ms) when catching up, and more when synced.
       if (toBlock < currentBlock - 50) {
         await new Promise(resolve => setTimeout(resolve, 100));
       } else {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_CHECK));
       }
 
     } catch (error) {

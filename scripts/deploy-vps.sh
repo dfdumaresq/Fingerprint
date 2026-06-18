@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/deploy-vps.sh — Automates the 9-step cross-compile and VPS deployment pipeline
+# scripts/deploy-vps.sh — Automates the local cross-compile and VPS deployment pipeline for the active branch
 
 # Exit on any error, undefined variable, or pipeline failure
 set -euo pipefail
@@ -7,10 +7,11 @@ set -euo pipefail
 PROJECT_ROOT="/Users/dfdumaresq/Projects/Fingerprint"
 cd "$PROJECT_ROOT"
 
-echo "==> Step 1: Synchronizing local and remote Git..."
-git checkout main
-git pull --ff-only
-ssh vps "cd ~/app && git fetch origin && git checkout main && git pull --ff-only origin main"
+# Get current git branch
+CURRENT_BRANCH=$(git branch --show-current)
+echo "==> Step 1: Synchronizing local and remote Git for branch '$CURRENT_BRANCH'..."
+git pull origin "$CURRENT_BRANCH" --ff-only
+ssh vps "cd ~/app && git fetch origin && git checkout $CURRENT_BRANCH && git pull --ff-only origin $CURRENT_BRANCH"
 
 # Download the remote .env to a temp local file
 ssh vps "cat ~/app/.env" > .env.vps
@@ -23,6 +24,7 @@ PROD_CHAIN_ID=$(grep ^REACT_APP_SEPOLIA_CHAIN_ID= .env.vps | cut -d= -f2- | tr -
 
 # Clean up temp file
 rm .env.vps
+
 
 
 echo "==> Step 3: Cross-compiling Docker images locally for linux/amd64..."

@@ -215,6 +215,12 @@ async function getNerPipeline(): Promise<NERPipeline | null> {
   }
   if (nerInitialised) return nerPipeline;
 
+  if (process.env.DISABLE_NER === 'true') {
+    nerInitialised = true;
+    nerPipeline = null;
+    return null;
+  }
+
   try {
     // Dynamic import keeps this optional — if transformers isn't installed the
     // service degrades gracefully to tiers 1+2 only.

@@ -13,7 +13,11 @@ CREATE TYPE workflow_type_enum AS ENUM (
     'draft_clinical_note',
     'simulated_patient_interaction',
     'care_plan_decision',
-    'system_alert'
+    'system_alert',
+    'clinician_action',
+    'clinician_amendment',
+    'behavior_rebaseline',
+    'key_rotation'
 );
 
 CREATE TYPE clinician_action_enum AS ENUM (
@@ -21,7 +25,10 @@ CREATE TYPE clinician_action_enum AS ENUM (
     'overridden',
     'ignored',
     'escalated',
-    'autonomous' -- No clinician in the loop
+    'autonomous', -- No clinician in the loop
+    'downgraded',
+    'rebaselined',
+    'rekey'
 );
 
 CREATE TABLE agent_events (

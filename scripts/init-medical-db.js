@@ -35,7 +35,8 @@ BEGIN
             'system_alert',
             'clinician_action',
             'clinician_amendment',
-            'behavior_rebaseline'
+            'behavior_rebaseline',
+            'key_rotation'
         );
     END IF;
     
@@ -47,7 +48,8 @@ BEGIN
             'escalated',
             'autonomous',
             'downgraded',
-            'rebaselined'
+            'rebaselined',
+            'rekey'
         );
     END IF;
 

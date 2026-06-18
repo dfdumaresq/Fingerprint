@@ -492,15 +492,109 @@ export const BehavioralVerification: React.FC<BehavioralVerificationProps> = ({ 
                         <div style={{ 
                             width: '100%', 
                             marginTop: '12px', 
-                            padding: '10px', 
-                            borderRadius: '6px', 
+                            padding: '16px', 
+                            borderRadius: '8px', 
                             fontSize: '0.85rem',
-                            textAlign: 'center',
-                            background: exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                            color: exportStatus.type === 'success' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)',
-                            border: `1px solid ${exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                            textAlign: 'left',
+                            background: exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+                            color: exportStatus.type === 'success' ? 'var(--plasma-integrity-green)' : 'var(--plasma-text-primary)',
+                            border: `1px solid ${exportStatus.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'var(--plasma-integrity-red)'}`
                         }}>
-                            {exportStatus.type === 'success' ? '✅' : '❌'} {exportStatus.message}
+                            {exportStatus.type === 'success' ? (
+                                <div style={{ textAlign: 'center', color: 'var(--plasma-integrity-green)', fontWeight: 600 }}>
+                                    ✅ {exportStatus.message}
+                                </div>
+                            ) : (
+                                <div>
+                                    <div style={{ fontWeight: 700, color: 'var(--plasma-integrity-red)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        ❌ Export failed
+                                    </div>
+                                    <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem', color: 'var(--plasma-text-secondary)', lineHeight: '1.4' }}>
+                                        {exportStatus.message}
+                                    </p>
+                                    
+                                    {(exportStatus.message.includes('signing key') || exportStatus.message.includes('re-key')) && (
+                                        <div style={{ 
+                                            background: 'rgba(245, 158, 11, 0.08)', 
+                                            borderLeft: '4px solid var(--plasma-warning-amber)',
+                                            padding: '12px',
+                                            borderRadius: '4px',
+                                            marginTop: '12px',
+                                            color: 'var(--plasma-text-primary)'
+                                        }}>
+                                            <h5 style={{ margin: '0 0 6px 0', color: 'var(--plasma-warning-amber)', fontSize: '0.85rem', fontWeight: 700 }}>
+                                                ⚠️ Identity Continuity Break Warning
+                                            </h5>
+                                            <p style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: 'var(--plasma-text-secondary)', lineHeight: '1.4' }}>
+                                                Storing signing keys in browser <code>localStorage</code> is a temporary MVP mechanism. It is device- and browser-local, and does not provide strong custody or portability for production-grade signing keys.
+                                            </p>
+                                            <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem', color: 'var(--plasma-text-secondary)', lineHeight: '1.4' }}>
+                                                <strong>Cryptographic Continuity Break:</strong> Generating a new local signing key creates a new cryptographic signer identity. Future exports from this browser will <strong>not</strong> share key continuity with prior signatures, meaning older sidecar manifests will fail verification relative to new signatures.
+                                            </p>
+                                            <p style={{ margin: '0 0 12px 0', fontSize: '0.8rem', color: 'var(--plasma-text-secondary)', lineHeight: '1.4' }}>
+                                                If you are sure you want to proceed with a new identity, you must trigger a deliberate re-key event.
+                                            </p>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        setExportStatus({ type: 'success', message: 'Generating identity keypair...' });
+                                                        const spkiBase64 = await c2paService.initializeIdentity(fingerprintHash);
+                                                        
+                                                        // Derive SHA-256 hash of public key
+                                                        const binary = window.atob(spkiBase64);
+                                                        const bytes = new Uint8Array(binary.length);
+                                                        for (let i = 0; i < binary.length; i++) {
+                                                            bytes[i] = binary.charCodeAt(i);
+                                                        }
+                                                        const hashBuffer = await window.crypto.subtle.digest('SHA-256', bytes);
+                                                        const hashArray = Array.from(new Uint8Array(hashBuffer));
+                                                        const newPublicKeyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                                                        // Log key rotation event to the backend API
+                                                        await fetch(`${REACT_APP_API_URL}/v1/events`, {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json',
+                                                                'Authorization': `Bearer ${REACT_APP_API_KEY}`
+                                                            },
+                                                            body: JSON.stringify({
+                                                                agent_fingerprint_id: fingerprintHash,
+                                                                model_version: REASONING_TEST_SUITE_V1.version || 'v1.0',
+                                                                workflow_type: 'key_rotation',
+                                                                clinician_action: 'rekey',
+                                                                input_ref: 'sha256:none',
+                                                                output_ref: `sha256:${newPublicKeyHash}`,
+                                                                clinical_data: {
+                                                                    reason: 'Missing signing key, regenerated new keypair',
+                                                                    storage: 'localStorage',
+                                                                    timestamp: new Date().toISOString()
+                                                                }
+                                                            })
+                                                        });
+
+                                                        setExportStatus({ type: 'success', message: '🔑 New local signing key generated and audit logged! You may now export the certificate.' });
+                                                    } catch (err: any) {
+                                                        setExportStatus({ type: 'error', message: `Re-key failed: ${err.message}` });
+                                                    }
+                                                }}
+                                                className="primary-btn"
+                                                style={{ 
+                                                    padding: '8px 16px', 
+                                                    fontSize: '0.8rem', 
+                                                    background: 'var(--plasma-clinical-blue)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 600
+                                                }}
+                                            >
+                                                🔑 Generate New Local Signing Key
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

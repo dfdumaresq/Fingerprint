@@ -3,7 +3,7 @@ project: AI Fingerprinting / Verification System
 short_name: fingerprint-ai
 status: active
 owner: Dave Dumaresq
-last_updated: 2026-06-14
+last_updated: 2026-06-19
 primary_repo: /Users/dfdumaresq/Projects/Fingerprint
 primary_vault_note: [[AI Fingerprinting - Master Note]]
 phase: Medical MVP — UI Hardening, Deduplication & VPS Operations (v1.3.1)
@@ -48,7 +48,7 @@ Out of scope for this phase:
 
 ## 4. Current state
 Active Git Branch:
-- `feat/agent-activation-audit-trail` — fully built, tested, and deployed to production.
+- `main` (with `fix/canonical-timestamp-ledger` and `feat/quick-activate-agent` merged) — fully built, tested, and deployed to production.
 
 Confirmed:
 - **Safety-Grade Behavioral Verification**: Fully operational off-chain verification using token-based Jaccard similarity (Bag-of-Words) and canonicalization layers to defeat formatting and whitespace attacks.
@@ -289,6 +289,7 @@ Unresolved threats:
 - **2026-06-06**: Postponed direct production verification of the divergence signal to post-MVP. Mandated verification policy requiring all testing and verification of the divergence signal to be executed in the local development environment (dev) first before promoting to production (prod).
 - **2026-06-14**: Implemented v1.3.1 UI Hardening & Backend Deduplication (PR #17, merged to `main`). Root cause of false clinical contradiction alerts identified: CPU saturation on VPS caused Ollama embedding timeouts; frontend fallback to lexical rules incorrectly surfaced a keyword match as a clinical contradiction. Fixes: Redis deduplication for POST endpoints; split infrastructure vs. clinical alert types; submit button disabled during in-flight work; background poller paused during heavy operations; visual CSS spinners + aria-busy/aria-hidden accessibility. Also fixed a schema drift issue blocking C2PA key rotation logs by adding an idempotent migration (`migrate-key-rotation-type.js`) that adds `key_rotation` and `rekey` to their respective database enums (`workflow_type_enum`, `clinician_action_enum`). 243/243 Jest tests passing. Rebuilt and deployed AMD64 Docker images to VPS. Established repeatable VPS rebuild runbook.
 - **2026-06-19**: Implemented the historical agent display metadata fix. Modified `TriageEncounter` interface to store `agent_name` and `agent_version` via table joins in `getTriageEncounters`, rather than dynamically referencing the active agent's name from `triageStatus` in `selectedEncounter` views. Added a re-evaluation drawer panel allowing clinicians to re-evaluate legacy rules-based/older-model encounters using the current active agent. Also analyzed the "Desynchronized" Ledger Stability issue: confirmed that `is_healthy` reports false-positive desynchronization failures due to timestamp serialization drift when event timestamps are written with JS millisecond precision but read from PostgreSQL with microsecond/sub-second formatting, leading to string mismatches in `generateEventHash`. Recommended remediation: standardize timestamp formatting before Keccak256 hashing or persist timestamps as exact string fields.
+- **2026-06-19**: Resolved the "Desynchronized" Ledger Stability issue by implementing the canonical timestamp fix. Added `event_timestamp_canonical TEXT NOT NULL` column to `agent_events` database schema and updated `EventService` to capture and record the exact ISO-8601 ingest-time string. Standardized hash verification in `AnchorService` to reconstruct hashes using the canonical field, failing closed if the field is null. Created the `migrate-canonical-timestamp.js` script to backfill existing postgres database chains and enforce the NOT NULL constraint. Merged the fix branch and verified both local and VPS systems are 100% healthy.
 
 
 ## 15. Open questions

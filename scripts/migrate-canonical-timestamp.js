@@ -32,8 +32,8 @@
 
 require('dotenv').config();
 const { Pool } = require('pg');
-const { keccak256 } = require('ethereum-cryptography/keccak');
-const { utf8ToBytes } = require('ethereum-cryptography/utils');
+const { ethers } = require('ethers');
+const stringify = require('fast-json-stable-stringify');
 
 // ─── Argument parsing ────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -46,31 +46,51 @@ if (ENV_FLAG === 'prod' && !args.includes('--i-understand-this-rebaselines-the-l
 }
 
 // ─── Crypto helpers (must match src/utils/crypto.utils.ts exactly) ───────────
-const CANONICAL_FIELDS = [
-  'agent_fingerprint_id', 'model_version', 'workflow_type', 'policy_id',
-  'session_id', 'input_ref', 'output_ref', 'clinician_action',
-  'amends_event_id', 'reason_code', 'reason_text', 'clinical_data',
-];
-
 function buildCanonicalPayload(event) {
-  const obj = {};
-  for (const field of CANONICAL_FIELDS) {
-    const val = event[field];
-    // Omit undefined; include null (matches TypeScript service behaviour)
-    if (val !== undefined) obj[field] = val ?? null;
+  const canonical = {};
+  
+  const scalarFields = [
+    'agent_fingerprint_id', 'model_version', 'workflow_type',
+    'input_ref', 'output_ref', 'policy_id', 'session_id',
+    'clinician_action', 'amends_event_id', 'reason_code',
+    'reason_text'
+  ];
+
+  for (const field of scalarFields) {
+    const camelField = field.replace(/_([a-z])/g, g => g[1].toUpperCase());
+    const legacyField = field === 'agent_fingerprint_id' ? 'agentId' : 
+                       field === 'model_version' ? 'modelVersion' : undefined;
+    
+    const value = event[field] !== undefined ? event[field] : 
+                 (event[camelField] !== undefined ? event[camelField] : (legacyField ? event[legacyField] : undefined));
+    
+    if (value !== undefined && value !== null) {
+      canonical[field] = value;
+    }
   }
-  return JSON.stringify(obj, Object.keys(obj).sort());
+
+  const clinicalData = event.clinical_data !== undefined ? event.clinical_data : event.clinicalData;
+  if (clinicalData !== undefined && clinicalData !== null) {
+    canonical.clinical_data = clinicalData;
+  }
+  
+  return canonical;
 }
 
-function generateEventHash(canonicalPayload, previousHash, canonicalTimestamp) {
-  const input = JSON.stringify({
-    payload: canonicalPayload,
-    previous_hash: previousHash ?? null,
-    timestamp: canonicalTimestamp,
-  });
-  const bytes  = utf8ToBytes(input);
-  const digest = keccak256(bytes);
-  return '0x' + Buffer.from(digest).toString('hex');
+function generateEventHash(payload, previousHash, timestamp) {
+  const tsStr = (typeof timestamp === 'string') 
+    ? new Date(timestamp).toISOString() 
+    : timestamp.toISOString();
+
+  const canonical = {
+    ...payload,
+    timestamp: tsStr,
+    previous_event_hash: previousHash
+  };
+  
+  const serialized = stringify(canonical);
+
+  return ethers.keccak256(ethers.toUtf8Bytes(serialized));
 }
 
 // ─── Migration ────────────────────────────────────────────────────────────────

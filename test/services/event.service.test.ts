@@ -59,7 +59,7 @@ describe('EventService', () => {
       await eventService.ingestEvent(basePayload);
       
       const insertCallA = client.query.mock.calls[2] as any;
-      const eventHashA = insertCallA[1][11]; // eventHash is index 11
+      const eventHashA = insertCallA[1][12]; // eventHash is now index 12 (after event_timestamp_canonical added as $4)
 
       // Reset client mock for payload B
       client.query.mockClear();
@@ -80,7 +80,7 @@ describe('EventService', () => {
       await eventService.ingestEvent(reorderedPayload as ClinicalEventPayload);
       
       const insertCallB = client.query.mock.calls[2] as any;
-      const eventHashB = insertCallB[1][11];
+      const eventHashB = insertCallB[1][12]; // eventHash is now index 12 (after event_timestamp_canonical added as $4)
 
       // Exact match guarantees canonicalization works
       expect(eventHashA).toEqual(eventHashB);
@@ -98,7 +98,7 @@ describe('EventService', () => {
       await eventService.ingestEvent(basePayload);
 
       const insertCall = client.query.mock.calls[2] as any;
-      const insertedPrevHash = insertCall[1][10]; // previousHash is index 10
+      const insertedPrevHash = insertCall[1][11]; // previousHash is now index 11 (after event_timestamp_canonical added as $4)
 
       expect(insertedPrevHash).toBe(PREV_HASH);
     });

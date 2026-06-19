@@ -131,19 +131,21 @@ async function seedScenarios() {
     // 6. Ingest scenario into append-only agent_events ledger
     const insertQuery = `
       INSERT INTO agent_events (
-        event_id, session_id, timestamp, 
+        event_id, session_id, timestamp,
+        event_timestamp_canonical,
         agent_fingerprint_id, model_version, 
         workflow_type, policy_id, 
         input_ref, output_ref, 
         previous_event_hash, event_hash,
         reason_code, clinical_data
       ) VALUES (
-        $1, $2, $3, 
-        $4, $5, 
-        $6, $7, 
-        $8, $9, 
-        $10, $11,
-        $12, $13
+        $1, $2, $3,
+        $4,
+        $5, $6, 
+        $7, $8, 
+        $9, $10, 
+        $11, $12,
+        $13, $14
       ) RETURNING id, event_hash
     `;
 
@@ -152,6 +154,7 @@ async function seedScenarios() {
       eventId,
       SCENARIO_SESSION_ID,
       timestampStr,
+      timestampStr,  // event_timestamp_canonical — same string used in generateEventHash
       MOCK_FINGERPRINT,
       '1.0.0',
       'triage_recommendation',

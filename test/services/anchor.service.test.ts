@@ -101,8 +101,8 @@ describe('AnchorService', () => {
 
       client.query.mockResolvedValueOnce({
         rows: [
-          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp },
-          { ...e2, id: 2, event_hash: h2, timestamp: e2.timestamp },
+          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp, event_timestamp_canonical: e1.timestamp.toISOString() },
+          { ...e2, id: 2, event_hash: h2, timestamp: e2.timestamp, event_timestamp_canonical: e2.timestamp.toISOString() },
         ]
       } as never);
 
@@ -138,8 +138,8 @@ describe('AnchorService', () => {
 
       client.query.mockResolvedValueOnce({
         rows: [
-          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp },
-          { ...e2, id: 2, event_hash: h2, timestamp: e2.timestamp }
+          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp, event_timestamp_canonical: e1.timestamp.toISOString() },
+          { ...e2, id: 2, event_hash: h2, timestamp: e2.timestamp, event_timestamp_canonical: e2.timestamp.toISOString() }
         ]
       } as never);
 
@@ -164,11 +164,13 @@ describe('AnchorService', () => {
 
       client.query.mockResolvedValueOnce({
         rows: [
-          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp },
+          { ...e1, id: 1, event_hash: h1, timestamp: e1.timestamp, event_timestamp_canonical: e1.timestamp.toISOString() },
           { 
             id: 2, agent_fingerprint_id: 'agentT', model_version: '1.0', workflow_type: 'triage_recommendation',
             input_ref: 'in2', output_ref: 'out2',
-            timestamp: new Date('2025-01-01T10:00:00Z'), previous_event_hash: h1, event_hash: 'hash2' 
+            timestamp: new Date('2025-01-01T10:00:00Z'),
+            event_timestamp_canonical: '2025-01-01T10:00:00.000Z',
+            previous_event_hash: h1, event_hash: 'hash2' 
           }, 
         ]
       } as never);

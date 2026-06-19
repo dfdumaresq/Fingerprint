@@ -9,7 +9,15 @@ export interface AgentEvent {
   id: number;
   event_id: string;
   session_id: string | null;
+  /** TIMESTAMPTZ column — for query/analytics only. Never use for hash reconstruction. */
   timestamp: string | Date;
+  /**
+   * Canonical ISO-8601 UTC millisecond string (YYYY-MM-DDTHH:mm:ss.sssZ) persisted
+   * at ingest time and used as the sole timestamp input to generateEventHash.
+   * Null only on pre-migration legacy rows (protocol v0). New rows must always have this set.
+   * Changing the format of this field is a BREAKING ledger protocol change.
+   */
+  event_timestamp_canonical: string | null;
   agent_fingerprint_id: string;
   model_version: string;
   workflow_type: string;

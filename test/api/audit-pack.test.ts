@@ -181,15 +181,17 @@ describe('One-Click Audit Pack Export', () => {
 
     await pool.query(`
       INSERT INTO agent_events (
-        event_id, session_id, timestamp, 
+        event_id, session_id, timestamp,
+        event_timestamp_canonical,
         agent_fingerprint_id, model_version, 
         workflow_type, input_ref, output_ref, 
         event_hash, previous_event_hash,
         clinical_data,
         policy_id, clinician_action, amends_event_id, reason_code, reason_text
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     `, [
       randomUUID(), sessionId, timestampStr, 
+      timestampStr,  // event_timestamp_canonical — same string used in legacyHash
       payload.agent_fingerprint_id, payload.model_version,
       payload.workflow_type, payload.input_ref, payload.output_ref,
       legacyHash, null, null, // clinical_data is null

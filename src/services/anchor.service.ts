@@ -145,7 +145,7 @@ export class AnchorService {
         const expectedPrev = chains[agentId] || null;
         let isDirectFailure = false;
         
-        // Check 1: Temporal monotonicity
+        // Check 1: Temporal monotonicity (use TIMESTAMPTZ for ordering only — not for hashing)
         const eventTime = new Date(event.timestamp);
         
         if (lastDates[agentId] && eventTime < lastDates[agentId]) {
@@ -154,14 +154,25 @@ export class AnchorService {
         }
         lastDates[agentId] = eventTime;
 
-        // Check 3: Recompute Content Hash (Hash Mismatch)
-        const reconstructedPayload = buildCanonicalPayload(event);
-        const trueHash = generateEventHash(reconstructedPayload, event.previous_event_hash, eventTime.toISOString());
-        
-        if (trueHash !== event.event_hash) {
+        // Check 2: Recompute Content Hash using the stored canonical timestamp string.
+        // Fail closed: if event_timestamp_canonical is missing, we cannot reconstruct the
+        // hash deterministically — treat this as an integrity fault rather than silently
+        // falling back to timestamp (which would reintroduce the TIMESTAMPTZ drift problem).
+        const canonicalTimestamp = event.event_timestamp_canonical;
+        if (!canonicalTimestamp) {
           if (!isDirectFailure) {
             isDirectFailure = true;
             failingEventIds.push(event.id);
+          }
+        } else {
+          const reconstructedPayload = buildCanonicalPayload(event);
+          const trueHash = generateEventHash(reconstructedPayload, event.previous_event_hash, canonicalTimestamp);
+          
+          if (trueHash !== event.event_hash) {
+            if (!isDirectFailure) {
+              isDirectFailure = true;
+              failingEventIds.push(event.id);
+            }
           }
         }
 

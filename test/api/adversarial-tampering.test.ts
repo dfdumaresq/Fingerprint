@@ -121,11 +121,13 @@ describe('Adversarial Tampering - DB Ledger Integrity', () => {
     // We expect temporal_violation or broken_chain
     await client.query(`
       INSERT INTO agent_events (
-        event_id, agent_fingerprint_id, timestamp, workflow_type, model_version, input_ref, output_ref, clinician_action, previous_event_hash, event_hash
+        event_id, agent_fingerprint_id, timestamp,
+        event_timestamp_canonical,
+        workflow_type, model_version, input_ref, output_ref, clinician_action, previous_event_hash, event_hash
       ) VALUES (
-        gen_random_uuid(), $1, $2, 'triage_recommendation', 'test-1.0', 'forged-in', 'forged-out', 'accepted', $3, $4
+        gen_random_uuid(), $1, $2, $3, 'triage_recommendation', 'test-1.0', 'forged-in', 'forged-out', 'accepted', $4, $5
       ) RETURNING id
-    `, [agentId, forgeDate, prevHash, fakeHash]);
+    `, [agentId, forgeDate, forgeDate, prevHash, fakeHash]);
 
     (anchorService as any).db = client;
     const health = await anchorService.verifyDatabaseIntegrity();

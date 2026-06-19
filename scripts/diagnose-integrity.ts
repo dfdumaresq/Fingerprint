@@ -46,9 +46,12 @@ async function diagnose() {
       const expectedPrev = lastHashes[agentId] || null;
       
       // A. Recompute Payload Hash
+      // Use event_timestamp_canonical if available (protocol v1+). Fall back to the TIMESTAMPTZ
+      // round-trip only for legacy rows that predate the canonical column.
       const reconstructedPayload = buildCanonicalPayload(event);
-      const eventTime = new Date(event.timestamp);
-      const currentHash = generateEventHash(reconstructedPayload, expectedPrev, eventTime.toISOString());
+      const canonicalTimestamp = (event as any).event_timestamp_canonical
+        ?? new Date(event.timestamp).toISOString();
+      const currentHash = generateEventHash(reconstructedPayload, expectedPrev, canonicalTimestamp);
       
       const payloadMismatch = currentHash !== event.event_hash;
       const chainMismatch = event.previous_event_hash !== expectedPrev;
@@ -77,7 +80,7 @@ async function diagnose() {
 
         reports.push({
           event_id: event.id,
-          timestamp: eventTime.toISOString(),
+          timestamp: canonicalTimestamp,
           agent_id: agentId,
           classification,
           segment_root_cause_candidate: !currentSegmentBroken,

@@ -502,10 +502,10 @@
 }
 
 .vital-input-box .form-input {
-  background: transparent;
-  border: none;
-  padding: 0;
-  width: 55px;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  width: 65px !important;
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
@@ -521,13 +521,26 @@
 }
 
 .bp-sys, .bp-dia {
-  width: 55px !important;
+  width: 65px !important;
+  padding: 0 !important;
 }
 
 .bp-divider {
   color: var(--text-secondary);
   font-weight: 300;
   margin: 0 2px;
+}
+
+/* Hide numeric spin buttons in vitals for cleaner presentation */
+.vital-input-box input::-webkit-outer-spin-button,
+.vital-input-box input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.vital-input-box input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .progressive-toggle {
@@ -2183,5 +2196,60 @@
   border-top-color: rgba(217, 119, 6, 0.15);
 }
 
+/* Re-evaluation Card Style */
+.re-evaluate-card {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #3b82f6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 
+.re-evaluate-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
 
+.re-evaluate-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 15px;
+}
+
+.action-reevaluate {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+  color: #fff !important;
+  border: none !important;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.action-reevaluate:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.action-reevaluate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+:root[data-theme="light"] .re-evaluate-card {
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}

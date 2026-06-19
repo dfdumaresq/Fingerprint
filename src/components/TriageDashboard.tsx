@@ -79,6 +79,8 @@ interface TriageEncounter {
     reason_text?: string;
     amends_event_id?: string;
   }[];
+  agent_name?: string;
+  agent_version?: string;
 }
 
 interface PhiScanWarning {
@@ -181,6 +183,7 @@ export const TriageDashboard: React.FC = () => {
   const [showNewForm, setShowNewForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [reevaluateLoading, setReevaluateLoading] = useState(false);
   const [triageStatus, setTriageStatus] = useState<{ 
     available: boolean; 
     success: boolean;
@@ -204,6 +207,7 @@ export const TriageDashboard: React.FC = () => {
   // Set whenever the server detects and masks PHI in a submitted field.
   // Never blocks the workflow — informational only.
   const [phiScanWarning, setPhiScanWarning] = useState<PhiScanWarning | null>(null);
+  const [availableAgents, setAvailableAgents] = useState<any[]>([]);
 
   // AI Latent Concept Audit (SAE) States (Phase 3)
   const [saeData, setSaeData] = useState<any | null>(null);
@@ -402,10 +406,25 @@ export const TriageDashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchAvailableAgents = useCallback(async () => {
+    try {
+      const res = await fetch(`${REACT_APP_API_URL}/v1/agents`, {
+        headers: { 'Authorization': `Bearer ${REACT_APP_API_KEY}` }
+      });
+      const data = await res.json();
+      if (data && Array.isArray(data.data)) {
+        setAvailableAgents(data.data.filter((a: any) => !a.revoked));
+      }
+    } catch (err) {
+      console.error('Failed to fetch available agents', err);
+    }
+  }, []);
+
   useEffect(() => { 
     fetchEncounters(); 
     fetchStatus();
-  }, [fetchEncounters, fetchStatus]);
+    fetchAvailableAgents();
+  }, [fetchEncounters, fetchStatus, fetchAvailableAgents]);
 
   // Poll to keep queue fresh when form is closed and no heavyweight verification is in progress
   useEffect(() => {
@@ -429,7 +448,7 @@ export const TriageDashboard: React.FC = () => {
 
   const submitEncounter = async () => {
     if (submitting || preAuditLoading) return;
-    if (!form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia) return;
+    if (!form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia || !form.age_years || !form.sex_at_birth) return;
 
     const enteredPain = Number(form.pain_score || 0);
     const hash = triageStatus?.agent?.fingerprintHash;
@@ -568,6 +587,51 @@ export const TriageDashboard: React.FC = () => {
       console.error('Failed to create encounter', err);
     }
     setSubmitting(false);
+  };
+
+  const handleReevaluate = async () => {
+    if (!selectedEncounter || !triageStatus?.agent) return;
+    setReevaluateLoading(true);
+    try {
+      const payload = {
+        chief_complaint: selectedEncounter.clinical.chief_complaint,
+        vitals: selectedEncounter.clinical.vitals,
+        patient_context: selectedEncounter.clinical.patient_context || {
+          demographics: {
+            age_years: selectedEncounter.clinical.age || 0,
+            sex_at_birth: (selectedEncounter.clinical.gender || 'unknown').toLowerCase(),
+          },
+          clinical: {
+            allergies: selectedEncounter.clinical.history?.allergies?.map(a => ({ substance: a })) || [],
+            medications: selectedEncounter.clinical.history?.medications?.map(m => ({ name: m })) || [],
+            comorbidities: selectedEncounter.clinical.history?.pmh?.map(p => ({ description: p, code: '' })) || [],
+          }
+        },
+        red_flags: selectedEncounter.clinical.red_flags || [],
+        clinician_name: 'clinician',
+        safety_warning_triggered: 'none',
+        safety_warning_bypassed: false
+      };
+
+      const res = await fetch(`${REACT_APP_API_URL}/v1/triage/encounters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${REACT_APP_API_KEY}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEncounters(prev => [data.data, ...prev]);
+        setSelectedEncounter(data.data);
+        alert(`Successfully re-evaluated encounter with the active model: ${triageStatus.agent.name}. A new event record has been logged in the audit ledger.`);
+      } else {
+        alert(`Re-evaluation failed: ${data.error?.message || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      console.error('Failed to re-evaluate encounter', err);
+      alert(`Failed to re-evaluate encounter: ${err.message}`);
+    } finally {
+      setReevaluateLoading(false);
+    }
   };
 
   const dispatchAction = async (action: string, assignedAcuity?: number) => {
@@ -714,12 +778,51 @@ export const TriageDashboard: React.FC = () => {
                 No active agent resolved in the governance registry. Acuity calculations are running safely on the clinical rule engine.
               </div>
             </div>
-            <button 
-              onClick={() => window.location.hash = 'governance'} 
-              style={{ background: '#d97706', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', marginLeft: '16px', flexShrink: 0 }}
-            >
-              Configure Agent
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: '16px' }}>
+              {availableAgents.length > 0 && (
+                <button 
+                  onClick={async () => {
+                    const targetAgent = availableAgents[0];
+                    if (window.confirm(`Activate "${targetAgent.name}" as the active triage agent?`)) {
+                      try {
+                        const response = await fetch(`${REACT_APP_API_URL}/v1/agents/activate`, {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${REACT_APP_API_KEY}`,
+                            'Content-Type': 'application/json',
+                            'X-Source': 'ui'
+                          },
+                          body: JSON.stringify({
+                            fingerprintHash: targetAgent.fingerprintHash,
+                            reason: 'Quick-activation via triage dashboard warning banner override.'
+                          })
+                        });
+                        const resData = await response.json();
+                        if (resData.success) {
+                          alert(`Agent "${targetAgent.name}" activated successfully.`);
+                          fetchStatus();
+                          fetchAvailableAgents();
+                        } else {
+                          alert(`Activation failed: ${resData.error?.message || 'Unknown error'}`);
+                        }
+                      } catch (err: any) {
+                        alert(`Activation failed: ${err.message}`);
+                      }
+                    }
+                  }}
+                  className="primary-btn"
+                  style={{ background: 'var(--plasma-clinical-blue)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                >
+                  ⚡ Enable {availableAgents[0].name}
+                </button>
+              )}
+              <button 
+                onClick={() => window.location.hash = 'governance'} 
+                style={{ background: '#d97706', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+              >
+                Configure Agent
+              </button>
+            </div>
           </div>
         )}
 
@@ -901,7 +1004,7 @@ export const TriageDashboard: React.FC = () => {
 
           <div className="form-section">
             <label className="form-label">Patient Demographics *</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '12px', marginBottom: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '12px', marginBottom: '10px' }}>
               <input className="form-input" type="number" placeholder="Age"
                 value={form.age_years} onChange={e => setForm(f => ({ ...f, age_years: e.target.value }))} />
               <select className="form-select" value={form.sex_at_birth}
@@ -974,7 +1077,7 @@ export const TriageDashboard: React.FC = () => {
 
           <button
             className="submit-btn"
-            disabled={submitting || preAuditLoading || !form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia}
+            disabled={submitting || preAuditLoading || !form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia || !form.age_years || !form.sex_at_birth}
             onClick={submitEncounter}
             aria-busy={submitting || preAuditLoading}
           >
@@ -1216,9 +1319,11 @@ export const TriageDashboard: React.FC = () => {
                   <div className="ai-rec-header">
                     <span>🤖 AI Triage Recommendation</span>
                     <span className="provider-badge">
-                      {selectedEncounter.clinical?.ai_provider === 'ollama' 
-                        ? (triageStatus?.agent?.name || 'Qwen') 
-                        : (selectedEncounter.clinical?.ai_provider || 'rules')}
+                      {selectedEncounter.agent_name 
+                        ? `${selectedEncounter.agent_name}${selectedEncounter.agent_version ? ` (${selectedEncounter.agent_version})` : ''}`
+                        : (selectedEncounter.clinical?.ai_provider === 'ollama' 
+                            ? 'Qwen' 
+                            : (selectedEncounter.clinical?.ai_provider || 'rules'))}
                     </span>
                   </div>
                   <div className="ai-acuity-line">
@@ -1433,6 +1538,30 @@ export const TriageDashboard: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Re-evaluate model mismatch card */}
+              {triageStatus?.agent && selectedEncounter.agent_id !== triageStatus.agent.fingerprintHash && (
+                <div className="re-evaluate-card">
+                  <div className="re-evaluate-header">
+                    <span>🔄 Model Mismatch Detected</span>
+                  </div>
+                  <p className="re-evaluate-text">
+                    This encounter was triaged using a different model/version. You can re-evaluate this encounter with the currently active model: <strong>{triageStatus.agent.name}</strong>.
+                  </p>
+                  <button 
+                    className="action-btn action-reevaluate" 
+                    onClick={handleReevaluate}
+                    disabled={reevaluateLoading}
+                  >
+                    {reevaluateLoading ? (
+                      <span className="btn-loading-container">
+                        <span className="spinner btn-spinner" aria-hidden="true" style={{ display: 'inline-block', marginRight: '8px' }} />
+                        <span>Re-evaluating…</span>
+                      </span>
+                    ) : `Re-evaluate with ${triageStatus.agent.name}`}
+                  </button>
                 </div>
               )}
 
@@ -1807,7 +1936,7 @@ export const TriageDashboard: React.FC = () => {
                               </div>
                             </div>
                             <div className="semantic-vector-metrics">
-                              <div><span style={{ opacity: 0.5 }}>Active Model:</span> <span style={{ color: 'var(--plasma-clinical-blue)' }}>{triageStatus?.agent?.name || 'Qwen2'}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>Model Used:</span> <span style={{ color: 'var(--plasma-clinical-blue)' }}>{selectedEncounter.agent_name || (selectedEncounter.clinical?.ai_provider === 'ollama' ? 'Qwen2' : (selectedEncounter.clinical?.ai_provider || 'rules'))}</span></div>
                               <div><span style={{ opacity: 0.5 }}>Cosine Sim:</span> <span style={{ color: semanticData.status === 'aligned' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)' }}>{semanticData.similarity.toFixed(6)}</span></div>
                               <div><span style={{ opacity: 0.5 }}>ESI Floor:</span> <span style={{ color: 'var(--plasma-text-primary)' }}>{semanticData.threshold.toFixed(2)}</span></div>
                               <div><span style={{ opacity: 0.5 }}>Compliance:</span> <span style={{ color: semanticData.status === 'aligned' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)', textTransform: 'uppercase', fontWeight: 'bold' }}>{semanticData.status}</span></div>

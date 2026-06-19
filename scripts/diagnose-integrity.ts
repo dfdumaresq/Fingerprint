@@ -26,10 +26,15 @@ async function diagnose() {
   try {
     // 1. Fetch all events and backups
     const eventsRes = await client.query('SELECT * FROM agent_events ORDER BY agent_fingerprint_id, id ASC');
-    const backupsRes = await client.query('SELECT * FROM demo_tamper_backups');
+    let backups = new Map();
+    try {
+      const backupsRes = await client.query('SELECT * FROM demo_tamper_backups');
+      backups = new Map(backupsRes.rows.map(b => [b.event_id, b]));
+    } catch (err) {
+      // Table may not exist if no tampering simulation has run
+    }
     
     const events = eventsRes.rows as AgentEvent[];
-    const backups = new Map(backupsRes.rows.map(b => [b.event_id, b]));
     
     const reports: FailureReport[] = [];
     const lastHashes: Record<string, string> = {};

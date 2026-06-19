@@ -146,6 +146,8 @@ export interface TriageEncounter {
     anchored_to_chain: boolean;
     tamper_status: 'pending' | 'anchored' | 'tampered';
   };
+  agent_name?: string;
+  agent_version?: string;
   decision_history?: { 
     action: string; 
     timestamp: string; 
@@ -426,8 +428,12 @@ export class TriageService {
 
     // 1. Resolve active agent fingerprint (or safely fallback to standard rule engine signature if unconfigured)
     let activeFingerprint = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    let activeAgent: any = null;
     try {
-      activeFingerprint = await this.resolveActiveAgent(TRIAGE_AGENT.slug);
+      activeAgent = await this.getActiveAgent(TRIAGE_AGENT.slug);
+      if (activeAgent) {
+        activeFingerprint = activeAgent.fingerprint_hash;
+      }
     } catch (err) {
       console.warn(`Registry warning: No active agent resolved for ${TRIAGE_AGENT.slug}. Safely routing to rules-based fallback.`);
     }
@@ -528,6 +534,8 @@ export class TriageService {
          tamper_status: 'pending'
        },
        phi_scan,
+       agent_name: activeAgent ? activeAgent.name : undefined,
+       agent_version: activeAgent ? activeAgent.version : undefined,
     };
   }
 
@@ -663,13 +671,14 @@ export class TriageService {
 
     try {
       const res = await client.query(
-        `SELECT DISTINCT ON (COALESCE(session_id, id::text)) *
-         FROM agent_events
-         WHERE workflow_type = 'triage_recommendation'
-         ORDER BY COALESCE(session_id, id::text), id DESC`
+        `SELECT DISTINCT ON (COALESCE(e.session_id, e.id::text)) e.*, a.name as agent_name, a.version as agent_version
+         FROM agent_events e
+         LEFT JOIN agents a ON e.agent_fingerprint_id = a.fingerprint_hash
+         WHERE e.workflow_type = 'triage_recommendation'
+         ORDER BY COALESCE(e.session_id, e.id::text), e.id DESC`
       );
 
-      const encounters: TriageEncounter[] = (res.rows as AgentEvent[]).map((event: AgentEvent) => {
+      const encounters: TriageEncounter[] = (res.rows as any[]).map((event: any) => {
         const sessionId = event.session_id || `enc_${event.id}`;
         const isLive = /^.+_[0-9a-f]{8}-[0-9a-f]{4}/.test(sessionId);
         const source: 'live' | 'scenario' = isLive ? 'live' : 'scenario';
@@ -722,6 +731,8 @@ export class TriageService {
           source,
           clinical: clinicalData,
           integrity: { event_hash: event.event_hash, merkle_root_id: event.merkle_root_id, anchored_to_chain: event.anchored_to_chain, tamper_status: tamperStatus },
+          agent_name: event.agent_name || undefined,
+          agent_version: event.agent_version || undefined,
         };
       });
 

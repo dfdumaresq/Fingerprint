@@ -204,6 +204,7 @@ export const TriageDashboard: React.FC = () => {
   // Set whenever the server detects and masks PHI in a submitted field.
   // Never blocks the workflow — informational only.
   const [phiScanWarning, setPhiScanWarning] = useState<PhiScanWarning | null>(null);
+  const [availableAgents, setAvailableAgents] = useState<any[]>([]);
 
   // AI Latent Concept Audit (SAE) States (Phase 3)
   const [saeData, setSaeData] = useState<any | null>(null);
@@ -402,10 +403,25 @@ export const TriageDashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchAvailableAgents = useCallback(async () => {
+    try {
+      const res = await fetch(`${REACT_APP_API_URL}/v1/agents`, {
+        headers: { 'Authorization': `Bearer ${REACT_APP_API_KEY}` }
+      });
+      const data = await res.json();
+      if (data && Array.isArray(data.data)) {
+        setAvailableAgents(data.data.filter((a: any) => !a.revoked));
+      }
+    } catch (err) {
+      console.error('Failed to fetch available agents', err);
+    }
+  }, []);
+
   useEffect(() => { 
     fetchEncounters(); 
     fetchStatus();
-  }, [fetchEncounters, fetchStatus]);
+    fetchAvailableAgents();
+  }, [fetchEncounters, fetchStatus, fetchAvailableAgents]);
 
   // Poll to keep queue fresh when form is closed and no heavyweight verification is in progress
   useEffect(() => {
@@ -714,12 +730,51 @@ export const TriageDashboard: React.FC = () => {
                 No active agent resolved in the governance registry. Acuity calculations are running safely on the clinical rule engine.
               </div>
             </div>
-            <button 
-              onClick={() => window.location.hash = 'governance'} 
-              style={{ background: '#d97706', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', marginLeft: '16px', flexShrink: 0 }}
-            >
-              Configure Agent
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, marginLeft: '16px' }}>
+              {availableAgents.length > 0 && (
+                <button 
+                  onClick={async () => {
+                    const targetAgent = availableAgents[0];
+                    if (window.confirm(`Activate "${targetAgent.name}" as the active triage agent?`)) {
+                      try {
+                        const response = await fetch(`${REACT_APP_API_URL}/v1/agents/activate`, {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${REACT_APP_API_KEY}`,
+                            'Content-Type': 'application/json',
+                            'X-Source': 'ui'
+                          },
+                          body: JSON.stringify({
+                            fingerprintHash: targetAgent.fingerprintHash,
+                            reason: 'Quick-activation via triage dashboard warning banner override.'
+                          })
+                        });
+                        const resData = await response.json();
+                        if (resData.success) {
+                          alert(`Agent "${targetAgent.name}" activated successfully.`);
+                          fetchStatus();
+                          fetchAvailableAgents();
+                        } else {
+                          alert(`Activation failed: ${resData.error?.message || 'Unknown error'}`);
+                        }
+                      } catch (err: any) {
+                        alert(`Activation failed: ${err.message}`);
+                      }
+                    }
+                  }}
+                  className="primary-btn"
+                  style={{ background: 'var(--plasma-clinical-blue)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                >
+                  ⚡ Enable {availableAgents[0].name}
+                </button>
+              )}
+              <button 
+                onClick={() => window.location.hash = 'governance'} 
+                style={{ background: '#d97706', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+              >
+                Configure Agent
+              </button>
+            </div>
           </div>
         )}
 

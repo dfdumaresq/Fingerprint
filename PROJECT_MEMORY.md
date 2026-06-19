@@ -352,6 +352,8 @@ Local Docker runs without the memory (`mem_limit`) and CPU caps enforced on the 
 ## 20. Antigravity operating rules
 When working on this project:
 - Read this file first.
+- Always start new work on a new branch (never work directly on `main`).
+- Before starting new work, update this file (`PROJECT_MEMORY.md`) with a summary of the upcoming task/milestone, and log detailed notes/proposals in the Obsidian vault.
 - Restate what is being verified before proposing architecture.
 - Explicitly distinguish evidence, attestation, anchor, and policy judgment.
 - Before implementing, identify what claim the code will make possible.

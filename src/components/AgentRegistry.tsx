@@ -543,7 +543,14 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                                                     </div>
                                                     <div className="field-row">
                                                         <span className="field-label">Operational ID</span>
-                                                        <span className="field-val tabular-nums" style={{ fontSize: '0.75rem' }}>{agent.id}</span>
+                                                        <span 
+                                                            className="field-val hash-val tabular-nums" 
+                                                            style={{ fontSize: '0.75rem' }}
+                                                            onClick={(e) => handleCopy(e, agent.id)}
+                                                            title={`Click to copy: ${agent.id}`}
+                                                        >
+                                                            {agent.id.length > 18 ? `${agent.id.slice(0, 8)}...${agent.id.slice(-6)}` : agent.id} 📋
+                                                        </span>
                                                     </div>
                                                     <div className="field-row" style={{ flexDirection: 'column', gap: '4px', borderBottom: 'none' }}>
                                                         <span className="field-label">Blockchain Fingerprint</span>

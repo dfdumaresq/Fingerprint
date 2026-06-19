@@ -12,6 +12,16 @@ import { PlatformView } from './components/Sidebar';
 
 const AppContent: React.FC = () => {
     const { isConnected } = useBlockchain();
+    const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'dark' || saved === 'light') return saved;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    });
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
   
     const [activeView, setActiveView] = useState<PlatformView>(() => {
         const hash = window.location.hash.replace('#', '');
@@ -41,7 +51,16 @@ const AppContent: React.FC = () => {
 
     if (!isConnected) {
         return (
-            <div className="platform-shell" style={{ justifyContent: 'center', alignItems: 'center' }}>
+            <div className="platform-shell" style={{ justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+                <button
+                    onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+                    className="theme-toggle-btn"
+                    style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10 }}
+                    title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                    aria-label="Toggle theme"
+                >
+                    {theme === 'dark' ? '☀️' : '🌙'}
+                </button>
                 <div className="plasma-card" style={{ maxWidth: '450px', textAlign: 'center' }}>
                     <div className="sidebar-logo" style={{ marginBottom: '24px', fontSize: '1.8rem', display: 'flex', justifyContent: 'center' }}>FINGERPRINT.AI</div>
                     <h2 style={{ marginBottom: '16px', color: 'var(--plasma-text-primary)' }}>Clinical Access Required</h2>
@@ -60,7 +79,12 @@ const AppContent: React.FC = () => {
     }
 
     return (
-        <PlatformLayout activeView={activeView} onViewChange={handleViewChange}>
+        <PlatformLayout 
+            activeView={activeView} 
+            onViewChange={handleViewChange}
+            theme={theme}
+            onThemeToggle={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+        >
             {activeView === 'triage' && <TriageDashboard />}
             
             {activeView === 'medical-audit' && <MedicalAuditDashboard />}

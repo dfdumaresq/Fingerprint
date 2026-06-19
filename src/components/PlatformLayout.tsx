@@ -6,6 +6,8 @@ interface PlatformLayoutProps {
   children: React.ReactNode;
   activeView: PlatformView;
   onViewChange: (view: PlatformView) => void;
+  theme: 'dark' | 'light';
+  onThemeToggle: () => void;
 }
 
 const VIEW_TITLES: Record<PlatformView, string> = {
@@ -15,7 +17,7 @@ const VIEW_TITLES: Record<PlatformView, string> = {
   'behavior-audit': 'Behavioral Drift Audit',
 };
 
-export const PlatformLayout: React.FC<PlatformLayoutProps> = ({ children, activeView, onViewChange }) => {
+export const PlatformLayout: React.FC<PlatformLayoutProps> = ({ children, activeView, onViewChange, theme, onThemeToggle }) => {
   const { walletAddress, isConnected, isSandbox } = useBlockchain();
   const [copied, setCopied] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
@@ -54,6 +56,15 @@ export const PlatformLayout: React.FC<PlatformLayoutProps> = ({ children, active
           </div>
 
           <div className="platform-header__right">
+            <button
+              onClick={onThemeToggle}
+              className="theme-toggle-btn"
+              style={{ marginRight: '8px' }}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
             {isConnected ? (
               <div className="wallet-pill">
                 <span className="wallet-pill__label">Wallet</span>

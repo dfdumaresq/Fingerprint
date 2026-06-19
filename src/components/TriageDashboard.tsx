@@ -1438,7 +1438,7 @@ export const TriageDashboard: React.FC = () => {
 
               {/* AI Latent Concept Audit Panel (Phase 3) */}
               {selectedEncounter.clinical?.ai_recommendation && (
-                <div className="sae-concept-panel">
+                <div className="sae-concept-panel latent-audit">
                   <div className="sae-concept-header">
                     <h3 className="sae-concept-title">
                       <span className="sae-concept-title-icon">🧠</span> AI Latent Concept Audit (Layer 9)
@@ -1458,32 +1458,20 @@ export const TriageDashboard: React.FC = () => {
                   </div>
 
                   {saeLoading && (
-                    <div className="sae-loading-state" style={{ color: '#a78bfa', padding: '20px 0', textAlign: 'center', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        border: '2px solid rgba(138, 92, 246, 0.2)',
-                        borderTopColor: '#a78bfa',
-                        borderRadius: '50%',
-                        animation: 'sae-spin 1s linear infinite'
-                      }} />
-                      <style>{`
-                        @keyframes sae-spin {
-                          to { transform: rotate(360deg); }
-                        }
-                      `}</style>
+                    <div className="sae-loading-state">
+                      <div className="sae-spinner" />
                       <div>Extracting residual stream activations at Layer 9...</div>
                     </div>
                   )}
 
                   {saeError && (
-                    <div style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px', fontSize: '0.8rem', marginTop: '10px' }}>
+                    <div className="sae-error-alert">
                       ⚠️ {saeError}
                     </div>
                   )}
 
                   {!saeLoading && !saeError && saeData && saeData.active_features && (
-                    <div className="sae-feature-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div className="sae-feature-list">
                       {/* 1. Primary Alarm View: Surface only critical 'smoke detectors' */}
                       {(() => {
                         const criticalAlerts = saeData.active_features.filter(
@@ -1492,41 +1480,18 @@ export const TriageDashboard: React.FC = () => {
 
                         if (criticalAlerts.length > 0) {
                           return (
-                            <div className="sae-critical-alerts-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div className="sae-critical-alerts-container">
                               {criticalAlerts.map((feat: any) => (
-                                <div key={feat.index} className="sae-alert-card critical" style={{
-                                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.04) 100%)',
-                                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                                  borderRadius: '8px',
-                                  padding: '12px 16px',
-                                  position: 'relative',
-                                  overflow: 'hidden'
-                                }}>
-                                  <div style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    bottom: 0,
-                                    width: '4px',
-                                    backgroundColor: '#ef4444'
-                                  }} />
+                                <div key={feat.index} className="sae-alert-card critical">
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span className="sae-alert-title-critical">
                                       🚨 {feat.name}
                                     </span>
-                                    <span style={{
-                                      background: 'rgba(239, 68, 68, 0.2)',
-                                      color: '#fca5a5',
-                                      padding: '2px 8px',
-                                      borderRadius: '12px',
-                                      fontSize: '0.72rem',
-                                      fontWeight: 600,
-                                      fontFamily: 'monospace'
-                                    }}>
+                                    <span className="sae-alert-badge-critical">
                                       {(feat.strength * 100).toFixed(1)}% activation
                                     </span>
                                   </div>
-                                  <div style={{ fontSize: '0.82rem', color: '#fecaca', lineHeight: 1.4 }}>
+                                  <div className="sae-alert-desc-critical">
                                     {feat.description}
                                   </div>
                                 </div>
@@ -1535,20 +1500,11 @@ export const TriageDashboard: React.FC = () => {
                           );
                         } else {
                           return (
-                            <div className="sae-alert-card safe" style={{
-                              background: 'linear-gradient(135deg, rgba(46, 213, 115, 0.12) 0%, rgba(46, 213, 115, 0.04) 100%)',
-                              border: '1px solid rgba(46, 213, 115, 0.25)',
-                              borderRadius: '8px',
-                              padding: '12px 16px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '12px',
-                              color: '#2ed573',
-                              fontSize: '0.85rem',
-                              fontWeight: 500
-                            }}>
-                              <span style={{ fontSize: '1.2rem' }}>✓</span>
-                              <span>No Latent Threat Detected: Residual stream concepts are within standard clinical bounds.</span>
+                            <div className="sae-alert-card safe">
+                              <span className="sae-alert-title-safe">
+                                <span style={{ fontSize: '1.2rem' }}>✓</span>
+                                <span>No Latent Threat Detected: Residual stream concepts are within standard clinical bounds.</span>
+                              </span>
                             </div>
                           );
                         }
@@ -1556,25 +1512,8 @@ export const TriageDashboard: React.FC = () => {
 
                       {/* 2. Technical Audit Trail: Complete roster of all activations (Clinical, Cognitive, Structural, etc.) */}
                       {showSaeTechnical && (
-                        <div className="sae-technical-audit-trail" style={{
-                          marginTop: '10px',
-                          background: 'rgba(0, 0, 0, 0.2)',
-                          border: '1px solid rgba(255, 255, 255, 0.06)',
-                          borderRadius: '8px',
-                          padding: '14px'
-                        }}>
-                          <h4 style={{
-                            fontSize: '0.78rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            color: 'var(--text-secondary)',
-                            margin: '0 0 12px 0',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                            paddingBottom: '6px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
+                        <div className="sae-technical-audit-trail">
+                          <h4 className="sae-technical-header">
                             <span>Neural Activation & Concept Roster</span>
                             <span style={{ fontSize: '0.7rem', color: '#a78bfa', fontFamily: 'monospace' }}>Layer 9 (Residual Stream)</span>
                           </h4>
@@ -1594,12 +1533,12 @@ export const TriageDashboard: React.FC = () => {
                               return Object.entries(categorizedFeatures).map(([category, list]) => {
                                 if (list.length === 0) return null;
                                 return (
-                                  <div key={category} className="sae-category-section" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)', paddingBottom: '12px' }}>
+                                  <div key={category} className="sae-category-section">
                                     <h5 style={{
                                       fontSize: '0.75rem',
                                       textTransform: 'uppercase',
                                       letterSpacing: '0.05em',
-                                      color: category === 'Critical' ? '#f87171' : category === 'Clinical' ? '#fbbf24' : category === 'Cognitive' ? '#60a5fa' : '#9ca3af',
+                                      color: category === 'Critical' ? 'var(--plasma-integrity-red)' : category === 'Clinical' ? 'var(--plasma-warning-amber)' : category === 'Cognitive' ? 'var(--plasma-clinical-blue)' : 'var(--plasma-text-muted)',
                                       margin: '0 0 10px 0',
                                       display: 'flex',
                                       alignItems: 'center',
@@ -1610,14 +1549,7 @@ export const TriageDashboard: React.FC = () => {
                                         {category === 'Critical' ? '🚨' : category === 'Clinical' ? '🩺' : category === 'Cognitive' ? '🧠' : '🏗️'}
                                       </span>
                                       <span>{category} Features</span>
-                                      <span style={{
-                                        fontSize: '0.65rem',
-                                        background: 'rgba(255, 255, 255, 0.08)',
-                                        padding: '1px 6px',
-                                        borderRadius: '8px',
-                                        color: '#fff',
-                                        fontFamily: 'monospace'
-                                      }}>
+                                      <span className="sae-category-count">
                                         {list.length}
                                       </span>
                                     </h5>
@@ -1657,20 +1589,9 @@ export const TriageDashboard: React.FC = () => {
                                               </div>
                                             </div>
 
-                                            <div style={{
-                                              marginTop: '8px',
-                                              paddingTop: '8px',
-                                              borderTop: '1px dashed rgba(255, 255, 255, 0.05)',
-                                              display: 'grid',
-                                              gridTemplateColumns: 'repeat(2, 1fr)',
-                                              gap: '4px',
-                                              fontFamily: 'monospace',
-                                              fontSize: '0.68rem',
-                                              color: 'var(--text-secondary)',
-                                              opacity: 0.8
-                                            }}>
-                                              <div><span style={{ opacity: 0.5 }}>Raw Float:</span> <span style={{ color: '#2ed573' }}>{feat.strength.toFixed(5)}</span></div>
-                                              <div><span style={{ opacity: 0.5 }}>Residual Val:</span> <span style={{ color: '#60a5fa' }}>{(feat.strength * 1.428).toFixed(5)}</span></div>
+                                            <div className="sae-feature-raw-metrics">
+                                              <div><span style={{ opacity: 0.5 }}>Raw Float:</span> <span style={{ color: 'var(--plasma-integrity-green)' }}>{feat.strength.toFixed(5)}</span></div>
+                                              <div><span style={{ opacity: 0.5 }}>Residual Val:</span> <span style={{ color: 'var(--plasma-clinical-blue)' }}>{(feat.strength * 1.428).toFixed(5)}</span></div>
                                             </div>
                                           </div>
                                         ))}
@@ -1689,7 +1610,7 @@ export const TriageDashboard: React.FC = () => {
 
               {/* Semantic Embedding Alignment Panel */}
               {selectedEncounter.clinical?.ai_recommendation && (
-                <div className="sae-concept-panel" style={{ marginTop: '20px' }}>
+                <div className="sae-concept-panel semantic-audit" style={{ marginTop: '20px' }}>
                   <div className="sae-concept-header">
                     <h3 className="sae-concept-title">
                       <span className="sae-concept-title-icon">✨</span> Semantic Embedding Alignment
@@ -1709,21 +1630,14 @@ export const TriageDashboard: React.FC = () => {
                   </div>
 
                   {semanticLoading && (
-                    <div className="sae-loading-state" style={{ color: '#60a5fa', padding: '20px 0', textAlign: 'center', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        border: '2px solid rgba(59, 130, 246, 0.2)',
-                        borderTopColor: '#60a5fa',
-                        borderRadius: '50%',
-                        animation: 'sae-spin 1s linear infinite'
-                      }} />
+                    <div className="semantic-loading-state">
+                      <div className="semantic-spinner" />
                       <div>Extracting active model embeddings and calculating cosine similarity...</div>
                     </div>
                   )}
 
                   {semanticError && (
-                    <div style={{ color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px', fontSize: '0.8rem', marginTop: '10px' }}>
+                    <div className="sae-error-alert">
                       ⚠️ {semanticError}
                     </div>
                   )}
@@ -1733,35 +1647,19 @@ export const TriageDashboard: React.FC = () => {
                       
                       {/* Metric Gauge & Alert Cards */}
                       {semanticData.status === 'aligned' ? (
-                        <div className="sae-alert-card safe" style={{
-                          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%)',
-                          border: '1px solid rgba(16, 185, 129, 0.25)',
-                          borderRadius: '8px',
-                          padding: '14px 16px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px'
-                        }}>
+                        <div className="semantic-aligned-card">
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#a7f3d0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className="semantic-aligned-title">
                               ✅ Semantic Alignment Confirmed
                             </span>
-                            <span style={{
-                              background: 'rgba(16, 185, 129, 0.2)',
-                              color: '#a7f3d0',
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              fontFamily: 'monospace'
-                            }}>
+                            <span className="semantic-aligned-badge">
                               {(semanticData.similarity * 100).toFixed(1)}% similarity
                             </span>
                           </div>
                           
                           {/* Progress bar visual indicator */}
                           <div className="sae-progress-container" style={{ margin: '4px 0 0 0' }}>
-                            <div className="sae-progress-track" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '4px', height: '6px' }}>
+                            <div className="sae-progress-track" style={{ borderRadius: '4px', height: '6px' }}>
                               <div className="sae-progress-bar" style={{
                                 width: `${semanticData.similarity * 100}%`,
                                 backgroundColor: '#10b981',
@@ -1771,40 +1669,24 @@ export const TriageDashboard: React.FC = () => {
                             </div>
                           </div>
 
-                          <div style={{ fontSize: '0.82rem', color: '#d1fae5', lineHeight: 1.4, marginTop: '2px' }}>
+                          <div className="semantic-aligned-desc">
                             Model representation aligns securely with ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)} emergent guidelines. Cognitive integrity verified.
                           </div>
                         </div>
                       ) : (
-                        <div className="sae-alert-card critical" style={{
-                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)',
-                          border: '1px solid rgba(239, 68, 68, 0.25)',
-                          borderRadius: '8px',
-                          padding: '14px 16px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px'
-                        }}>
+                        <div className="semantic-mismatch-card">
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className="semantic-mismatch-title">
                               ⚠️ Semantic Mismatch Detected
                             </span>
-                            <span style={{
-                              background: 'rgba(239, 68, 68, 0.2)',
-                              color: '#fca5a5',
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              fontFamily: 'monospace'
-                            }}>
+                            <span className="semantic-mismatch-badge">
                               {(semanticData.similarity * 100).toFixed(1)}% similarity
                             </span>
                           </div>
                           
                           {/* Progress bar visual indicator */}
                           <div className="sae-progress-container" style={{ margin: '4px 0 0 0' }}>
-                            <div className="sae-progress-track" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '4px', height: '6px' }}>
+                            <div className="sae-progress-track" style={{ borderRadius: '4px', height: '6px' }}>
                               <div className="sae-progress-bar" style={{
                                 width: `${semanticData.similarity * 100}%`,
                                 backgroundColor: '#ef4444',
@@ -1814,7 +1696,7 @@ export const TriageDashboard: React.FC = () => {
                             </div>
                           </div>
 
-                          <div style={{ fontSize: '0.82rem', color: '#fecaca', lineHeight: 1.4, marginTop: '2px' }}>
+                          <div className="semantic-mismatch-desc">
                             Critical Warning: The model's internal concept representation has drifted below the required floor of {(semanticData.threshold * 100).toFixed(0)}% for ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)}. Cognitive drift or anomalous triage suspected.
                           </div>
                         </div>
@@ -1848,57 +1730,46 @@ export const TriageDashboard: React.FC = () => {
                           ? 'Significant Rule Conflict Detected'
                           : 'Minor Rule Discrepancy';
 
+                        const conflictCardClass = isSilentFailure 
+                          ? 'semantic-conflict-card silent-failure' 
+                          : isSignificant 
+                          ? 'semantic-conflict-card significant-conflict' 
+                          : 'semantic-conflict-card minor-discrepancy';
+
                         return (
-                          <div style={{
-                            background: bgColor,
-                            border: `1px solid ${borderColor}`,
-                            borderRadius: '8px',
-                            padding: '14px 16px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '10px',
-                            marginTop: '2px'
-                          }}>
+                          <div className={conflictCardClass}>
                             {/* Header row */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: labelColor, display: 'flex', alignItems: 'center', gap: '7px' }}>
+                              <span className="conflict-title">
                                 {icon} {label}
                               </span>
-                              <span style={{
-                                background: 'rgba(0,0,0,0.3)',
-                                color: labelColor,
-                                padding: '2px 8px',
-                                borderRadius: '12px',
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
-                                fontFamily: 'monospace'
-                              }}>
+                              <span className="conflict-badge">
                                 Δ{divergence} level{divergence !== 1 ? 's' : ''}
                               </span>
                             </div>
 
                             {/* Acuity comparison */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '8px', alignItems: 'center' }}>
-                              <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>AI Decision</div>
-                                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: aiAcuity <= 2 ? '#f87171' : aiAcuity === 3 ? '#fbbf24' : '#9ca3af', fontFamily: 'monospace', lineHeight: 1 }}>L{aiAcuity}</div>
-                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>{['','Resuscitation','Emergent','Urgent','Less Urgent','Non-Urgent'][aiAcuity]}</div>
+                            <div className="conflict-comparison-grid">
+                              <div className="conflict-comparison-box">
+                                <div className="conflict-comparison-label">AI Decision</div>
+                                <div className={`conflict-comparison-value acuity-text-${aiAcuity}`}>L{aiAcuity}</div>
+                                <div className="conflict-comparison-sub">{['','Resuscitation','Emergent','Urgent','Less Urgent','Non-Urgent'][aiAcuity]}</div>
                               </div>
-                              <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: '1.1rem' }}>≠</div>
-                              <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>Rules Engine</div>
-                                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: rulesAcuity <= 2 ? '#f87171' : rulesAcuity === 3 ? '#fbbf24' : '#9ca3af', fontFamily: 'monospace', lineHeight: 1 }}>L{rulesAcuity}</div>
-                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>{['','Resuscitation','Emergent','Urgent','Less Urgent','Non-Urgent'][rulesAcuity]}</div>
+                              <div className="conflict-comparison-divider">≠</div>
+                              <div className="conflict-comparison-box">
+                                <div className="conflict-comparison-label">Rules Engine</div>
+                                <div className={`conflict-comparison-value acuity-text-${rulesAcuity}`}>L{rulesAcuity}</div>
+                                <div className="conflict-comparison-sub">{['','Resuscitation','Emergent','Urgent','Less Urgent','Non-Urgent'][rulesAcuity]}</div>
                               </div>
                             </div>
 
                             {/* Rules engine reasoning */}
                             {rulesReasons.length > 0 && (
-                              <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: '6px', padding: '8px 10px' }}>
-                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Rules Engine Triggered On</div>
-                                <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div className="conflict-reasons-box">
+                                <div className="conflict-reasons-title">Rules Engine Triggered On</div>
+                                <ul className="conflict-reasons-list">
                                   {rulesReasons.map((r: string, i: number) => (
-                                    <li key={i} style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: 1.4 }}>{r}</li>
+                                    <li key={i} className="conflict-reason-item">{r}</li>
                                   ))}
                                 </ul>
                               </div>
@@ -1906,7 +1777,7 @@ export const TriageDashboard: React.FC = () => {
 
                             {/* Silent failure explanation */}
                             {isSilentFailure && (
-                              <div style={{ fontSize: '0.75rem', color: '#fde68a', lineHeight: 1.5, borderTop: '1px solid rgba(251,191,36,0.15)', paddingTop: '8px' }}>
+                              <div className="conflict-silent-failure-desc">
                                 <strong>⚡ Silent Failure Pattern:</strong> The AI's language representation aligns well semantically ({semanticScore != null ? `${(semanticScore * 100).toFixed(0)}%` : '--'}) but the clinical logic diverges significantly. The model produced a fluent, internally coherent response that is clinically incorrect. Clinician review is essential.
                               </div>
                             )}
@@ -1916,24 +1787,8 @@ export const TriageDashboard: React.FC = () => {
 
                       {/* 2. Technical Audit Trail: Complete roster of sentinel baseline prompt vector data */}
                       {showSemanticTechnical && (
-                        <div className="sae-technical-audit-trail" style={{
-                          background: 'rgba(0, 0, 0, 0.2)',
-                          border: '1px solid rgba(255, 255, 255, 0.06)',
-                          borderRadius: '8px',
-                          padding: '14px'
-                        }}>
-                          <h4 style={{
-                            fontSize: '0.78rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            color: 'var(--text-secondary)',
-                            margin: '0 0 12px 0',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                            paddingBottom: '6px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
+                        <div className="sae-technical-audit-trail">
+                          <h4 className="sae-technical-header">
                             <span>Semantic Vector Proving</span>
                             <span style={{ fontSize: '0.7rem', color: '#60a5fa', fontFamily: 'monospace' }}>Cosine Similarity (3584-D)</span>
                           </h4>
@@ -1941,36 +1796,26 @@ export const TriageDashboard: React.FC = () => {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.8rem', color: 'var(--text-primary)' }}>
                             <div>
                               <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '3px' }}>Patient Clinical Prompt:</strong>
-                              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.78rem', color: '#9fa6b2', lineHeight: 1.3 }}>
+                              <div className="sae-prompt-block">
                                 {buildEncounterSaePrompt(selectedEncounter)}
                               </div>
                             </div>
                             <div>
                               <strong style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '3px' }}>Ideal Sentinel ESI-{(selectedEncounter.clinical?.ai_recommendation?.acuity || selectedEncounter.clinical?.acuity || 3)} Baseline:</strong>
-                              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.78rem', color: '#9fa6b2', lineHeight: 1.3 }}>
+                              <div className="sae-prompt-block">
                                 {semanticData.sentinelPromptUsed}
                               </div>
                             </div>
-                            <div style={{
-                              marginTop: '8px',
-                              paddingTop: '8px',
-                              borderTop: '1px dashed rgba(255, 255, 255, 0.05)',
-                              display: 'grid',
-                              gridTemplateColumns: 'repeat(2, 1fr)',
-                              gap: '8px',
-                              fontFamily: 'monospace',
-                              fontSize: '0.7rem',
-                              color: 'var(--text-secondary)'
-                            }}>
-                              <div><span style={{ opacity: 0.5 }}>Active Model:</span> <span style={{ color: '#60a5fa' }}>{triageStatus?.agent?.name || 'Qwen2'}</span></div>
-                              <div><span style={{ opacity: 0.5 }}>Cosine Sim:</span> <span style={{ color: semanticData.status === 'aligned' ? '#10b981' : '#ef4444' }}>{semanticData.similarity.toFixed(6)}</span></div>
-                              <div><span style={{ opacity: 0.5 }}>ESI Floor:</span> <span style={{ color: '#fff' }}>{semanticData.threshold.toFixed(2)}</span></div>
-                              <div><span style={{ opacity: 0.5 }}>Compliance:</span> <span style={{ color: semanticData.status === 'aligned' ? '#10b981' : '#ef4444', textTransform: 'uppercase', fontWeight: 'bold' }}>{semanticData.status}</span></div>
+                            <div className="semantic-vector-metrics">
+                              <div><span style={{ opacity: 0.5 }}>Active Model:</span> <span style={{ color: 'var(--plasma-clinical-blue)' }}>{triageStatus?.agent?.name || 'Qwen2'}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>Cosine Sim:</span> <span style={{ color: semanticData.status === 'aligned' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)' }}>{semanticData.similarity.toFixed(6)}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>ESI Floor:</span> <span style={{ color: 'var(--plasma-text-primary)' }}>{semanticData.threshold.toFixed(2)}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>Compliance:</span> <span style={{ color: semanticData.status === 'aligned' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)', textTransform: 'uppercase', fontWeight: 'bold' }}>{semanticData.status}</span></div>
                               {selectedEncounter.clinical?.acuity_divergence != null && (
                                 <>
-                                  <div><span style={{ opacity: 0.5 }}>AI Acuity:</span> <span style={{ color: '#a78bfa' }}>L{selectedEncounter.clinical.ai_recommendation?.acuity}</span></div>
-                                  <div><span style={{ opacity: 0.5 }}>Rules Acuity:</span> <span style={{ color: selectedEncounter.clinical.acuity_divergence >= 2 ? '#fbbf24' : '#2ed573' }}>L{selectedEncounter.clinical.rules_recommendation?.acuity}</span></div>
-                                  <div style={{ gridColumn: '1 / -1' }}><span style={{ opacity: 0.5 }}>Acuity Divergence:</span> <span style={{ color: selectedEncounter.clinical.acuity_divergence >= 2 ? '#fbbf24' : selectedEncounter.clinical.acuity_divergence === 1 ? '#f97316' : '#2ed573', fontWeight: 'bold' }}>Δ{selectedEncounter.clinical.acuity_divergence} {selectedEncounter.clinical.acuity_divergence >= 2 ? '⚡ CONFLICT' : selectedEncounter.clinical.acuity_divergence === 1 ? '⚠ DISCREPANCY' : '✓ ALIGNED'}</span></div>
+                                  <div><span style={{ opacity: 0.5 }}>AI Acuity:</span> <span className={`acuity-text-${selectedEncounter.clinical.ai_recommendation?.acuity}`}>L{selectedEncounter.clinical.ai_recommendation?.acuity}</span></div>
+                                  <div><span style={{ opacity: 0.5 }}>Rules Acuity:</span> <span className={`acuity-text-${selectedEncounter.clinical.rules_recommendation?.acuity}`}>L{selectedEncounter.clinical.rules_recommendation?.acuity}</span></div>
+                                  <div style={{ gridColumn: '1 / -1' }}><span style={{ opacity: 0.5 }}>Acuity Divergence:</span> <span style={{ fontWeight: 'bold' }} className={selectedEncounter.clinical.acuity_divergence >= 2 ? 'acuity-text-2' : selectedEncounter.clinical.acuity_divergence === 1 ? 'acuity-text-2' : 'acuity-text-4'}>Δ{selectedEncounter.clinical.acuity_divergence} {selectedEncounter.clinical.acuity_divergence >= 2 ? '⚡ CONFLICT' : selectedEncounter.clinical.acuity_divergence === 1 ? '⚠ DISCREPANCY' : '✓ ALIGNED'}</span></div>
                                 </>
                               )}
                             </div>

@@ -532,3 +532,109 @@ body {
   justify-content: center;
 }
 
+/* ─── Light / Dark Theme Support ───────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  
+  /* Accessibility-Optimized Light Palette */
+  --plasma-bg: #f8fafc;
+  --plasma-sidebar: #ffffff;
+  --plasma-surface: #ffffff;
+  --plasma-surface-2: #f1f5f9;
+  
+  /* Typography */
+  --plasma-text-primary: #0f172a;
+  --plasma-text-secondary: #475569;
+  --plasma-text-muted: #64748b;
+  
+  /* Strengthened Borders & Focus States */
+  --plasma-border: #cbd5e1;
+  --plasma-border-strong: #94a3b8;
+  
+  /* Semantic Colors (Confident Salience) */
+  --plasma-clinical-blue: #2563eb; 
+  --plasma-integrity-green: #059669;
+  --plasma-integrity-red: #dc2626;
+  --plasma-warning-amber: #d97706;
+  
+  /* Layout Spacing & Shadow */
+  --plasma-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* Light theme general override adjustments */
+:root[data-theme="light"] .sidebar-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="light"] .nav-item:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme="light"] .plasma-table tr:hover td {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+:root[data-theme="light"] .icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="light"] .status-neutral {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+:root[data-theme="light"] .status-completed {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+:root[data-theme="light"] .status-critical {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+:root[data-theme="light"] .status-warning {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid var(--plasma-border);
+  color: var(--plasma-text-primary);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--plasma-border-strong);
+  transform: scale(1.05);
+}
+
+:root[data-theme="light"] .theme-toggle-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Global Transitions for Smooth Theme Changes */
+body, .sidebar, .platform-header, .plasma-card, .form-input, .vital-input-box, .encounter-drawer, .nav-item, .secondary-btn, .theme-toggle-btn {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+

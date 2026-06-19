@@ -156,7 +156,22 @@ const VerifyFingerprint: React.FC<VerifyFingerprintProps> = ({ blockchainService
             </div>
             <div>
               <label className="context-label">Operational ID</label>
-              <div className="tabular-nums">{result.agent.id}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span 
+                  className="tabular-nums" 
+                  title={result.agent.id}
+                  style={{ wordBreak: 'break-all' }}
+                >
+                  {result.agent.id.length > 18 ? `${result.agent.id.slice(0, 8)}...${result.agent.id.slice(-6)}` : result.agent.id}
+                </span>
+                <button
+                  onClick={() => handleCopy(result.agent!.id, 'opid')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}
+                  title="Click to copy full ID"
+                >
+                  {copiedField === 'opid' ? '✓' : '📋'}
+                </button>
+              </div>
             </div>
             <div style={{ gridColumn: 'span 2' }}>
               <label className="context-label">Blockchain Fingerprint</label>

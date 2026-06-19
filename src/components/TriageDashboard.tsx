@@ -79,6 +79,8 @@ interface TriageEncounter {
     reason_text?: string;
     amends_event_id?: string;
   }[];
+  agent_name?: string;
+  agent_version?: string;
 }
 
 interface PhiScanWarning {
@@ -181,6 +183,7 @@ export const TriageDashboard: React.FC = () => {
   const [showNewForm, setShowNewForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [reevaluateLoading, setReevaluateLoading] = useState(false);
   const [triageStatus, setTriageStatus] = useState<{ 
     available: boolean; 
     success: boolean;
@@ -584,6 +587,51 @@ export const TriageDashboard: React.FC = () => {
       console.error('Failed to create encounter', err);
     }
     setSubmitting(false);
+  };
+
+  const handleReevaluate = async () => {
+    if (!selectedEncounter || !triageStatus?.agent) return;
+    setReevaluateLoading(true);
+    try {
+      const payload = {
+        chief_complaint: selectedEncounter.clinical.chief_complaint,
+        vitals: selectedEncounter.clinical.vitals,
+        patient_context: selectedEncounter.clinical.patient_context || {
+          demographics: {
+            age_years: selectedEncounter.clinical.age || 0,
+            sex_at_birth: (selectedEncounter.clinical.gender || 'unknown').toLowerCase(),
+          },
+          clinical: {
+            allergies: selectedEncounter.clinical.history?.allergies?.map(a => ({ substance: a })) || [],
+            medications: selectedEncounter.clinical.history?.medications?.map(m => ({ name: m })) || [],
+            comorbidities: selectedEncounter.clinical.history?.pmh?.map(p => ({ description: p, code: '' })) || [],
+          }
+        },
+        red_flags: selectedEncounter.clinical.red_flags || [],
+        clinician_name: 'clinician',
+        safety_warning_triggered: 'none',
+        safety_warning_bypassed: false
+      };
+
+      const res = await fetch(`${REACT_APP_API_URL}/v1/triage/encounters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${REACT_APP_API_KEY}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEncounters(prev => [data.data, ...prev]);
+        setSelectedEncounter(data.data);
+        alert(`Successfully re-evaluated encounter with the active model: ${triageStatus.agent.name}. A new event record has been logged in the audit ledger.`);
+      } else {
+        alert(`Re-evaluation failed: ${data.error?.message || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      console.error('Failed to re-evaluate encounter', err);
+      alert(`Failed to re-evaluate encounter: ${err.message}`);
+    } finally {
+      setReevaluateLoading(false);
+    }
   };
 
   const dispatchAction = async (action: string, assignedAcuity?: number) => {
@@ -1271,9 +1319,11 @@ export const TriageDashboard: React.FC = () => {
                   <div className="ai-rec-header">
                     <span>🤖 AI Triage Recommendation</span>
                     <span className="provider-badge">
-                      {selectedEncounter.clinical?.ai_provider === 'ollama' 
-                        ? (triageStatus?.agent?.name || 'Qwen') 
-                        : (selectedEncounter.clinical?.ai_provider || 'rules')}
+                      {selectedEncounter.agent_name 
+                        ? `${selectedEncounter.agent_name}${selectedEncounter.agent_version ? ` (${selectedEncounter.agent_version})` : ''}`
+                        : (selectedEncounter.clinical?.ai_provider === 'ollama' 
+                            ? 'Qwen' 
+                            : (selectedEncounter.clinical?.ai_provider || 'rules'))}
                     </span>
                   </div>
                   <div className="ai-acuity-line">
@@ -1488,6 +1538,30 @@ export const TriageDashboard: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Re-evaluate model mismatch card */}
+              {triageStatus?.agent && selectedEncounter.agent_id !== triageStatus.agent.fingerprintHash && (
+                <div className="re-evaluate-card">
+                  <div className="re-evaluate-header">
+                    <span>🔄 Model Mismatch Detected</span>
+                  </div>
+                  <p className="re-evaluate-text">
+                    This encounter was triaged using a different model/version. You can re-evaluate this encounter with the currently active model: <strong>{triageStatus.agent.name}</strong>.
+                  </p>
+                  <button 
+                    className="action-btn action-reevaluate" 
+                    onClick={handleReevaluate}
+                    disabled={reevaluateLoading}
+                  >
+                    {reevaluateLoading ? (
+                      <span className="btn-loading-container">
+                        <span className="spinner btn-spinner" aria-hidden="true" style={{ display: 'inline-block', marginRight: '8px' }} />
+                        <span>Re-evaluating…</span>
+                      </span>
+                    ) : `Re-evaluate with ${triageStatus.agent.name}`}
+                  </button>
                 </div>
               )}
 
@@ -1862,7 +1936,7 @@ export const TriageDashboard: React.FC = () => {
                               </div>
                             </div>
                             <div className="semantic-vector-metrics">
-                              <div><span style={{ opacity: 0.5 }}>Active Model:</span> <span style={{ color: 'var(--plasma-clinical-blue)' }}>{triageStatus?.agent?.name || 'Qwen2'}</span></div>
+                              <div><span style={{ opacity: 0.5 }}>Model Used:</span> <span style={{ color: 'var(--plasma-clinical-blue)' }}>{selectedEncounter.agent_name || (selectedEncounter.clinical?.ai_provider === 'ollama' ? 'Qwen2' : (selectedEncounter.clinical?.ai_provider || 'rules'))}</span></div>
                               <div><span style={{ opacity: 0.5 }}>Cosine Sim:</span> <span style={{ color: semanticData.status === 'aligned' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)' }}>{semanticData.similarity.toFixed(6)}</span></div>
                               <div><span style={{ opacity: 0.5 }}>ESI Floor:</span> <span style={{ color: 'var(--plasma-text-primary)' }}>{semanticData.threshold.toFixed(2)}</span></div>
                               <div><span style={{ opacity: 0.5 }}>Compliance:</span> <span style={{ color: semanticData.status === 'aligned' ? 'var(--plasma-integrity-green)' : 'var(--plasma-integrity-red)', textTransform: 'uppercase', fontWeight: 'bold' }}>{semanticData.status}</span></div>

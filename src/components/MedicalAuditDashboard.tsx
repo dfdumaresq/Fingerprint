@@ -198,7 +198,7 @@ export const MedicalAuditDashboard: React.FC = () => {
                 value={agentFilter} 
                 onChange={(e) => setAgentFilter(e.target.value)}
                 className="form-input"
-                style={{ width: '100%', background: 'var(--plasma-bg)', border: '1px solid var(--plasma-border)', padding: '8px', color: '#fff', borderRadius: '4px' }}
+                style={{ width: '100%', background: 'var(--plasma-bg)', border: '1px solid var(--plasma-border)', padding: '8px', color: 'var(--plasma-text-primary)', borderRadius: '4px' }}
               >
                 <option value="">All Agents</option>
                 {registeredAgents.map(a => (
@@ -214,7 +214,7 @@ export const MedicalAuditDashboard: React.FC = () => {
                 value={workflowFilter} 
                 onChange={(e) => setWorkflowFilter(e.target.value)}
                 className="form-input"
-                style={{ width: '100%', background: 'var(--plasma-bg)', border: '1px solid var(--plasma-border)', padding: '8px', color: '#fff', borderRadius: '4px' }}
+                style={{ width: '100%', background: 'var(--plasma-bg)', border: '1px solid var(--plasma-border)', padding: '8px', color: 'var(--plasma-text-primary)', borderRadius: '4px' }}
               >
                 <option value="">All Types</option>
                 <option value="triage_recommendation">Triage Recruitment</option>
@@ -305,7 +305,7 @@ export const MedicalAuditDashboard: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-         <button onClick={triggerAnchor} className="new-encounter-btn" style={{ background: 'var(--plasma-surface)', border: '1px solid var(--plasma-border)', fontSize: '0.8rem', padding: '6px 12px', color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>
+         <button onClick={triggerAnchor} className="new-encounter-btn" style={{ background: 'var(--plasma-surface)', border: '1px solid var(--plasma-border)', fontSize: '0.8rem', padding: '6px 12px', color: 'var(--plasma-text-primary)', borderRadius: '4px', cursor: 'pointer' }}>
           🔒 Force Merkle Anchor
         </button>
       </div>

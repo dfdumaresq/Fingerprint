@@ -870,7 +870,7 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                                         width: '100%',
                                         background: 'var(--plasma-surface-2)',
                                         border: '1px solid var(--plasma-border)',
-                                        color: '#fff',
+                                        color: 'var(--plasma-text-primary)',
                                         borderRadius: '4px',
                                         padding: '10px',
                                         fontSize: '0.9rem',

@@ -1207,7 +1207,7 @@ export const BehaviorAuditView: React.FC = () => {
                 className="form-input"
                 style={{
                   border: replaceConfirmText === 'REPLACE' ? '1px solid var(--plasma-integrity-green)' : '1px solid var(--plasma-border)',
-                  color: '#fff',
+                  color: 'var(--plasma-text-primary)',
                   fontFamily: 'monospace',
                   letterSpacing: '2px',
                   fontWeight: 700,

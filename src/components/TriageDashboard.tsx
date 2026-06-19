@@ -445,7 +445,7 @@ export const TriageDashboard: React.FC = () => {
 
   const submitEncounter = async () => {
     if (submitting || preAuditLoading) return;
-    if (!form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia) return;
+    if (!form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia || !form.age_years || !form.sex_at_birth) return;
 
     const enteredPain = Number(form.pain_score || 0);
     const hash = triageStatus?.agent?.fingerprintHash;
@@ -956,7 +956,7 @@ export const TriageDashboard: React.FC = () => {
 
           <div className="form-section">
             <label className="form-label">Patient Demographics *</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '12px', marginBottom: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '12px', marginBottom: '10px' }}>
               <input className="form-input" type="number" placeholder="Age"
                 value={form.age_years} onChange={e => setForm(f => ({ ...f, age_years: e.target.value }))} />
               <select className="form-select" value={form.sex_at_birth}
@@ -1029,7 +1029,7 @@ export const TriageDashboard: React.FC = () => {
 
           <button
             className="submit-btn"
-            disabled={submitting || preAuditLoading || !form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia}
+            disabled={submitting || preAuditLoading || !form.chief_complaint || (form.chief_complaint === 'Other…' && !form.custom_complaint.trim()) || !form.hr || !form.bp_sys || !form.bp_dia || !form.age_years || !form.sex_at_birth}
             onClick={submitEncounter}
             aria-busy={submitting || preAuditLoading}
           >

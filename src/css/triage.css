@@ -502,10 +502,10 @@
 }
 
 .vital-input-box .form-input {
-  background: transparent;
-  border: none;
-  padding: 0;
-  width: 55px;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  width: 65px !important;
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
@@ -521,13 +521,26 @@
 }
 
 .bp-sys, .bp-dia {
-  width: 55px !important;
+  width: 65px !important;
+  padding: 0 !important;
 }
 
 .bp-divider {
   color: var(--text-secondary);
   font-weight: 300;
   margin: 0 2px;
+}
+
+/* Hide numeric spin buttons in vitals for cleaner presentation */
+.vital-input-box input::-webkit-outer-spin-button,
+.vital-input-box input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.vital-input-box input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .progressive-toggle {

@@ -52,20 +52,21 @@ export class EventService {
 
       // 2. Server asserts the timestamp (normalized to ms for cross-platform hash stability)
       const now = new Date();
-      const timestamp = new Date(Math.floor(now.getTime() / 1000) * 1000); // Strip ms if needed? No, JS uses ms.
-      // Actually, just using a stable ISO string is best.
-      const timestampStr = now.toISOString();
+      // canonicalTimestamp is the single, authoritative string used in generateEventHash.
+      // It is persisted in event_timestamp_canonical so verification never relies on the
+      // TIMESTAMPTZ round-trip through Postgres/node-pg. Format: ISO-8601 UTC ms precision.
+      const canonicalTimestamp = now.toISOString();
 
       // 3. Compute immutable Event Hash (server-authoritative)
       // Pass the full payload to ensure aliases and refined null-omission are handled centrally.
       const hashPayload = buildCanonicalPayload(payload);
 
-      const eventHash = generateEventHash(hashPayload, previousHash, timestampStr);
+      const eventHash = generateEventHash(hashPayload, previousHash, canonicalTimestamp);
 
-      // 4. Insert into append-only log (use the EXACT string used for hash)
       const insertQuery = `
         INSERT INTO agent_events (
-          event_id, session_id, timestamp, 
+          event_id, session_id, timestamp,
+          event_timestamp_canonical,
           agent_fingerprint_id, model_version, 
           workflow_type, policy_id, clinician_action, 
           input_ref, output_ref, 
@@ -73,20 +74,22 @@ export class EventService {
           amends_event_id, reason_code, reason_text,
           clinical_data
         ) VALUES (
-          $1, $2, $3, 
-          $4, $5, 
-          $6, $7, $8, 
-          $9, $10, 
-          $11, $12,
-          $13, $14, $15,
-          $16
+          $1, $2, $3,
+          $4,
+          $5, $6, 
+          $7, $8, $9, 
+          $10, $11, 
+          $12, $13,
+          $14, $15, $16,
+          $17
         ) RETURNING id, event_id, event_hash, timestamp, previous_event_hash
       `;
       
       const eventId = randomUUID();
       
       const result = await client.query(insertQuery, [
-        eventId, payload.session_id, timestampStr, // Use string
+        eventId, payload.session_id, canonicalTimestamp, // timestamp TIMESTAMPTZ column
+        canonicalTimestamp,                               // event_timestamp_canonical TEXT column
         payload.agent_fingerprint_id, payload.model_version,
         payload.workflow_type, payload.policy_id, payload.clinician_action,
         payload.input_ref, payload.output_ref,

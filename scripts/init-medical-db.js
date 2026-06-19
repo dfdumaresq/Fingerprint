@@ -75,7 +75,14 @@ CREATE TABLE IF NOT EXISTS agent_events (
     id SERIAL PRIMARY KEY,
     event_id UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
     session_id VARCHAR(255),
+    -- TIMESTAMPTZ for query semantics (analytics, time-window filtering) only.
+    -- Do NOT use this column to reconstruct event_hash. Use event_timestamp_canonical.
     timestamp TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    -- Canonical ISO-8601 UTC millisecond string (YYYY-MM-DDTHH:mm:ss.sssZ) used
+    -- as the sole timestamp input to generateEventHash. Persisted at ingest time to
+    -- guarantee byte-for-byte hash reconstruction independent of Postgres/node-pg
+    -- timestamp formatting. Changing this format is a breaking ledger protocol change.
+    event_timestamp_canonical TEXT NOT NULL,
     
     agent_fingerprint_id VARCHAR(66) NOT NULL,
     model_version VARCHAR(50) NOT NULL,

@@ -78,9 +78,10 @@ Confirmed:
 - **Indexer Catch-Up Performance Optimization**: Tuned the indexer catch-up query settings (increased batch size from `1000` to `10000` blocks and added conditional sleep intervals: `100ms` when catching up, `2000ms` when synced), reducing the event synchronization catch-up lag on Sepolia from ~22 minutes to under 10 seconds.
 - **C2PA Signer Continuity Warnings & Audit Logs**: Implemented visual warning alerts in `BehavioralVerification.tsx` and `BehaviorAuditView.tsx` explaining cryptographic continuity breaks when exporting certificates on browsers lacking private keys. Re-key generation registers a P-256 WebCrypto key pair and writes a `key_rotation` event with action `rekey` to the database events queue.
 - **Decoupled Postgres migrations at boot**: Decoupled pg migrations and DB table creations in `docker-entrypoint.sh` to run only on arguments-less API server starts, resolving deadlocks with concurrently starting container services (like the indexer).
+- **VPS Host-to-Local Bridge for Med42 Inference**: Configured an SSH reverse tunnel from the local M4 Mac Mini host to the VPS, mapping port 11434 to make the local Ollama instance securely accessible to internal Docker containers on the VPS. Established Launchd plist persistent monitors and verified container-to-host connectivity.
 
 In progress:
-- **VPS Host-to-Local Bridge for Med42 Inference**: Configuring an SSH reverse tunnel from the local M4 Mac Mini host to the VPS, mapping port 11434 to make the local Ollama instance securely accessible to internal Docker containers on the VPS. Establishing Launchd plist persistent monitors and adjusting GatewayPorts settings on the remote server.
+- None.
 
 Blocked:
 - None.

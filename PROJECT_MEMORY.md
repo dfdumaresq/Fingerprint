@@ -3,10 +3,10 @@ project: AI Fingerprinting / Verification System
 short_name: fingerprint-ai
 status: active
 owner: Dave Dumaresq
-last_updated: 2026-06-19
+last_updated: 2026-06-20
 primary_repo: /Users/dfdumaresq/Projects/Fingerprint
 primary_vault_note: [[AI Fingerprinting - Master Note]]
-phase: Medical MVP — UI Hardening, Deduplication & VPS Operations (v1.3.1)
+phase: Medical MVP — Governed Triage Audit Trail (v1.4.0)
 trust_level: experimental (Phase 1 Completed, Phase 2 in progress)
 ---
 
@@ -79,9 +79,11 @@ Confirmed:
 - **C2PA Signer Continuity Warnings & Audit Logs**: Implemented visual warning alerts in `BehavioralVerification.tsx` and `BehaviorAuditView.tsx` explaining cryptographic continuity breaks when exporting certificates on browsers lacking private keys. Re-key generation registers a P-256 WebCrypto key pair and writes a `key_rotation` event with action `rekey` to the database events queue.
 - **Decoupled Postgres migrations at boot**: Decoupled pg migrations and DB table creations in `docker-entrypoint.sh` to run only on arguments-less API server starts, resolving deadlocks with concurrently starting container services (like the indexer).
 - **VPS Host-to-Local Bridge for Med42 Inference**: Configured an SSH reverse tunnel from the local M4 Mac Mini host to the VPS, mapping port 11434 to make the local Ollama instance securely accessible to internal Docker containers on the VPS. Established Launchd plist persistent monitors and verified container-to-host connectivity.
+- **AcuityGovernanceEvent — Service-Layer Conflict Classification** (commit `969b56b9`): Normalized triage conflict classification at the `TriageService` layer and stored it as a versioned `AcuityGovernanceEvent` object in the existing `clinical_data` JSONB column (no DB migration required). The object is always present (never absent) for every encounter, eliminating ambiguity on reads. Fields: `schema_version`, `classification` (`aligned` / `under_triage` / `over_escalation`), `conflict_type` (`no_conflict` / `rules_floor_override` / `high_severity_conflict_escalated` / `clinician_review_required`), `divergence`, `ai_recommendation`, `rules_recommendation`, `final_governed_outcome`, `trigger_description`, `semantic_enrichment_status`, `parent_event_id`, `source`, `classification_basis`. Helper `buildAcuityGovernanceEvent()` is a pure function exported from `triage.service.ts`. `parentEventId` is pre-generated with `randomUUID()` before the DB write and threaded into both the builder and `ingestEvent`. `ingestEvent` accepts an optional caller-supplied `event_id` so the parent ID is stable. All 281 tests (38 Hardhat + 243 Jest) confirmed passing.
+- **Frontend Governance Card Refactor & High-Contrast Visual Polishes** (branch `feature/triage-governance-ux`): Replaced frontend re-derivation fallback logic in `TriageDashboard.tsx` with direct reading of `acuity_governance_event` properties. Extracted card layout inline styling into modular classes (`.gov-provenance-chips`, `.gov-chip`, `.gov-outcome-box`) inside `triage.css`. Created explicit high-contrast overrides under `:root[data-theme="light"]` for all card indicators, resolving low-contrast white-on-white text issues for the final governed outcome, trigger descriptions, and unavailable status chips in light theme.
 
 In progress:
-- **Pain Score Contradiction Flag Generalization**: Modifying `TriageDashboard.tsx` to trigger a pre-submission contradiction warning for any pain-related chief complaint submitted with a `0/10` pain score, preventing inaccurate triage ratings like Acuity 5 for active pain symptoms.
+- None.
 
 Blocked:
 - None.
@@ -291,6 +293,7 @@ Unresolved threats:
 - **2026-06-14**: Implemented v1.3.1 UI Hardening & Backend Deduplication (PR #17, merged to `main`). Root cause of false clinical contradiction alerts identified: CPU saturation on VPS caused Ollama embedding timeouts; frontend fallback to lexical rules incorrectly surfaced a keyword match as a clinical contradiction. Fixes: Redis deduplication for POST endpoints; split infrastructure vs. clinical alert types; submit button disabled during in-flight work; background poller paused during heavy operations; visual CSS spinners + aria-busy/aria-hidden accessibility. Also fixed a schema drift issue blocking C2PA key rotation logs by adding an idempotent migration (`migrate-key-rotation-type.js`) that adds `key_rotation` and `rekey` to their respective database enums (`workflow_type_enum`, `clinician_action_enum`). 243/243 Jest tests passing. Rebuilt and deployed AMD64 Docker images to VPS. Established repeatable VPS rebuild runbook.
 - **2026-06-19**: Implemented the historical agent display metadata fix. Modified `TriageEncounter` interface to store `agent_name` and `agent_version` via table joins in `getTriageEncounters`, rather than dynamically referencing the active agent's name from `triageStatus` in `selectedEncounter` views. Added a re-evaluation drawer panel allowing clinicians to re-evaluate legacy rules-based/older-model encounters using the current active agent. Also analyzed the "Desynchronized" Ledger Stability issue: confirmed that `is_healthy` reports false-positive desynchronization failures due to timestamp serialization drift when event timestamps are written with JS millisecond precision but read from PostgreSQL with microsecond/sub-second formatting, leading to string mismatches in `generateEventHash`. Recommended remediation: standardize timestamp formatting before Keccak256 hashing or persist timestamps as exact string fields.
 - **2026-06-19**: Resolved the "Desynchronized" Ledger Stability issue by implementing the canonical timestamp fix. Added `event_timestamp_canonical TEXT NOT NULL` column to `agent_events` database schema and updated `EventService` to capture and record the exact ISO-8601 ingest-time string. Standardized hash verification in `AnchorService` to reconstruct hashes using the canonical field, failing closed if the field is null. Created the `migrate-canonical-timestamp.js` script to backfill existing postgres database chains and enforce the NOT NULL constraint. Merged the fix branch and verified both local and VPS systems are 100% healthy.
+- **2026-06-20**: Implemented `AcuityGovernanceEvent` service-layer conflict normalization (commit `969b56b9`). Governance meaning is now created and persisted at ingestion time in `TriageService`, not reconstructed at render time in the frontend. The object is always non-null, schema-versioned (`schema_version: "1.0"`), and stored additively in the existing `clinical_data` JSONB column. `acuity_governance_event` is a required (non-optional) field on `ClinicalData` — absence in legacy records handled with `as unknown as ClinicalData` cast and a code comment. `getMockClinicalData` updated with a zero-divergence aligned stub. 281/281 tests passing (38 Hardhat + 243 Jest).
 
 
 ## 15. Open questions
@@ -316,13 +319,14 @@ Do not re-open by default unless needed:
 - Long-form research digests
 
 Best next action:
-- Begin Dynamic Lexical Drift Monitoring (v1) on a new branch.
+- Refactor `TriageDashboard.tsx` conflict card (lines ~1847–1960) to read from `clinical.acuity_governance_event` instead of re-deriving classification at render time.
 
 Known "don't lose this" context:
 - **Homograph Safety**: If homograph characters are detected, the perturbation scorer MUST drop verification confidence to exactly 0%, regardless of similarity percentages.
 - **ACS Acuity Fallbacks**: If the patient's sex is marked as `unknown`, the safety-grade rule engine must err on the side of caution and apply male risk thresholds (age 40) for chest pain acuity.
 - **Integrity Score is binary on a clean pass**: 100 if match=true and not suspicious. Do not reintroduce confidence-weighted scoring for clean passes — the perturbation score of ~0.15 is expected natural linguistic texture.
 - **Fixture loading is available in audit mode**: Admins need to replay the same baseline responses during a drift audit to verify scoring logic changes without re-entering responses.
+- **AcuityGovernanceEvent contract**: `acuity_governance_event` is required on `ClinicalData`. Legacy pre-governance records use `as unknown as ClinicalData` cast — do not silently make the field optional again. The `parent_event_id` links the governance event to its row in `agent_events` and must be pre-generated before the DB write.
 
 ## 18. Canon notes
 - [[AI Fingerprinting - Master Note]]

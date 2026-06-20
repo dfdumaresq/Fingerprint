@@ -53,6 +53,32 @@ interface ClinicalData {
   /** |ai_acuity - rules_acuity|: 0=aligned, 1=discrepancy, ≥2=conflict */
   acuity_divergence?: number;
   ai_provider?: string;
+  /**
+   * Canonical governance record written once by TriageService at ingestion time.
+   * The frontend must read classification from this field; never re-derive it.
+   * Absent on pre-v1.4.0 legacy records — render a legacy-mode placeholder.
+   */
+  acuity_governance_event?: {
+    schema_version: '1.0';
+    source: 'triage_service';
+    classification_basis: 'server_rules_only';
+    semantic_enrichment_status: 'not_available' | 'pending' | 'attached';
+    event_id: string;
+    parent_event_id: string;
+    occurred_at: string;
+    ai_decision: { level: number; label: string };
+    rules_decision: { level: number; label: string; triggered_on: string[] };
+    final_governed_outcome: {
+      level: number;
+      label: string;
+      resolution: 'no_conflict' | 'rules_floor_override' | 'clinician_review_required' | 'high_severity_conflict_escalated';
+    };
+    pattern: 'aligned' | 'under_triage' | 'over_escalation' | 'semantic_drift_suspected';
+    divergence: number;
+    trigger_description: string;
+    safety_floor_applied: boolean;
+    clinician_review_required: boolean;
+  };
   state: string;
 }
 
@@ -1578,6 +1604,164 @@ export const TriageDashboard: React.FC = () => {
                 </div>
               )}
 
+              {/* Acuity Governance Event Card (v1.4.0) */}
+              {(() => {
+                const govEvent = selectedEncounter.clinical?.acuity_governance_event;
+
+                // Legacy records (pre-v1.4.0) have no governance event — render a minimal placeholder.
+                if (!govEvent) {
+                  const legacyAiAcuity = selectedEncounter.clinical?.ai_recommendation?.acuity;
+                  const legacyRulesAcuity = selectedEncounter.clinical?.rules_recommendation?.acuity;
+                  if (legacyAiAcuity == null || legacyRulesAcuity == null) return null;
+                  return (
+                    <div className="semantic-conflict-card minor-discrepancy" style={{ margin: '20px 0', opacity: 0.7 }}>
+                      <span className="conflict-title">📋 Acuity Governance — Legacy Record</span>
+                      <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', margin: '8px 0 0 0' }}>
+                        This encounter pre-dates v1.4.0. Canonical governance data is not available.
+                        AI recommended L{legacyAiAcuity}; rules engine recommended L{legacyRulesAcuity}.
+                      </p>
+                    </div>
+                  );
+                }
+
+                // ── Read all values directly from the canonical governance record ──────────
+                const { ai_decision, rules_decision, final_governed_outcome, pattern,
+                        divergence, trigger_description, safety_floor_applied,
+                        clinician_review_required: clinicianReviewRequired,
+                        classification_basis, semantic_enrichment_status } = govEvent;
+
+                const resolution      = final_governed_outcome.resolution;
+                const isAligned       = pattern === 'aligned';
+                const isUnderTriage   = pattern === 'under_triage';
+                const isOverEscalation = pattern === 'over_escalation';
+                const isSignificant   = divergence >= 2;
+
+                // Pattern-driven card classification — never derived from semantic score
+                const conflictCardClass = isUnderTriage
+                  ? 'semantic-conflict-card silent-failure'
+                  : isSignificant
+                  ? 'semantic-conflict-card significant-conflict'
+                  : isAligned
+                  ? 'semantic-conflict-card aligned-governance'
+                  : 'semantic-conflict-card minor-discrepancy';
+
+                const icon = isUnderTriage    ? '⚡'
+                           : isOverEscalation  ? '🔴'
+                           : isAligned         ? '🛡️'
+                           : '🟡';
+
+                const PATTERN_LABELS: Record<typeof pattern, string> = {
+                  aligned:                  'Acuity Governance — Aligned',
+                  under_triage:             'Under-Triage Detected — Safety Floor Enforced',
+                  over_escalation:          'Over-Escalation — Clinician Review Required',
+                  semantic_drift_suspected: 'Semantic Drift Suspected — Pending Enrichment',
+                };
+                const titleLabel = PATTERN_LABELS[pattern] ?? 'Acuity Governance Event';
+
+                return (
+                  <div className={conflictCardClass}>
+                    {/* Header row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="conflict-title">
+                        {icon} {titleLabel}
+                      </span>
+                      <span className="conflict-badge">
+                        {isAligned ? 'VALIDATED' : `Δ${divergence} level${divergence !== 1 ? 's' : ''}`}
+                      </span>
+                    </div>
+
+                    {/* Provenance chips — classification authority, always visible */}
+                    <div className="gov-provenance-chips">
+                      <span className="gov-chip basis-rules">
+                        basis: {classification_basis}
+                      </span>
+                      <span className={`gov-chip ${semantic_enrichment_status === 'attached' ? 'semantic-attached' : 'semantic-other'}`}>
+                        semantic: {semantic_enrichment_status.replace('_', ' ')}
+                      </span>
+                      {safety_floor_applied && (
+                        <span className="gov-chip safety-floor">
+                          ⚠ safety floor applied
+                        </span>
+                      )}
+                      {clinicianReviewRequired && (
+                        <span className="gov-chip review-required">
+                          clinician review required
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Acuity comparison — values read from canonical governance fields */}
+                    <div className="conflict-comparison-grid">
+                      <div className="conflict-comparison-box">
+                        <div className="conflict-comparison-label">AI Decision</div>
+                        <div className={`conflict-comparison-value acuity-text-${ai_decision.level}`}>L{ai_decision.level}</div>
+                        <div className="conflict-comparison-sub">{ai_decision.label}</div>
+                      </div>
+                      <div className="conflict-comparison-divider">{isAligned ? '==' : '≠'}</div>
+                      <div className="conflict-comparison-box">
+                        <div className="conflict-comparison-label">Rules Engine</div>
+                        <div className={`conflict-comparison-value acuity-text-${rules_decision.level}`}>L{rules_decision.level}</div>
+                        <div className="conflict-comparison-sub">{rules_decision.label}</div>
+                      </div>
+                    </div>
+
+                    {/* Final Governed Outcome */}
+                    <div className="gov-outcome-box">
+                      <div className="gov-outcome-box-title">
+                        Final Governed Outcome
+                      </div>
+                      <div className="gov-outcome-row">
+                        <span className="gov-outcome-label">Final Governed Acuity:</span>
+                        <strong className={`acuity-text-${final_governed_outcome.level}`}>
+                          L{final_governed_outcome.level} — {final_governed_outcome.label}
+                        </strong>
+                      </div>
+                      <div className="gov-outcome-row">
+                        <span className="gov-outcome-label">Resolution:</span>
+                        <span className="gov-outcome-value">
+                          {resolution === 'rules_floor_override'             && 'Rules engine override'}
+                          {resolution === 'high_severity_conflict_escalated' && 'Escalated to higher acuity'}
+                          {resolution === 'clinician_review_required'         && 'Flagged for clinician review'}
+                          {resolution === 'no_conflict'                        && 'No conflict'}
+                        </span>
+                      </div>
+                      {trigger_description && (
+                        <div className="gov-outcome-trigger-section">
+                          <span className="gov-outcome-trigger-label">Trigger Description:</span>
+                          <span className="gov-outcome-trigger-desc">"{trigger_description}"</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rules engine triggered-on reasons */}
+                    {rules_decision.triggered_on.length > 0 && (
+                      <div className="conflict-reasons-box">
+                        <div className="conflict-reasons-title">Rules Engine Triggered On</div>
+                        <ul className="conflict-reasons-list">
+                          {rules_decision.triggered_on.map((r: string, i: number) => (
+                            <li key={i} className="conflict-reason-item">{r}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Under-triage explanation — pattern-driven, not semantic-score-driven */}
+                    {isUnderTriage && (
+                      <div className="conflict-silent-failure-desc">
+                        <strong>⚡ Under-Triage Pattern:</strong> The AI recommended an acuity level below the safety floor enforced by the clinical rules engine. The rules engine override has been applied and clinician review is required.
+                      </div>
+                    )}
+
+                    {/* Over-escalation note */}
+                    {isOverEscalation && (
+                      <div className="conflict-silent-failure-desc" style={{ borderColor: 'rgba(239,68,68,0.3)' }}>
+                        <strong>🔴 Over-Escalation Detected:</strong> The AI recommended a higher acuity than the rules engine. The more cautious AI level has been retained and sent for mandatory clinician review.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* AI Latent Concept Audit Panel (Phase 3) */}
               {selectedEncounter.clinical?.ai_recommendation && (
                 <div className="sae-concept-panel latent-audit">
@@ -1843,89 +2027,6 @@ export const TriageDashboard: React.FC = () => {
                           </div>
                         </div>
                       )}
-
-                      {/* Rule Conflict Indicator: surfaces divergence between AI output and clinical rules engine */}
-                      {(() => {
-                        const aiAcuity = selectedEncounter.clinical?.ai_recommendation?.acuity;
-                        const rulesAcuity = selectedEncounter.clinical?.rules_recommendation?.acuity;
-                        const divergence = selectedEncounter.clinical?.acuity_divergence;
-                        const rulesReasons = selectedEncounter.clinical?.rules_recommendation?.reasons || [];
-                        const semanticScore = semanticData?.similarity;
-
-                        // Only render when we have both values and they differ
-                        if (aiAcuity == null || rulesAcuity == null || divergence == null || divergence === 0) return null;
-
-                        // Classify severity:
-                        // divergence ≥ 2 + high semantic = most dangerous (silent failure)
-                        // divergence ≥ 2 + low semantic  = both signals flagging (more detectable)
-                        // divergence = 1                 = minor discrepancy
-                        const isSilentFailure = divergence >= 2 && semanticScore != null && semanticScore >= 0.70;
-                        const isSignificant = divergence >= 2;
-
-                        const borderColor = isSilentFailure ? 'rgba(251, 191, 36, 0.5)' : isSignificant ? 'rgba(239, 68, 68, 0.35)' : 'rgba(251, 191, 36, 0.2)';
-                        const bgColor = isSilentFailure ? 'linear-gradient(135deg, rgba(251,191,36,0.10) 0%, rgba(239,68,68,0.06) 100%)' : isSignificant ? 'linear-gradient(135deg, rgba(239,68,68,0.10) 0%, rgba(239,68,68,0.04) 100%)' : 'linear-gradient(135deg, rgba(251,191,36,0.07) 0%, rgba(0,0,0,0) 100%)';
-                        const labelColor = isSilentFailure ? '#fde68a' : isSignificant ? '#fca5a5' : '#fef3c7';
-                        const icon = isSilentFailure ? '⚡' : isSignificant ? '🔴' : '🟡';
-                        const label = isSilentFailure
-                          ? 'Silent Failure Risk — High Semantic + Logic Conflict'
-                          : isSignificant
-                          ? 'Significant Rule Conflict Detected'
-                          : 'Minor Rule Discrepancy';
-
-                        const conflictCardClass = isSilentFailure 
-                          ? 'semantic-conflict-card silent-failure' 
-                          : isSignificant 
-                          ? 'semantic-conflict-card significant-conflict' 
-                          : 'semantic-conflict-card minor-discrepancy';
-
-                        return (
-                          <div className={conflictCardClass}>
-                            {/* Header row */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span className="conflict-title">
-                                {icon} {label}
-                              </span>
-                              <span className="conflict-badge">
-                                Δ{divergence} level{divergence !== 1 ? 's' : ''}
-                              </span>
-                            </div>
-
-                            {/* Acuity comparison */}
-                            <div className="conflict-comparison-grid">
-                              <div className="conflict-comparison-box">
-                                <div className="conflict-comparison-label">AI Decision</div>
-                                <div className={`conflict-comparison-value acuity-text-${aiAcuity}`}>L{aiAcuity}</div>
-                                <div className="conflict-comparison-sub">{['','Resuscitation','Emergent','Urgent','Less Urgent','Non-Urgent'][aiAcuity]}</div>
-                              </div>
-                              <div className="conflict-comparison-divider">≠</div>
-                              <div className="conflict-comparison-box">
-                                <div className="conflict-comparison-label">Rules Engine</div>
-                                <div className={`conflict-comparison-value acuity-text-${rulesAcuity}`}>L{rulesAcuity}</div>
-                                <div className="conflict-comparison-sub">{['','Resuscitation','Emergent','Urgent','Less Urgent','Non-Urgent'][rulesAcuity]}</div>
-                              </div>
-                            </div>
-
-                            {/* Rules engine reasoning */}
-                            {rulesReasons.length > 0 && (
-                              <div className="conflict-reasons-box">
-                                <div className="conflict-reasons-title">Rules Engine Triggered On</div>
-                                <ul className="conflict-reasons-list">
-                                  {rulesReasons.map((r: string, i: number) => (
-                                    <li key={i} className="conflict-reason-item">{r}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {/* Silent failure explanation */}
-                            {isSilentFailure && (
-                              <div className="conflict-silent-failure-desc">
-                                <strong>⚡ Silent Failure Pattern:</strong> The AI's language representation aligns well semantically ({semanticScore != null ? `${(semanticScore * 100).toFixed(0)}%` : '--'}) but the clinical logic diverges significantly. The model produced a fluent, internally coherent response that is clinically incorrect. Clinician review is essential.
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
 
                       {/* 2. Technical Audit Trail: Complete roster of sentinel baseline prompt vector data */}
                       {showSemanticTechnical && (

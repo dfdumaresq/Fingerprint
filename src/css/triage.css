@@ -2000,7 +2000,18 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 2px;
+  margin: 20px 0;
+}
+
+.semantic-conflict-card.aligned-governance {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.05);
+}
+
+.semantic-conflict-card.aligned-governance .conflict-title,
+.semantic-conflict-card.aligned-governance .conflict-badge {
+  color: #34d399;
 }
 
 .semantic-conflict-card.silent-failure {
@@ -2055,6 +2066,7 @@
   grid-template-columns: 1fr auto 1fr;
   gap: 8px;
   align-items: center;
+  margin: 8px 0;
 }
 
 .conflict-comparison-box {
@@ -2095,6 +2107,7 @@
   background: rgba(0, 0, 0, 0.15);
   border-radius: 6px;
   padding: 8px 10px;
+  margin: 4px 0;
 }
 
 .conflict-reasons-title {
@@ -2125,9 +2138,114 @@
   line-height: 1.5;
   border-top: 1px solid rgba(251, 191, 36, 0.15);
   padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* --- Acuity Governance Event Card Provenance Chips & Outcome (v1.4.0) --- */
+.gov-provenance-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+
+.gov-chip {
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.gov-chip.basis-rules {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+}
+
+.gov-chip.semantic-attached {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.gov-chip.semantic-other {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.gov-chip.safety-floor {
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+}
+
+.gov-chip.review-required {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.gov-outcome-box {
+  background: rgba(0, 0, 0, 0.15);
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.gov-outcome-box-title {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.gov-outcome-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.gov-outcome-label {
+  color: var(--text-primary);
+}
+
+.gov-outcome-value {
+  color: #fff;
+  font-weight: 600;
+}
+
+.gov-outcome-trigger-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.gov-outcome-trigger-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.7rem;
+}
+
+.gov-outcome-trigger-desc {
+  font-style: italic;
+  color: #e2e8f0;
 }
 
 /* Light Mode Overrides for Conflict Cards */
+:root[data-theme="light"] .semantic-conflict-card.aligned-governance {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0.01) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+:root[data-theme="light"] .semantic-conflict-card.aligned-governance .conflict-title,
+:root[data-theme="light"] .semantic-conflict-card.aligned-governance .conflict-badge {
+  color: #059669;
+}
+
 :root[data-theme="light"] .semantic-conflict-card.silent-failure {
   background: linear-gradient(135deg, rgba(217, 119, 6, 0.08) 0%, rgba(220, 38, 38, 0.04) 100%);
   border: 1px solid rgba(217, 119, 6, 0.3);
@@ -2194,6 +2312,66 @@
 :root[data-theme="light"] .conflict-silent-failure-desc {
   color: #92400e;
   border-top-color: rgba(217, 119, 6, 0.15);
+}
+
+/* Light Mode Overrides for Provenance Chips & Outcome Box */
+:root[data-theme="light"] .gov-chip.basis-rules {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #312e81;
+}
+
+:root[data-theme="light"] .gov-chip.semantic-attached {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #064e3b;
+}
+
+:root[data-theme="light"] .gov-chip.semantic-other {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #475569;
+}
+
+:root[data-theme="light"] .gov-chip.safety-floor {
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  color: #78350f;
+}
+
+:root[data-theme="light"] .gov-chip.review-required {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #7f1d1d;
+}
+
+:root[data-theme="light"] .gov-outcome-box {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+:root[data-theme="light"] .gov-outcome-box-title {
+  color: #475569;
+}
+
+:root[data-theme="light"] .gov-outcome-label {
+  color: #334155;
+}
+
+:root[data-theme="light"] .gov-outcome-value {
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .gov-outcome-trigger-section {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+:root[data-theme="light"] .gov-outcome-trigger-label {
+  color: #475569;
+}
+
+:root[data-theme="light"] .gov-outcome-trigger-desc {
+  color: #1e293b;
 }
 
 /* Re-evaluation Card Style */

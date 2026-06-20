@@ -5,6 +5,11 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+if (process.env.DISABLE_INDEXER === 'true') {
+  console.log('Indexer is disabled via DISABLE_INDEXER=true. Exiting.');
+  process.exit(0);
+}
+
 const ABI = [
   "function registerFingerprint(string id, string name, string provider, string version, string fingerprintHash) external",
   "function verifyFingerprint(string fingerprintHash) external view returns (bool isVerified, string id, string name, string provider, string version, uint256 createdAt)",

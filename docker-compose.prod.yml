@@ -18,6 +18,7 @@ services:
     cpus: "0.25"
 
   indexer:
+    restart: unless-stopped
     mem_limit: 256m
     cpus: "0.25"
 

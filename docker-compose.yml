@@ -73,7 +73,7 @@ services:
       dockerfile: Dockerfile
     image: fingerprint-api:latest
     container_name: fingerprint_indexer
-    restart: unless-stopped
+    restart: "no"
     command: ["npx", "ts-node", "scripts/indexer.ts"]
     environment:
       NODE_ENV:                           production
@@ -83,6 +83,7 @@ services:
       REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
       REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
       DISABLE_NER:                        ${DISABLE_NER:-false}
+      DISABLE_INDEXER:                    ${DISABLE_INDEXER:-false}
       NODE_OPTIONS:                       --max-old-space-size=1200
     depends_on:
       postgres:

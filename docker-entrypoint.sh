@@ -8,6 +8,9 @@ if [ $# -eq 0 ]; then
   echo "==> Initialising activation audit schema..."
   node scripts/migrate-activation-audit.js
 
+  echo "==> Running canonical timestamp migration..."
+  node scripts/migrate-canonical-timestamp.js
+
   echo "==> Initialising medical schema + seeding scenarios..."
   node scripts/init-medical-db.js
 

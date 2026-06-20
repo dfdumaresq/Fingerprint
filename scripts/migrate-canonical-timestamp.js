@@ -107,6 +107,21 @@ async function migrate() {
 
     await client.query('BEGIN');
 
+    // Check if agent_events table exists first to support running migration before schema creation on fresh installations
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'agent_events'
+      );
+    `);
+    const tableExists = tableCheck.rows[0].exists;
+    if (!tableExists) {
+      console.log('Table agent_events does not exist. Skipping migration (will be created with canonical timestamp column by schema init).');
+      await client.query('COMMIT');
+      return;
+    }
+
     // ── Step 1: Add column as nullable (idempotent) ───────────────────────
     console.log('Step 1: Adding event_timestamp_canonical column (if absent)…');
     if (!DRY_RUN) {

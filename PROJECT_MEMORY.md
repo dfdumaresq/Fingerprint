@@ -80,7 +80,7 @@ Confirmed:
 - **Decoupled Postgres migrations at boot**: Decoupled pg migrations and DB table creations in `docker-entrypoint.sh` to run only on arguments-less API server starts, resolving deadlocks with concurrently starting container services (like the indexer).
 
 In progress:
-- None.
+- **VPS Host-to-Local Bridge for Med42 Inference**: Configuring an SSH reverse tunnel from the local M4 Mac Mini host to the VPS, mapping port 11434 to make the local Ollama instance securely accessible to internal Docker containers on the VPS. Establishing Launchd plist persistent monitors and adjusting GatewayPorts settings on the remote server.
 
 Blocked:
 - None.

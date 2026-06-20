@@ -81,7 +81,7 @@ Confirmed:
 - **VPS Host-to-Local Bridge for Med42 Inference**: Configured an SSH reverse tunnel from the local M4 Mac Mini host to the VPS, mapping port 11434 to make the local Ollama instance securely accessible to internal Docker containers on the VPS. Established Launchd plist persistent monitors and verified container-to-host connectivity.
 
 In progress:
-- None.
+- **Pain Score Contradiction Flag Generalization**: Modifying `TriageDashboard.tsx` to trigger a pre-submission contradiction warning for any pain-related chief complaint submitted with a `0/10` pain score, preventing inaccurate triage ratings like Acuity 5 for active pain symptoms.
 
 Blocked:
 - None.

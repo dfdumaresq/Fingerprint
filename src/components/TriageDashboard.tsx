@@ -489,6 +489,19 @@ export const TriageDashboard: React.FC = () => {
           setShowExtendedVitals(true); // Automatically reveal the extended vitals section
           setPreAuditLoading(false);
           return;
+        } else {
+          // If not emergent ESI-2, check for general pain lexical contradiction (e.g. pain/ache/sore/hurt/colic but 0/10 pain score)
+          const complaintLower = (resolvedComplaint || '').toLowerCase();
+          const hasPainKeywords = complaintLower.includes('pain') || complaintLower.includes('ache') || complaintLower.includes('sore') || complaintLower.includes('hurt') || complaintLower.includes('pressure') || complaintLower.includes('angina') || complaintLower.includes('colic') || complaintLower.includes('cramp');
+          
+          if (hasPainKeywords) {
+            setValidationWarning("Chief complaint describes symptoms of pain, but the Pain Score is registered as 0/10. Please verify or re-enter the Pain Score.");
+            setValidationWarningType('contradiction');
+            setPainInputConflict(true);
+            setShowExtendedVitals(true);
+            setPreAuditLoading(false);
+            return;
+          }
         }
       } catch (err) {
         console.warn("Pre-submission semantic audit failed, falling back to lexical rules:", err);

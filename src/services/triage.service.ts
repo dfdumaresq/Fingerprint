@@ -352,7 +352,10 @@ async function runTriageAgent(input: ClinicalInput): Promise<{ result: TriageRes
           model: TRIAGE_AGENT.model,
           prompt: buildTriagePrompt(input),
           stream: false,
-          format: 'json'
+          format: 'json',
+          options: {
+            temperature: TRIAGE_AGENT.temperature ?? 0
+          }
         }),
         signal: AbortSignal.timeout(90000)
       });

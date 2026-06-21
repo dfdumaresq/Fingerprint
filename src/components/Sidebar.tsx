@@ -48,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Header */}
       <div className="sidebar-header">
-        {!collapsed && <div className="sidebar-logo">FINGERPRINT.AI</div>}
+        {!collapsed && <div className="sidebar-logo">TRIAGEGUARD</div>}
         <button
           className="sidebar-toggle"
           onClick={onToggleCollapse}

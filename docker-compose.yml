@@ -3,6 +3,8 @@ services:
 
   # ── PostgreSQL ──────────────────────────────────────────────────────────────
   postgres:
+    ports:
+      - "5433:5432"   # host:container (localhost only — dev diagnostic access)
     image: postgres:16-alpine
     container_name: fingerprint_db
     restart: unless-stopped
@@ -63,8 +65,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    expose:
-      - "3000"
+    ports:
+      - "3001:3000"
 
   # ── Blockchain Indexer ──────────────────────────────────────────────────────
   indexer:

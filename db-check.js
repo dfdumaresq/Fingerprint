@@ -2,11 +2,15 @@ const { Pool } = require('pg');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+const DOCKER_DB =
+  "postgresql://fingerprint:Rum^6buM%ZYaiC7L@localhost:5433/fingerprint";
+
+const connectionString = process.env.DB_TARGET || DOCKER_DB;
+const db = new Pool({ connectionString });
 
 async function main() {
+  const maskedDb = connectionString ? connectionString.replace(/:([^:@]+)@/, ':****@') : 'undefined';
+  console.log('Connected to DB:', maskedDb);
   const { rows } = await db.query('SELECT fingerprint_hash, name, latest_trait_hash FROM agents');
   console.log('Postgres agents:', rows);
   

@@ -59,7 +59,7 @@ module.exports = {
     proxy: [
       {
         context: ['/v1', '/health', '/api-docs'],
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3001',
         changeOrigin: true
       }
     ]

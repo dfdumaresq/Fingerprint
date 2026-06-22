@@ -27,6 +27,93 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
     const [heartbeats, setHeartbeats] = useState<Record<string, 'checking' | 'active' | 'idle' | 'revoked'>>({});
     const [activeAgentHash, setActiveAgentHash] = useState<string>('');
 
+    // UI redesign search and filters states
+    const [filterPreset, setFilterPreset] = useState<'active-now' | 'non-revoked' | 'models-test' | 'revoked'>('active-now');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>(() => {
+        try {
+            const stored = localStorage.getItem('triageguard:expanded-details');
+            return stored ? JSON.parse(stored) : {};
+        } catch {
+            return {};
+        }
+    });
+    const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+        try {
+            const stored = localStorage.getItem('triageguard:collapsed-groups');
+            return stored ? JSON.parse(stored) : {};
+        } catch {
+            return {};
+        }
+    }); // false = expanded (default)
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+    // Sync expandedDetails and collapsedGroups to localStorage
+    useEffect(() => {
+        try {
+            localStorage.setItem('triageguard:expanded-details', JSON.stringify(expandedDetails));
+        } catch (e) {
+            console.error('Error writing expandedDetails to localStorage', e);
+        }
+    }, [expandedDetails]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('triageguard:collapsed-groups', JSON.stringify(collapsedGroups));
+        } catch (e) {
+            console.error('Error writing collapsedGroups to localStorage', e);
+        }
+    }, [collapsedGroups]);
+
+    // Timer effect to reset the copied checkmark after 1.5 seconds
+    useEffect(() => {
+        if (!copiedKey) return;
+        const timer = setTimeout(() => {
+            setCopiedKey(null);
+        }, 1500);
+        return () => clearTimeout(timer);
+    }, [copiedKey]);
+
+    const DOMAIN_METADATA: Record<string, { label: string; icon: string }> = {
+        'triage-related': { label: 'Triage-related', icon: '🩺' },
+        'reasoning-model': { label: 'Reasoning models', icon: '🧠' },
+        'test-utility': { label: 'Test & utility agents', icon: '🛠️' },
+        'note-generation': { label: 'Note generation', icon: '📋' },
+        'other': { label: 'Other agents', icon: '📦' }
+    };
+
+    const inferDomain = useCallback((agent: Agent): string => {
+        const name = agent.name.toLowerCase();
+        if (name.includes('test') || name.includes('cli') || name.includes('bot') || name.includes('wins'))
+            return 'test-utility';
+        if (name.includes('qwen') || name.includes('llama') || name.includes('minimax'))
+            return 'reasoning-model';
+        if (name.includes('triage') || name.includes('meditron') || name.includes('med42'))
+            return 'triage-related';
+        if (name.includes('notegen') || name.includes('note'))
+            return 'note-generation';
+        return 'other';
+    }, []);
+
+    const groupAgents = useCallback((list: Agent[]) => {
+        const groups: Record<string, Agent[]> = {
+            'triage-related': [],
+            'reasoning-model': [],
+            'test-utility': [],
+            'note-generation': [],
+            'other': []
+        };
+        list.forEach(agent => {
+            const domain = inferDomain(agent);
+            if (groups[domain]) {
+                groups[domain].push(agent);
+            } else {
+                groups['other'].push(agent);
+            }
+        });
+        return groups;
+    }, [inferDomain]);
+
     // Activation Audit Trail states
     const [auditLog, setAuditLog] = useState<any[]>([]);
     const [loadingAudit, setLoadingAudit] = useState(false);
@@ -169,7 +256,11 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
 
     const handleCopy = (e: React.MouseEvent, text: string) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(text);
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedKey(text);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
     };
 
 
@@ -383,6 +474,59 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                     border-color: var(--plasma-clinical-blue, #4a6bff);
                     background: rgba(255, 255, 255, 0.03);
                 }
+                .filter-chips-bar {
+                    display: flex;
+                    gap: 8px;
+                }
+                .filter-chip {
+                    background: transparent;
+                    border: 1px solid var(--plasma-border, #3a4458);
+                    color: var(--plasma-text-secondary, #c7d0e0);
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    font-size: 0.82rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+                }
+                .filter-chip:hover {
+                    border-color: var(--plasma-border-strong, #4a5770);
+                    color: var(--plasma-text-primary, #f3f6fb);
+                    background-color: rgba(255, 255, 255, 0.02);
+                }
+                .filter-chip.active {
+                    background-color: rgba(79, 131, 255, 0.1);
+                    color: var(--plasma-clinical-blue, #4f83ff);
+                    border-color: var(--plasma-clinical-blue, #4f83ff);
+                }
+                .toggle-details-btn {
+                    background: transparent;
+                    border: none;
+                    color: var(--plasma-text-muted, #9aa6bd);
+                    font-size: 0.78rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                }
+                .toggle-details-btn:hover {
+                    color: var(--plasma-clinical-blue, #4f83ff);
+                    background: rgba(255, 255, 255, 0.03);
+                }
+                .copy-hash-btn {
+                    transition: color 0.2s;
+                }
+                .copy-hash-btn:hover .hash-val {
+                    text-decoration: underline;
+                }
+                .group-section-header {
+                    transition: border-color 0.2s, background-color 0.2s;
+                }
+                .group-section-header:hover {
+                    border-color: var(--plasma-border-strong, #4a5770);
+                    background: var(--plasma-surface, #1a2030) !important;
+                }
             `}</style>
 
             <div style={{ marginBottom: '32px' }}>
@@ -469,7 +613,6 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                     </button>
                 )}
             </div>
-
             <div className="registry-content">
                 {subView === 'list' && (
                     <div>
@@ -493,132 +636,424 @@ export const AgentRegistry: React.FC<AgentRegistryProps> = ({ onViewChange }) =>
                                     Register First Agent
                                 </button>
                             </div>
-                        ) : (
-                            <div className="agent-card-grid">
-                                {agents.map((agent) => {
-                                    const status = heartbeats[agent.fingerprintHash] || 'checking';
-                                    
-                                    return (
-                                        <div 
-                                            key={agent.fingerprintHash} 
-                                            className={`agent-gov-card ${agent.revoked ? 'revoked-card' : ''}`}
-                                        >
-                                            <div>
-                                                <div className="card-header-top">
-                                                    <div>
-                                                        <h4 style={{ margin: '0 0 2px 0', fontSize: '1.05rem', fontWeight: 600, color: 'var(--plasma-text-primary)' }}>
-                                                            {agent.name}
-                                                        </h4>
-                                                        <span style={{ fontSize: '0.78rem', color: 'var(--plasma-text-secondary)' }}>
-                                                            v{agent.version}
+                        ) : (() => {
+                            // Filter agents based on active preset and search query
+                            const filteredAgents = agents.filter(agent => {
+                                const matchesSearch = searchQuery.trim() === '' || 
+                                    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    agent.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    agent.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    agent.fingerprintHash.toLowerCase().includes(searchQuery.toLowerCase());
+
+                                if (!matchesSearch) return false;
+
+                                if (filterPreset === 'active-now') {
+                                    return agent.fingerprintHash === activeAgentHash;
+                                } else if (filterPreset === 'non-revoked') {
+                                    return agent.revoked !== true;
+                                } else if (filterPreset === 'models-test') {
+                                    if (agent.revoked === true) return false;
+                                    const domain = inferDomain(agent);
+                                    if (domain === 'reasoning-model' || domain === 'test-utility') {
+                                        return true;
+                                    }
+                                    if (searchQuery.trim() !== '') {
+                                        return true;
+                                    }
+                                    return false;
+                                } else if (filterPreset === 'revoked') {
+                                    return agent.revoked === true;
+                                }
+                                return true;
+                            });
+
+                            // Render single agent card
+                            const renderAgentCard = (agent: Agent) => {
+                                const status = heartbeats[agent.fingerprintHash] || 'checking';
+                                const isExpanded = !!expandedDetails[agent.fingerprintHash];
+
+                                return (
+                                    <div 
+                                        key={agent.fingerprintHash} 
+                                        className={`agent-gov-card ${agent.revoked ? 'revoked-card' : ''}`}
+                                    >
+                                        <div>
+                                            <div className="card-header-top">
+                                                <div>
+                                                    <h4 style={{ margin: '0 0 2px 0', fontSize: '1.05rem', fontWeight: 600, color: 'var(--plasma-text-primary)' }}>
+                                                        {agent.name}
+                                                    </h4>
+                                                    <span style={{ fontSize: '0.78rem', color: 'var(--plasma-text-secondary)' }}>
+                                                        v{agent.version}
+                                                    </span>
+                                                </div>
+                                                
+                                                {status === 'checking' && (
+                                                    <span className="card-badge status-checking">
+                                                        <span className="dot-blue"></span> Checking
+                                                    </span>
+                                                )}
+                                                {status === 'active' && (
+                                                    <span className="card-badge status-online">
+                                                        <span className="dot-green"></span> Active / Online
+                                                    </span>
+                                                )}
+                                                {status === 'idle' && (
+                                                    <span className="card-badge status-idle">
+                                                        <span className="dot-gray"></span> Idle
+                                                    </span>
+                                                )}
+                                                {status === 'revoked' && (
+                                                    <span className="card-badge status-revoked">
+                                                        <span className="dot-red"></span> Revoked
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div style={{ marginTop: '16px' }}>
+                                                <div className="field-row">
+                                                    <span className="field-label">Provider</span>
+                                                    <span className="field-val">{agent.provider}</span>
+                                                </div>
+                                                <div className="field-row">
+                                                    <span className="field-label">Registered At</span>
+                                                    <span className="field-val tabular-nums" style={{ fontSize: '0.78rem' }}>
+                                                        {formatTimestamp(agent.createdAt)}
+                                                    </span>
+                                                </div>
+                                                <div className="field-row">
+                                                    <span className="field-label">Fingerprint Hash</span>
+                                                    <button
+                                                        type="button"
+                                                        className="copy-hash-btn"
+                                                        onClick={(e) => handleCopy(e, agent.fingerprintHash)}
+                                                        aria-label="Copy full fingerprint hash"
+                                                        title="Copy full fingerprint hash"
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center' }}
+                                                    >
+                                                        <span className="hash-val tabular-nums" style={{ fontSize: '0.75rem' }}>
+                                                            {agent.fingerprintHash.slice(0, 8)}...{agent.fingerprintHash.slice(-6)}
                                                         </span>
-                                                    </div>
-                                                    
-                                                    {status === 'checking' && (
-                                                        <span className="card-badge status-checking">
-                                                            <span className="dot-blue"></span> Checking
+                                                        <span style={{ 
+                                                            marginLeft: '4px', 
+                                                            fontSize: '0.85rem', 
+                                                            color: copiedKey === agent.fingerprintHash ? 'var(--plasma-success, #10b981)' : 'inherit' 
+                                                        }}>
+                                                            {copiedKey === agent.fingerprintHash ? '✅' : '📋'}
                                                         </span>
-                                                    )}
-                                                    {status === 'active' && (
-                                                        <span className="card-badge status-online">
-                                                            <span className="dot-green"></span> Active / Online
-                                                        </span>
-                                                    )}
-                                                    {status === 'idle' && (
-                                                        <span className="card-badge status-idle">
-                                                            <span className="dot-gray"></span> Idle
-                                                        </span>
-                                                    )}
-                                                    {status === 'revoked' && (
-                                                        <span className="card-badge status-revoked">
-                                                            <span className="dot-red"></span> Revoked
-                                                        </span>
-                                                    )}
+                                                    </button>
                                                 </div>
 
-                                                <div style={{ marginTop: '16px' }}>
-                                                    <div className="field-row">
-                                                        <span className="field-label">Provider</span>
-                                                        <span className="field-val">{agent.provider}</span>
-                                                    </div>
-                                                    <div className="field-row">
+                                                <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setExpandedDetails(prev => ({
+                                                            ...prev,
+                                                            [agent.fingerprintHash]: !prev[agent.fingerprintHash]
+                                                        }))}
+                                                        aria-expanded={isExpanded}
+                                                        aria-controls={`details-${agent.fingerprintHash}`}
+                                                        className="toggle-details-btn"
+                                                    >
+                                                        {isExpanded ? '▲ Hide Details' : '▼ View Details'}
+                                                    </button>
+                                                </div>
+
+                                                <div 
+                                                    id={`details-${agent.fingerprintHash}`}
+                                                    className="collapsible-details"
+                                                    style={{ 
+                                                        maxHeight: isExpanded ? '200px' : '0px',
+                                                        opacity: isExpanded ? 1 : 0,
+                                                        overflow: 'hidden',
+                                                        transition: 'max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out',
+                                                        paddingTop: isExpanded ? '12px' : '0px'
+                                                    }}
+                                                >
+                                                    <div className="field-row" style={{ borderBottom: '1px dashed rgba(255, 255, 255, 0.04)' }}>
                                                         <span className="field-label">Operational ID</span>
-                                                        <span 
-                                                            className="field-val hash-val tabular-nums" 
-                                                            style={{ fontSize: '0.75rem' }}
+                                                        <button
+                                                            type="button"
+                                                            className="copy-hash-btn"
                                                             onClick={(e) => handleCopy(e, agent.id)}
-                                                            title={`Click to copy: ${agent.id}`}
+                                                            aria-label="Copy full operational ID"
+                                                            title="Copy full operational ID"
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center' }}
                                                         >
-                                                            {agent.id.length > 18 ? `${agent.id.slice(0, 8)}...${agent.id.slice(-6)}` : agent.id} 📋
-                                                        </span>
+                                                            <span className="hash-val tabular-nums" style={{ fontSize: '0.75rem' }}>
+                                                                {agent.id.length > 18 ? `${agent.id.slice(0, 8)}...${agent.id.slice(-6)}` : agent.id}
+                                                            </span>
+                                                            <span style={{ 
+                                                                marginLeft: '4px', 
+                                                                fontSize: '0.85rem', 
+                                                                color: copiedKey === agent.id ? 'var(--plasma-success, #10b981)' : 'inherit' 
+                                                            }}>
+                                                                {copiedKey === agent.id ? '✅' : '📋'}
+                                                            </span>
+                                                        </button>
                                                     </div>
                                                     <div className="field-row" style={{ flexDirection: 'column', gap: '4px', borderBottom: 'none' }}>
-                                                        <span className="field-label">Blockchain Fingerprint</span>
-                                                        <span 
-                                                            className="field-val hash-val tabular-nums" 
-                                                            style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}
+                                                        <span className="field-label">Full Blockchain Fingerprint</span>
+                                                        <button
+                                                            type="button"
+                                                            className="copy-hash-btn"
                                                             onClick={(e) => handleCopy(e, agent.fingerprintHash)}
-                                                            title="Click to copy full hash"
+                                                            aria-label="Copy full fingerprint hash"
+                                                            title="Copy full fingerprint hash"
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', width: '100%' }}
                                                         >
-                                                            {agent.fingerprintHash} 📋
-                                                        </span>
-                                                    </div>
-                                                    <div className="field-row">
-                                                        <span className="field-label">Registered At</span>
-                                                        <span className="field-val tabular-nums" style={{ fontSize: '0.78rem' }}>
-                                                            {formatTimestamp(agent.createdAt)}
-                                                        </span>
+                                                            <span 
+                                                                className="hash-val tabular-nums" 
+                                                                style={{ fontSize: '0.72rem', wordBreak: 'break-all', display: 'block', width: '100%' }}
+                                                            >
+                                                                {agent.fingerprintHash}{' '}
+                                                                <span style={{ 
+                                                                    color: copiedKey === agent.fingerprintHash ? 'var(--plasma-success, #10b981)' : 'inherit',
+                                                                    display: 'inline-block'
+                                                                }}>
+                                                                    {copiedKey === agent.fingerprintHash ? '✅' : '📋'}
+                                                                </span>
+                                                            </span>
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            {!agent.revoked ? (
-                                                <div className="card-actions">
-                                                    <button 
-                                                        className="card-action-btn"
-                                                        onClick={() => {
-                                                            if (onViewChange) {
-                                                                sessionStorage.setItem('pending_behavior_audit_hash', agent.fingerprintHash);
-                                                                onViewChange('behavior-audit');
-                                                            } else {
-                                                                setSelectedHash(agent.fingerprintHash);
-                                                                setSubView('verify');
-                                                            }
-                                                        }}
-                                                    >
-                                                        🔍 Verify
-                                                    </button>
-                                                    <button 
-                                                        className={`card-action-btn btn-activate ${agent.fingerprintHash === activeAgentHash ? 'active-btn' : ''}`}
-                                                        disabled={agent.fingerprintHash === activeAgentHash}
-                                                        onClick={() => {
-                                                            setAgentToActivate(agent);
-                                                            setShowActivationModal(true);
-                                                            setActivationReason('');
-                                                        }}
-                                                    >
-                                                        {agent.fingerprintHash === activeAgentHash ? '🟢 Active' : '⚡ Activate'}
-                                                    </button>
-                                                    <button 
-                                                        className="card-action-btn btn-revoke"
-                                                        onClick={() => {
+                                        {!agent.revoked ? (
+                                            <div className="card-actions">
+                                                <button 
+                                                    className="card-action-btn"
+                                                    onClick={() => {
+                                                        if (onViewChange) {
+                                                            sessionStorage.setItem('pending_behavior_audit_hash', agent.fingerprintHash);
+                                                            onViewChange('behavior-audit');
+                                                        } else {
                                                             setSelectedHash(agent.fingerprintHash);
-                                                            setSubView('revoke');
+                                                            setSubView('verify');
+                                                        }
+                                                    }}
+                                                >
+                                                    🔍 Verify
+                                                </button>
+                                                <button 
+                                                    className={`card-action-btn btn-activate ${agent.fingerprintHash === activeAgentHash ? 'active-btn' : ''}`}
+                                                    disabled={agent.fingerprintHash === activeAgentHash}
+                                                    onClick={() => {
+                                                        setAgentToActivate(agent);
+                                                        setShowActivationModal(true);
+                                                        setActivationReason('');
+                                                    }}
+                                                >
+                                                    {agent.fingerprintHash === activeAgentHash ? '🟢 Active' : '⚡ Activate'}
+                                                </button>
+                                                <button 
+                                                    className="card-action-btn btn-revoke"
+                                                    onClick={() => {
+                                                        setSelectedHash(agent.fingerprintHash);
+                                                        setSubView('revoke');
+                                                    }}
+                                                >
+                                                    ⚠️ Revoke
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div style={{ marginTop: '16px', padding: '10px', background: 'rgba(239, 68, 68, 0.04)', borderRadius: '6px', border: '1px dashed rgba(239, 68, 68, 0.2)', fontSize: '0.75rem', color: '#ef4444', textAlign: 'center', fontWeight: 600 }}>
+                                                🔒 Permanent Revocation Anchored
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            };
+
+                            const grouped = groupAgents(filteredAgents);
+
+                            return (
+                                <div>
+                                    {/* Redesigned Search & Filters Header Controls */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                                            <div style={{ position: 'relative', width: '320px' }}>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    placeholder="Search name, provider, or hash..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    style={{ paddingLeft: '36px', height: '40px' }}
+                                                />
+                                                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--plasma-text-muted, #9aa6bd)' }}>
+                                                    🔍
+                                                </span>
+                                            </div>
+                                            
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <span style={{ fontSize: '0.9rem', color: 'var(--plasma-text-secondary, #c7d0e0)', fontWeight: 500 }}>
+                                                    {filteredAgents.length} {filteredAgents.length === 1 ? 'agent' : 'agents'} found
+                                                </span>
+                                                
+                                                {(filterPreset !== 'active-now' || searchQuery.trim() !== '') && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setFilterPreset('active-now');
+                                                            setSearchQuery('');
+                                                        }}
+                                                        style={{
+                                                            background: 'transparent',
+                                                            border: 'none',
+                                                            color: 'var(--plasma-clinical-blue, #4f83ff)',
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.9rem',
+                                                            fontWeight: 600,
+                                                            padding: '4px 8px',
+                                                            textDecoration: 'underline'
                                                         }}
                                                     >
-                                                        ⚠️ Revoke
+                                                        Clear filters
                                                     </button>
-                                                </div>
-                                            ) : (
-                                                <div style={{ marginTop: '16px', padding: '10px', background: 'rgba(239, 68, 68, 0.04)', borderRadius: '6px', border: '1px dashed rgba(239, 68, 68, 0.2)', fontSize: '0.75rem', color: '#ef4444', textAlign: 'center', fontWeight: 600 }}>
-                                                    🔒 Permanent Revocation Anchored
-                                                </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                                            <div className="filter-chips-bar">
+                                                <button
+                                                    type="button"
+                                                    className={`filter-chip ${filterPreset === 'active-now' ? 'active' : ''}`}
+                                                    onClick={() => setFilterPreset('active-now')}
+                                                >
+                                                    Active Now
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`filter-chip ${filterPreset === 'non-revoked' ? 'active' : ''}`}
+                                                    onClick={() => setFilterPreset('non-revoked')}
+                                                >
+                                                    Non-Revoked
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`filter-chip ${filterPreset === 'models-test' ? 'active' : ''}`}
+                                                    onClick={() => setFilterPreset('models-test')}
+                                                >
+                                                    Models & Test Agents
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`filter-chip ${filterPreset === 'revoked' ? 'active' : ''}`}
+                                                    onClick={() => setFilterPreset('revoked')}
+                                                >
+                                                    Revoked / Archived
+                                                </button>
+                                            </div>
+
+                                            {(filterPreset === 'non-revoked' || filterPreset === 'models-test') && (
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--plasma-text-muted, #9aa6bd)', fontStyle: 'italic' }}>
+                                                    Groups are inferred from agent names.
+                                                </span>
                                             )}
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                    </div>
+
+                                    {/* Render filtered agents */}
+                                    {filteredAgents.length === 0 ? (
+                                        <div className="plasma-card" style={{ textAlign: 'center', padding: '40px', marginTop: '20px' }}>
+                                            <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🔍</div>
+                                            <h4 style={{ color: 'var(--plasma-text-primary)', marginBottom: '8px' }}>No Matching Agents Found</h4>
+                                            <p className="text-secondary" style={{ fontSize: '0.9rem', marginBottom: '16px' }}>
+                                                Adjust your search or active filters to find the registered identity.
+                                            </p>
+                                            <button 
+                                                className="secondary-btn"
+                                                onClick={() => {
+                                                    setFilterPreset('active-now');
+                                                    setSearchQuery('');
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </button>
+                                        </div>
+                                    ) : (filterPreset === 'non-revoked' || filterPreset === 'models-test') ? (
+                                        // Grouped accordion lists
+                                        <div>
+                                            {Object.entries(grouped).map(([domainKey, groupList]) => {
+                                                if (groupList.length === 0) return null;
+                                                const meta = DOMAIN_METADATA[domainKey] || { label: 'Other agents', icon: '📦' };
+                                                const isCollapsed = !!collapsedGroups[domainKey];
+                                                
+                                                return (
+                                                    <div key={domainKey} style={{ marginBottom: '24px' }}>
+                                                        <button
+                                                            id={`group-header-${domainKey}`}
+                                                            type="button"
+                                                            className="group-section-header"
+                                                            onClick={() => setCollapsedGroups(prev => ({
+                                                                ...prev,
+                                                                [domainKey]: !prev[domainKey]
+                                                            }))}
+                                                            aria-expanded={!isCollapsed}
+                                                            aria-controls={`group-panel-${domainKey}`}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'space-between',
+                                                                width: '100%',
+                                                                background: 'var(--plasma-surface-2, #232a3a)',
+                                                                border: '1px solid var(--plasma-border, #3a4458)',
+                                                                borderRadius: '6px',
+                                                                padding: '12px 16px',
+                                                                cursor: 'pointer',
+                                                                textAlign: 'left',
+                                                                fontWeight: 600,
+                                                                color: 'var(--plasma-text-primary, #f3f6fb)'
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <span style={{ fontSize: '1.2rem' }}>{meta.icon}</span>
+                                                                <span>{meta.label}</span>
+                                                                <span className="group-badge" style={{
+                                                                    background: 'rgba(255, 255, 255, 0.05)',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '12px',
+                                                                    fontSize: '0.75rem',
+                                                                    color: 'var(--plasma-text-muted, #9aa6bd)',
+                                                                    marginLeft: '8px'
+                                                                }}>
+                                                                    {groupList.length}
+                                                                </span>
+                                                            </div>
+                                                            <span style={{ fontSize: '0.8rem', color: 'var(--plasma-text-muted, #9aa6bd)' }}>
+                                                                {isCollapsed ? '▼' : '▲'}
+                                                            </span>
+                                                        </button>
+                                                        
+                                                        <div 
+                                                            id={`group-panel-${domainKey}`}
+                                                            role="region"
+                                                            aria-labelledby={`group-header-${domainKey}`}
+                                                            style={{ 
+                                                                display: isCollapsed ? 'none' : 'block',
+                                                                marginTop: '16px'
+                                                            }}
+                                                        >
+                                                            <div className="agent-card-grid">
+                                                                {groupList.map(agent => renderAgentCard(agent))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        // Flat grid for Active Now and Revoked
+                                        <div className="agent-card-grid">
+                                            {filteredAgents.map(agent => renderAgentCard(agent))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
 

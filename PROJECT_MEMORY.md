@@ -3,10 +3,10 @@ project: AI Fingerprinting / Verification System
 short_name: fingerprint-ai
 status: active
 owner: Dave Dumaresq
-last_updated: 2026-06-20
+last_updated: 2026-06-22
 primary_repo: /Users/dfdumaresq/Projects/Fingerprint
 primary_vault_note: [[AI Fingerprinting - Master Note]]
-phase: Medical MVP — Governed Triage Audit Trail (v1.4.0)
+phase: Medical MVP — Agent Registry UI Redesign & Persisted Preferences (v1.5.0)
 trust_level: experimental (Phase 1 Completed, Phase 2 in progress)
 ---
 
@@ -28,10 +28,10 @@ Why this matters:
 
 ## 3. Current phase
 Phase:
-- Medical MVP — UI Hardening, Deduplication & VPS Operations (v1.3.1)
+- Medical MVP — Agent Registry UI Redesign & Persisted Preferences (v1.5.0)
 
 Phase objective:
-- Prevent double-submissions and duplicate backend work, add visual loading feedback to all async actions, distinguish infrastructure outages from true clinical contradiction warnings, and establish a repeatable cross-platform VPS rebuild operations workflow.
+- Reduce cognitive load in the Agent Directory view by implementing horizontal preset chips, dynamic name-based domain groupings, collapsible details, visual copy verification cues, and persisting layout preferences in localStorage.
 
 Definition of done:
 - [x] Robust demographic models including Sex At Birth (with unknown/intersex fallbacks) and Gender Identity in `PatientContext`.
@@ -294,6 +294,7 @@ Unresolved threats:
 - **2026-06-19**: Implemented the historical agent display metadata fix. Modified `TriageEncounter` interface to store `agent_name` and `agent_version` via table joins in `getTriageEncounters`, rather than dynamically referencing the active agent's name from `triageStatus` in `selectedEncounter` views. Added a re-evaluation drawer panel allowing clinicians to re-evaluate legacy rules-based/older-model encounters using the current active agent. Also analyzed the "Desynchronized" Ledger Stability issue: confirmed that `is_healthy` reports false-positive desynchronization failures due to timestamp serialization drift when event timestamps are written with JS millisecond precision but read from PostgreSQL with microsecond/sub-second formatting, leading to string mismatches in `generateEventHash`. Recommended remediation: standardize timestamp formatting before Keccak256 hashing or persist timestamps as exact string fields.
 - **2026-06-19**: Resolved the "Desynchronized" Ledger Stability issue by implementing the canonical timestamp fix. Added `event_timestamp_canonical TEXT NOT NULL` column to `agent_events` database schema and updated `EventService` to capture and record the exact ISO-8601 ingest-time string. Standardized hash verification in `AnchorService` to reconstruct hashes using the canonical field, failing closed if the field is null. Created the `migrate-canonical-timestamp.js` script to backfill existing postgres database chains and enforce the NOT NULL constraint. Merged the fix branch and verified both local and VPS systems are 100% healthy.
 - **2026-06-20**: Implemented `AcuityGovernanceEvent` service-layer conflict normalization (commit `969b56b9`). Governance meaning is now created and persisted at ingestion time in `TriageService`, not reconstructed at render time in the frontend. The object is always non-null, schema-versioned (`schema_version: "1.0"`), and stored additively in the existing `clinical_data` JSONB column. `acuity_governance_event` is a required (non-optional) field on `ClinicalData` — absence in legacy records handled with `as unknown as ClinicalData` cast and a code comment. `getMockClinicalData` updated with a zero-divergence aligned stub. 281/281 tests passing (38 Hardhat + 243 Jest).
+- **2026-06-22**: Implemented v1.5.0 Agent Registry UI Redesign & Persisted Preferences. Added horizontal preset chips (Active Now, Non-Revoked, Models & Test Agents, Revoked / Archived), instant lexical search filtering (matching name, provider, operational ID, or hash), and collapsed card technical details (blockchain hash, operational ID) behind expandable `<button>` triggers. Implemented dynamic name-based domain grouping accordions (🩺 Triage-related, 🧠 Reasoning models, 🛠️ Test & utility agents, 📋 Note generation, 📦 Other) with custom header badge counts. Added persistent `localStorage` syncing for expanded card details (`triageguard:expanded-details`) and group accordions (`triageguard:collapsed-groups`). Introduced visual green checkmark feedback (`✅`) for 1.5 seconds upon copying registry identifiers to the clipboard. Rebuilt and successfully deployed target architecture images to VPS.
 
 
 ## 15. Open questions

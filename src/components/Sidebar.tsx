@@ -81,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Version badge */}
       <div className="sidebar-version">
-              {collapsed ? 'v1.4' : 'v1.4.0'}
+              {collapsed ? 'v1.5' : 'v1.5.0'}
       </div>
 
     </aside>

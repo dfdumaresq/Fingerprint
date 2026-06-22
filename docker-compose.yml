@@ -55,7 +55,7 @@ services:
       TRIAGE_AGENT_SLUG:     ${TRIAGE_AGENT_SLUG:-rules-engine-v1}
       TRIAGE_AGENT_NAME:     ${TRIAGE_AGENT_NAME:-Clinical Rules Engine}
       TRIAGE_AGENT_MODEL:    ${TRIAGE_AGENT_MODEL:-tinydolphin}
-      OLLAMA_ENDPOINT:       ${OLLAMA_ENDPOINT:-http://localhost:11434}
+      OLLAMA_ENDPOINT:       ${OLLAMA_ENDPOINT:-http://host.docker.internal:11434}
       REACT_APP_SEPOLIA_CONTRACT_ADDRESS:  ${REACT_APP_SEPOLIA_CONTRACT_ADDRESS}
       REACT_APP_SEPOLIA_CHAIN_ID:          ${REACT_APP_SEPOLIA_CHAIN_ID}
       DISABLE_NER:                         ${DISABLE_NER:-false}

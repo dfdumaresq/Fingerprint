@@ -323,6 +323,7 @@ Best next action:
 - Refactor `TriageDashboard.tsx` conflict card (lines ~1847–1960) to read from `clinical.acuity_governance_event` instead of re-deriving classification at render time.
 
 Known "don't lose this" context:
+- **SSH Tunnel Orphaned Sessions**: If the VPS reports "Connection to local Ollama agent failed" but local Ollama is running and the LaunchAgent plist is active, check for an orphaned `sshd` process on the VPS (`ssh vps "ps -ef | grep sshd"`). If a stale session exists, kill it (`kill -9 <PID>`) and reload the local LaunchAgent (`launchctl unload/load`) to re-establish the port forwarding.
 - **Homograph Safety**: If homograph characters are detected, the perturbation scorer MUST drop verification confidence to exactly 0%, regardless of similarity percentages.
 - **ACS Acuity Fallbacks**: If the patient's sex is marked as `unknown`, the safety-grade rule engine must err on the side of caution and apply male risk thresholds (age 40) for chest pain acuity.
 - **Integrity Score is binary on a clean pass**: 100 if match=true and not suspicious. Do not reintroduce confidence-weighted scoring for clean passes — the perturbation score of ~0.15 is expected natural linguistic texture.

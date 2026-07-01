@@ -15,7 +15,7 @@
  * 2. PROD DEPLOYMENT (POST-MVP):
  *    - Push branch changes and pull on the server: `git pull && docker compose up -d --build api`
  *    - Run this script against the remote server:
- *        node scripts/verify-divergence.js https://clinicianledger.ca [PROD_API_KEY]
+ *        node scripts/verify-divergence.js https://triageguard.ca [PROD_API_KEY]
  */
 
 /**
@@ -28,7 +28,7 @@
  * 
  * Usage:
  *   node scripts/verify-divergence.js                    (local, port 3000)
- *   node scripts/verify-divergence.js https://clinicianledger.ca f98ee134f35b
+ *   node scripts/verify-divergence.js https://triageguard.ca f98ee134f35b
  */
 
 const BASE_URL = process.argv[2] || 'http://localhost:3000';

@@ -17,14 +17,14 @@ This roadmap tracks the evolution of the Fingerprint project from a foundational
 6. **Docker Deployment and Branch Merge**
    - ✅ Committed all docker deployment changes, fixed brittle hardhat test timing errors, and merged `feature/docker-deployment` into `main`.
 7. **Remote Server Deployment Pipeline**
-   - ✅ Verified build of local AMD64 images, compressed file transfer, loaded onto VPS at `clinicianledger.ca`, and confirmed container stack health.
+   - ✅ Verified build of local AMD64 images, compressed file transfer, loaded onto VPS at `triageguard.ca`, and confirmed container stack health.
 8. **Baseline Recalibration**
    - ✅ Registered a fresh on-chain baseline for the production `tinydolphin` agent on the Sepolia smart contract ledger, clearing cross-model drift warnings.
 
 ## High Priority: Clinical Trust & Workflow
 
 1. **Host MVP**
-   - ✅ Deployed the container network to production at `clinicianledger.ca`, verified relative path API routing under same-origin Nginx proxy, database migration, and HTTPS SSL certificates. The 5-stage behavioral drift audit workflow is live and ready.
+   - ✅ Deployed the container network to production at `triageguard.ca`, verified relative path API routing under same-origin Nginx proxy, database migration, and HTTPS SSL certificates. The 5-stage behavioral drift audit workflow is live and ready.
 2. **Clinician Decision Ledger (Immutable History)**
    - Implement "Clinician Decision" events to track how human reviewers accept, modify, or override AI recommendations. These must be logged as cryptographically anchored amendments to the original record.
 3. **Interactive Audit Timeline (Evidence Chain Visualization)**

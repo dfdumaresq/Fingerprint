@@ -6,7 +6,7 @@
 #
 set -euo pipefail
 
-DOMAIN="clinicianledger.ca"
+DOMAIN="triageguard.ca"
 EMAIL="${1:?Usage: $0 <your@email.com>}"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -35,5 +35,5 @@ echo "==> Reloading nginx..."
 docker compose -f "$APP_DIR/docker-compose.yml" exec nginx nginx -s reload
 
 echo ""
-echo "✅ Done! clinicianledger.ca is now served over HTTPS."
+echo "✅ Done! triageguard.ca is now served over HTTPS."
 echo "   Certbot will auto-renew every 12 hours via the certbot container."
